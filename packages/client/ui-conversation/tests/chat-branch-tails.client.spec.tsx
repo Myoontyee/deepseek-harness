@@ -14,6 +14,7 @@ import type {
   ChatConversationViewNode, ConversationNode,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ChatNodeViewProps } from '../src/client/contract/slots.ts'
+import type { InputState } from '../src/client/input/contract.ts'
 import {
   formatMessageClock, msUntilNextLocalMidnight, startOfLocalDay,
 } from '../src/client/chat/message-chrome.ts'
@@ -49,6 +50,9 @@ interface MessageItemProps {
   readonly t: ChatNodeViewProps['t']
 }
 
+/** Static input snapshot backing the kit stub; message views only read the draft. */
+const INPUT_SNAPSHOT: InputState = { draft: '', imageIds: [], draftRev: 0, phase: 'plain', occurrences: [], queue: [] }
+
 /** Legacy-node fixture adapter for the independently registered renderers. */
 function MessageItem({ node, t: translate }: MessageItemProps) {
   const kind = node.kind === 'assistant' ? 'assistant-step' : node.kind
@@ -62,7 +66,18 @@ function MessageItem({ node, t: translate }: MessageItemProps) {
     visibility: 'visible',
     data: node.kind === 'model-retry' ? { attempts: [node], current: node } : node,
   }
-  const props = { node: viewNode, t: translate } as ChatNodeViewProps
+  const props = {
+    node: viewNode,
+    t: translate,
+    useInput: bindSnapshotSelector({ getSnapshot: () => INPUT_SNAPSHOT, subscribe: () => () => {} }),
+    inputActions: {
+      setDraft: () => {},
+      addImages: () => true,
+      removeImage: () => {},
+      pruneImages: () => {},
+      submit: () => {},
+    },
+  } as unknown as ChatNodeViewProps
   switch (node.kind) {
     case 'user':
     case 'steering':

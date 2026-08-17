@@ -14,6 +14,7 @@ import { ImageGallery, type ImageLoader } from '@deepseek-ai/dsh-client-ui-attac
 import { messageImageLabels } from '../image-labels.ts'
 import { CompactionItem } from './CompactionItem.tsx'
 import { ContextInjectionRow } from './ContextInjectionRow.tsx'
+import { MessageContextMenu, quoteIntoDraft } from './MessageContextMenu.tsx'
 import { MessageIconActions } from './MessageIconActions.tsx'
 import css from './MessageItem.module.css'
 
@@ -207,53 +208,72 @@ function UserStyleBubble({
 /**
  * Render one Host-authoritative pending steering item with the same visual
  * language as its eventual durable transcript node.
- * @param props - Pending message content and conversation translator.
+ * @param props - Pending message content, input kit, and conversation translator.
  * @returns the pending steering bubble.
  */
-export function PendingSteeringBubble({ content, loadImage, t }: {
+export function PendingSteeringBubble({ content, loadImage, t, useInput, inputActions }: {
   content: readonly unknown[]
   loadImage?: ImageLoader
   t: ChatViewSlotProps['t']
+  useInput: ChatViewSlotProps['useInput']
+  inputActions: ChatViewSlotProps['inputActions']
 }): ReactNode {
   const imageLoader = loadImage ?? (() => Promise.reject(new Error(t('image.serviceUnavailable'))))
+  const text = contentParts(content).text
+  const draft = useInput(state => state.draft)
   return (
-    <UserStyleBubble
-      content={content}
-      imageLoader={imageLoader}
-      pending
+    <MessageContextMenu
+      text={text}
+      onQuote={() => inputActions.setDraft(quoteIntoDraft(draft, text))}
       t={t}
-      actions={text => (
-        <MessageIconActions
-          text={text}
-          clock="start"
-          className={css.actions}
-          t={t}
-        />
-      )}
-    />
+    >
+      <UserStyleBubble
+        content={content}
+        imageLoader={imageLoader}
+        pending
+        t={t}
+        actions={text => (
+          <MessageIconActions
+            text={text}
+            clock="start"
+            className={css.actions}
+            t={t}
+          />
+        )}
+      />
+    </MessageContextMenu>
   )
 }
 
 /** User and admitted-steering keyed Chat renderer. */
 export const UserMessageNodeView = memo(function UserMessageNodeView({
-  node, loadImage, t,
+  node, loadImage, t, useInput, inputActions,
 }: ChatNodeViewProps<'user' | 'steering'>) {
   const data = node.data
+  const text = contentParts(data.content).text
+  const draft = useInput(state => state.draft)
   return (
-    <UserStyleBubble
-      content={data.content}
-      imageLoader={loadImage}
+    <MessageContextMenu
+      text={text}
+      onEdit={() => inputActions.setDraft(text)}
+      onQuote={() => inputActions.setDraft(quoteIntoDraft(draft, text))}
       t={t}
-      actions={text => (
-        <MessageIconActions
-          text={text}
-          time={data.time}
-          clock="start"
-          className={css.actions}
-          t={t}
-        />
-      )}
-    />
+    >
+      <UserStyleBubble
+        content={data.content}
+        imageLoader={loadImage}
+        t={t}
+        actions={text => (
+          <MessageIconActions
+            text={text}
+            time={data.time}
+            clock="start"
+            className={css.actions}
+            t={t}
+          />
+        )}
+      />
+    </MessageContextMenu>
   )
 })
 

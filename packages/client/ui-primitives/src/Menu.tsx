@@ -8,8 +8,8 @@
 // Lists keep 12px clearance to the viewport's top/bottom edges and scroll
 // internally past that; submenu-bearing menus are exempt (see .scrollable).
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import { IconCheckOutline16 } from './icons/index.tsx'
@@ -77,6 +77,10 @@ const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
  * gap and a brief overshoot survivable; coming back cancels the close.
  * @param props.dense - reduce vertical row spacing without changing the standard typography or card width.
  * @param props.compact - use reduced menu typography and spacing.
+ * @param props.keyboard - enable roving-focus keyboard navigation over the
+ * leaf rows (Arrow keys/Home/End move the active row, Enter/Space select, Tab
+ * closes) and the active-row highlight. Opt-in so the existing mouse-first
+ * pickers keep their behavior; context menus set it.
  * @param props.getAnchorRect - portal mode only: supply the anchor rect
  * directly (e.g. from a host-owned trigger button) instead of measuring the
  * Menu's own wrapper span. Required when the wrapper isn't itself laid out at
@@ -87,7 +91,7 @@ const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
  * by a hairline; they stay visible while the items above scroll.
  * @returns anchor wrapper with the conditional list.
  */
-export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, onClose, align = 'start', side = 'bottom', portal = false, closeOnPointerLeave = false, dense = false, compact = false, getAnchorRect, footer, className }: {
+export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, onClose, align = 'start', side = 'bottom', portal = false, closeOnPointerLeave = false, dense = false, compact = false, keyboard = false, getAnchorRect, footer, className }: {
   open: boolean
   anchor: ReactNode
   items: readonly MenuEntry[]
@@ -102,6 +106,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
   closeOnPointerLeave?: boolean
   dense?: boolean
   compact?: boolean
+  keyboard?: boolean
   getAnchorRect?: () => DOMRect | null
   className?: string
 }) {
@@ -109,7 +114,42 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
   const listRef = useRef<HTMLDivElement>(null)
   const [openSubmenuId, setOpenSubmenuId] = useState<string | null>(null)
   const [fixedPos, setFixedPos] = useState<CSSProperties | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const wasOpenRef = useRef(false)
   const { arm: armClose, cancel: cancelClose } = usePointerGrace(onClose)
+
+  // Leaf rows keyboard navigation may land on: enabled, non-heading,
+  // non-separator, submenu-free items. Submenu parents stay hover-driven (flat
+  // context menus never need them; the generic picker keeps its mouse-first
+  // submenu model).
+  const selectableIds = useMemo(() => (
+    items.filter((entry): entry is MenuItem =>
+      !isSeparator(entry) && !isLabel(entry) && entry.disabled !== true
+        && (entry.submenu === undefined || entry.submenu.length === 0),
+    ).map(entry => entry.id)
+  ), [items])
+
+  // Reset the keyboard-active row only at open/close transitions: while a
+  // menu stays open, a parent re-render (e.g. streaming chat chunks) must not
+  // yank the active row back to the first item just because `items` got a new
+  // array identity. A reopened menu starts on its first selectable row.
+  useEffect(() => {
+    const opened = open && !wasOpenRef.current
+    wasOpenRef.current = open
+    if (open && keyboard && opened) {
+      setActiveId(selectableIds[0] ?? null)
+      return
+    }
+    if (!open) setActiveId(null)
+  }, [open, keyboard, selectableIds])
+
+  // Roving focus: while keyboard navigation is enabled the active row owns
+  // focus, so Arrow/Enter key events land on the list without a second
+  // document listener.
+  useEffect(() => {
+    if (!open || !keyboard) return
+    listRef.current?.querySelector<HTMLButtonElement>('[data-menu-active]')?.focus()
+  }, [open, keyboard, activeId])
 
   // Portal mode: fixed-position the list from the anchor rect before paint;
   // track the anchor while open (capture-phase scroll catches nested panes).
@@ -195,6 +235,39 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
     if (!open) cancelClose()
   }, [open, cancelClose])
 
+  // Keyboard navigation over the leaf rows (see `keyboard`). The list is
+  // focused via roving focus, so keydown arrives here from the active item.
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    if (!keyboard || selectableIds.length === 0) return
+    const index = activeId === null ? -1 : selectableIds.indexOf(activeId)
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setActiveId(selectableIds[(index + 1) % selectableIds.length] ?? null)
+      return
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActiveId(selectableIds[index <= 0 ? selectableIds.length - 1 : index - 1] ?? null)
+      return
+    }
+    if (event.key === 'Home') {
+      event.preventDefault()
+      setActiveId(selectableIds[0] ?? null)
+      return
+    }
+    if (event.key === 'End') {
+      event.preventDefault()
+      setActiveId(selectableIds[selectableIds.length - 1] ?? null)
+      return
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      if (activeId !== null) onSelect(activeId)
+      return
+    }
+    if (event.key === 'Tab') onClose()
+  }
+
   // The submenu card is absolutely positioned outside the list box; the
   // scroll clip would crop it, so only submenu-free menus get the height cap.
   const scrollable = !items.some(entry => !isSeparator(entry) && !isLabel(entry) && entry.submenu !== undefined && entry.submenu.length > 0)
@@ -209,6 +282,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
     const hasSub = entry.submenu !== undefined && entry.submenu.length > 0
     const subOpen = hasSub && openSubmenuId === entry.id
     const selected = entry.id === selectedId || selectedIds?.includes(entry.id) === true
+    const active = keyboard && entry.id === activeId
     return (
       <div
         key={entry.id}
@@ -219,7 +293,9 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
         <button
           type="button"
           role="menuitem"
-          className={clsx(css.item, selected && css.selected, entry.danger === true && css.danger)}
+          tabIndex={keyboard ? -1 : undefined}
+          data-menu-active={active ? 'true' : undefined}
+          className={clsx(css.item, selected && css.selected, active && css.active, entry.danger === true && css.danger)}
           disabled={entry.disabled}
           aria-haspopup={hasSub ? 'menu' : undefined}
           aria-expanded={hasSub ? subOpen : undefined}
@@ -272,6 +348,7 @@ export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, o
       // this stop, an item click re-fires the anchor row's own onClick
       // (open/toggle) after onSelect.
       onClick={(e) => { e.stopPropagation() }}
+      onKeyDown={handleKeyDown}
     >
       <div className={css.viewport} role="presentation">
         {items.map(renderEntry)}

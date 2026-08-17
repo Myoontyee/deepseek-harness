@@ -111,7 +111,8 @@
   text-align: left;
 }
 
-.item:hover:not(:disabled) {
+.item:hover:not(:disabled),
+.item.active {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
@@ -198,7 +199,8 @@
   color: var(--dsw-alias-state-error-primary);
 }
 
-.danger:hover:not(:disabled) {
+.danger:hover:not(:disabled),
+.danger.active {
   background: var(--dsw-alias-interactive-bg-hover-danger);
 }
 

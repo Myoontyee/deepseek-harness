@@ -1,0 +1,22 @@
+/* Row wrapper: the context-menu target. Layout stays neutral so the wrapped
+ * row (flex bubbles, assistant bodies) renders exactly as unwrapped. */
+.wrapper {
+  display: contents;
+}
+
+/* Post-copy chip floating above the menu position, same elevated surface
+ * language as the menu card. */
+.copiedTip {
+  position: fixed;
+  z-index: 1100;
+  transform: translate(-50%, -100%);
+  padding: 4px 10px;
+  border: 1px solid var(--dsw-alias-border-inverted);
+  border-radius: 8px;
+  background: var(--dsw-specific-menu);
+  box-shadow: var(--dsw-shadow-lv3);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-primary);
+  pointer-events: none;
+}

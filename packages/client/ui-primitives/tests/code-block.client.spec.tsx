@@ -154,3 +154,54 @@ describe('CodeBlock', () => {
     expect(absent.queryByRole('button', { name: '复制成功' })).toBeNull()
   })
 })
+
+describe('CodeBlock context menu', () => {
+  const block = (view: ReturnType<typeof render>): HTMLElement => (
+    view.container.querySelector('.md-code-block') as HTMLElement
+  )
+
+  it('right-click opens a menu at the pointer with copy first, then owner actions; an action runs and closes', () => {
+    const run = vi.fn()
+    const view = render(
+      <CodeBlock code="plain body" contextActions={[{ id: 'copy-path', label: '复制路径', run }]} />,
+    )
+    fireEvent.contextMenu(block(view), { clientX: 40, clientY: 40 })
+    const menu = screen.getByRole('menu')
+    expect(menu.style.left).toBe('40px')
+    expect(menu.style.top).toBe('44px')
+    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['复制', '复制路径'])
+    fireEvent.click(screen.getByRole('menuitem', { name: '复制路径' }))
+    expect(run).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('menu copy writes the pre text and flips the banner label; Escape closes without acting', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    const view = render(<CodeBlock code={'const a = 1\n'} lang="ts" />)
+    fireEvent.contextMenu(block(view), { clientX: 10, clientY: 10 })
+    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['复制'])
+    fireEvent.click(screen.getByRole('menuitem', { name: '复制' }))
+    expect(writeText).toHaveBeenCalledWith('const a = 1')
+    await act(async () => { await Promise.resolve() })
+    expect(screen.getByRole('button', { name: '复制成功' })).toBeTruthy()
+    fireEvent.contextMenu(block(view), { clientX: 10, clientY: 10 })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(writeText).toHaveBeenCalledTimes(1)
+  })
+
+  it('a live selection yields to the selection menu (no block menu opens)', () => {
+    const spy = vi.spyOn(window, 'getSelection').mockReturnValue({ toString: () => 'sel' } as unknown as Selection)
+    try {
+      const view = render(<CodeBlock code="plain body" />)
+      fireEvent.contextMenu(block(view), { clientX: 10, clientY: 10 })
+      expect(screen.queryByRole('menu')).toBeNull()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})

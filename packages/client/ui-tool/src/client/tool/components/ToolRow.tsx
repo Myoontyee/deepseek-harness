@@ -17,12 +17,13 @@
 // independent); an error row's collapsed summary is the failure's first line in
 // the error color.
 
-import { useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import clsx from 'clsx'
 import {
-  CodeBlock, DiffBlock, DisclosureRow, IconInspectOutline12, ReadBlock, SearchBlock, StateDot, TerminalBlock, WebBlock,
+  CodeBlock, ContextMenu, DiffBlock, DisclosureRow, hasActiveSelection, IconInspectOutline12, ReadBlock, SearchBlock,
+  StateDot, TerminalBlock, WebBlock, writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { WebBlockProps } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { MenuEntry, WebBlockProps } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { CHAT_DIFF_MAX_LINES, type DiffCardModel } from '../models/diff-card-model.ts'
 import { CHAT_READ_MAX_LINES, type ReadCardModel } from '../models/read-card-model.ts'
@@ -147,6 +148,12 @@ export function ToolRow({
   inspect,
 }: ToolRowProps) {
   const [expanded, setExpanded] = useState(false)
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const [pathCopied, setPathCopied] = useState(false)
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (copyTimer.current !== null) clearTimeout(copyTimer.current)
+  }, [])
   const terminalBody = terminal ?? null
   const diffBody = diff ?? null
   const readBody = read ?? null
@@ -171,6 +178,43 @@ export function ToolRow({
   const suffix = failureLine === null ? summarySuffix ?? null : null
   // The failure line is error prose, not the path: no open-file affordance.
   const fileLink = filePath !== undefined && onOpenFile !== undefined && failureLine === null
+  const hasPath = filePath !== undefined && failureLine === null
+  // Right-click menu over a file-backed row: copy the path, or open the host
+  // default app. The copied label swaps in place and the menu closes itself,
+  // so no extra chrome is needed for feedback.
+  const menuItems: MenuEntry[] = []
+  if (filePath !== undefined) {
+    menuItems.push({ id: 'copy-path', label: pathCopied ? t('copied') : t('contextMenu.copyPath') })
+  }
+  if (fileLink) {
+    menuItems.push({ id: 'open-file', label: t('contextMenu.openFile') })
+  }
+  const selectMenu = (id: string): void => {
+    if (id === 'copy-path') {
+      if (pathCopied || filePath === undefined) return
+      void writeClipboard(filePath).then((ok) => {
+        if (!ok) return
+        setPathCopied(true)
+        if (copyTimer.current !== null) clearTimeout(copyTimer.current)
+        copyTimer.current = window.setTimeout(() => {
+          copyTimer.current = null
+          setPathCopied(false)
+          setMenu(null)
+        }, 800)
+      })
+      return
+    }
+    setMenu(null)
+    if (id === 'open-file' && filePath !== undefined) onOpenFile?.(filePath)
+  }
+  const onRowContextMenu = (event: MouseEvent<HTMLDivElement>): void => {
+    // A live selection yields to the conversation's selection menu (bubbles).
+    if (hasActiveSelection()) return
+    event.preventDefault()
+    event.stopPropagation()
+    setPathCopied(false)
+    setMenu({ x: event.clientX, y: event.clientY })
+  }
   const toggleExpand = () => {
     setExpanded(v => !v)
   }
@@ -192,7 +236,13 @@ export function ToolRow({
   // row keeps DisclosureRow's icon→chevron hover preview (its default) instead
   // of losing it with the icon.
   return (
-    <div className={css.root} data-variant={variant} data-tool={toolName} data-state={state}>
+    <div
+      className={css.root}
+      data-variant={variant}
+      data-tool={toolName}
+      data-state={state}
+      onContextMenu={hasPath ? onRowContextMenu : undefined}
+    >
       {status !== null && <span className={css.visuallyHidden}>{status}</span>}
       <DisclosureRow
         rowClassName={css.row}
@@ -302,6 +352,16 @@ export function ToolRow({
           )}
         </div>
       </DisclosureRow>
+      {menu !== null && (
+        <ContextMenu
+          open
+          x={menu.x}
+          y={menu.y}
+          items={menuItems}
+          onSelect={selectMenu}
+          onClose={() => setMenu(null)}
+        />
+      )}
     </div>
   )
 }

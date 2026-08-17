@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Button, ConnectionBanner, Input, Menu, Modal, Pill } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, ConnectionBanner, ContextMenu, Input, Menu, Modal, Pill } from '@deepseek-ai/dsh-client-ui-primitives'
 import { POINTER_GRACE_MS } from '../src/pointer-grace.ts'
 
 afterEach(cleanup)
@@ -376,6 +376,119 @@ describe('Menu', () => {
         onClose={() => {}}
       />)
     expect(screen.getByRole('menu').className).not.toMatch(/scrollable/)
+  })
+
+  it('keyboard mode starts on the first selectable row, highlights it, and makes items roving-tab only', () => {
+    const { rerender } = render(
+      <Menu keyboard open={false} anchor={<span>trigger</span>} items={items} onSelect={() => {}} onClose={() => {}} />)
+    expect(screen.queryByRole('menu')).toBeNull()
+    rerender(
+      <Menu keyboard open anchor={<span>trigger</span>} items={items} onSelect={() => {}} onClose={() => {}} />)
+    const alpha = screen.getByRole('menuitem', { name: 'Alpha' })
+    expect(alpha.className).toMatch(/active/)
+    expect(alpha.getAttribute('data-menu-active')).toBe('true')
+    expect(alpha.getAttribute('tabindex')).toBe('-1')
+  })
+
+  it('keyboard mode navigates with arrows/Home/End, skips disabled rows, and selects with Enter/Space', () => {
+    const onSelect = vi.fn()
+    const kbdItems = [
+      { id: 'a', label: 'Alpha' },
+      { id: 'skip', label: 'Skip', disabled: true },
+      { id: 'b', label: 'Beta' },
+      { id: 'c', label: 'Gamma' },
+    ]
+    render(
+      <Menu keyboard open anchor={<span>trigger</span>} items={kbdItems} onSelect={onSelect} onClose={() => {}} />)
+    const active = () => document.querySelector<HTMLElement>('[data-menu-active]')
+    expect(active()!.textContent).toBe('Alpha')
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'ArrowDown' })
+    expect(active()!.textContent).toBe('Beta')
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'ArrowDown' })
+    expect(active()!.textContent).toBe('Gamma')
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'ArrowDown' })
+    expect(active()!.textContent).toBe('Alpha')
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'ArrowUp' })
+    expect(active()!.textContent).toBe('Gamma')
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Home' })
+    expect(active()!.textContent).toBe('Alpha')
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'End' })
+    expect(active()!.textContent).toBe('Gamma')
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Enter' })
+    expect(onSelect).toHaveBeenLastCalledWith('c')
+    fireEvent.keyDown(screen.getByRole('menu'), { key: ' ' })
+    expect(onSelect).toHaveBeenCalledTimes(2)
+  })
+
+  it('keyboard mode skips submenu parents, closes on Tab, and ignores navigation keys without the flag', () => {
+    const onSelect = vi.fn()
+    const onClose = vi.fn()
+    const kbdItems = [
+      { id: 'p', label: 'Parent', submenu: [{ id: 's', label: 'Sub' }] },
+      { id: 'a', label: 'Alpha' },
+    ]
+    const { rerender } = render(
+      <Menu keyboard open anchor={<span>trigger</span>} items={kbdItems} onSelect={onSelect} onClose={onClose} />)
+    const active = () => document.querySelector<HTMLElement>('[data-menu-active]')
+    expect(active()!.textContent).toBe('Alpha')
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Tab' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+    rerender(
+      <Menu open anchor={<span>trigger</span>} items={kbdItems} onSelect={onSelect} onClose={onClose} />)
+    expect(document.querySelector('[data-menu-active]')).toBeNull()
+    expect(screen.getByRole('menuitem', { name: 'Alpha' }).getAttribute('tabindex')).toBeNull()
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'ArrowDown' })
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('keyboard mode with no selectable rows ignores navigation keys', () => {
+    const onSelect = vi.fn()
+    render(
+      <Menu
+        keyboard
+        open
+        anchor={<span>trigger</span>}
+        items={[{ id: 'd', label: 'Only', disabled: true }]}
+        onSelect={onSelect}
+        onClose={() => {}}
+      />)
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'ArrowDown' })
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Enter' })
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+})
+
+describe('ContextMenu', () => {
+  it('portals a keyboard-navigable menu at the pointer coordinates; Enter selects, Escape closes', () => {
+    const onSelect = vi.fn()
+    const onClose = vi.fn()
+    const { container, rerender } = render(
+      <ContextMenu open={false} x={40} y={132} items={[{ id: 'a', label: 'Copy' }]} onSelect={onSelect} onClose={onClose} />)
+    expect(screen.queryByRole('menu')).toBeNull()
+    rerender(
+      <ContextMenu open x={40} y={132} items={[{ id: 'a', label: 'Copy' }]} onSelect={onSelect} onClose={onClose} />)
+    const menu = screen.getByRole('menu')
+    expect(container.contains(menu)).toBe(false)
+    expect(menu.parentElement).toBe(document.body)
+    // bottom-side placement: list starts 4px under the pointer.
+    expect(menu.style.left).toBe('40px')
+    expect(menu.style.top).toBe('136px')
+    const item = screen.getByRole('menuitem', { name: 'Copy' })
+    expect(item.className).toMatch(/active/)
+    fireEvent.keyDown(menu, { key: 'Enter' })
+    expect(onSelect).toHaveBeenCalledWith('a')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('stays open on an inside pointerdown and closes on an outside one', () => {
+    const onClose = vi.fn()
+    render(
+      <ContextMenu open x={10} y={10} items={[{ id: 'a', label: 'Copy' }]} onSelect={() => {}} onClose={onClose} />)
+    fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Copy' }))
+    expect(onClose).not.toHaveBeenCalled()
+    fireEvent.pointerDown(document.body)
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })
 

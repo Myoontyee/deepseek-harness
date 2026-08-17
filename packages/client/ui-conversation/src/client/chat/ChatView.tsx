@@ -13,8 +13,11 @@
 // lifecycle updates replace only their own row without remounting it.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { MouseEvent } from 'react'
 import type { ConversationTimelineSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
-import { IconChevronDownOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import {
+  ContextMenu, IconChevronDownOutline14, IconCopyOutline16, type MenuEntry, writeClipboard,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatViewSlotProps } from '../contract/slots.ts'
 import { PendingSteeringBubble } from './MessageItem.tsx'
 import { ChatNodeSeat } from './ChatNodeSeat.tsx'
@@ -145,7 +148,7 @@ function TurnStatus({ startTime, t }: {
  */
 export function ChatView({
   useSession, useSessions, useStore, renderSlot, sessionId, openFile, loadOlder, loadImage, inspectCall, chatScroll, forkAt,
-  fileMentions, t,
+  fileMentions, useInput, inputActions, t,
 }: ChatViewSlotProps) {
   const order = useSession(s => s.chat.order)
   const nodeStore = useSession(s => s.chat.nodes)
@@ -159,6 +162,7 @@ export function ChatView({
   const hasMore = useSession(s => s.hasMore)
   const loadingOlder = useSession(s => s.loadingOlder)
   const selectedCallId = useStore(s => s.selection?.callId)
+  const draft = useInput(state => state.draft)
 
   const pendingSteering = useMemo(
     () => inbox.filter(item => item.placement === 'steering'),
@@ -170,6 +174,7 @@ export function ChatView({
   const columnRef = useRef<HTMLDivElement | null>(null)
   const atBottomRef = useRef(true)
   const [atBottom, setAtBottom] = useState(true)
+  const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number; text: string } | null>(null)
   /** Last position delivered or written on the main thread. */
   const observedTopRef = useRef(0)
   /** Paging anchor: semantic row/position at click, updated by reader scrolls
@@ -362,8 +367,37 @@ export function ChatView({
     loadOlder()
   }
 
+  // Selection right-click menu (Codex behavior): a right-click over a live
+  // selection copies or explains it. Rows with their own context menu yield
+  // to it by leaving the event unhandled when a selection exists.
+  const onRootContextMenu = (event: MouseEvent<HTMLDivElement>): void => {
+    const selection = window.getSelection()
+    const text = selection?.toString().trim() ?? ''
+    if (text === '') return
+    event.preventDefault()
+    event.stopPropagation()
+    setSelectionMenu({ x: event.clientX, y: event.clientY, text })
+  }
+  const selectionItems: MenuEntry[] = [
+    { id: 'copy', label: t('copy'), icon: <IconCopyOutline16 /> },
+    { id: 'explain', label: t('contextMenu.explain') },
+  ]
+  const onSelectionSelect = (id: string): void => {
+    const menu = selectionMenu
+    setSelectionMenu(null)
+    if (menu === null) return
+    if (id === 'copy') {
+      void writeClipboard(menu.text)
+      return
+    }
+    if (id === 'explain') {
+      const prompt = t('contextMenu.explainPrompt', { text: menu.text })
+      inputActions.setDraft(draft.length === 0 ? prompt : `${draft}\n\n${prompt}`)
+    }
+  }
+
   return (
-    <div className={css.root}>
+    <div className={css.root} onContextMenu={onRootContextMenu}>
       <div ref={listRef} className={css.scroll}>
         <div ref={columnRef} className={css.column} data-chat-flow="">
           {openState === 'loading' && <div className={css.hint}>{t('chat.loadingHistory')}</div>}
@@ -402,7 +436,14 @@ export function ChatView({
               wait, tool execution, streaming) so it never flickers per step. */}
           {running && <TurnStatus startTime={runningTurnStart} t={t} />}
           {pendingSteering.map(item => (
-            <PendingSteeringBubble key={item.id} content={item.content} loadImage={loadImage} t={t} />
+            <PendingSteeringBubble
+              key={item.id}
+              content={item.content}
+              loadImage={loadImage}
+              useInput={useInput}
+              inputActions={inputActions}
+              t={t}
+            />
           ))}
         </div>
         {!atBottom && (
@@ -422,6 +463,16 @@ export function ChatView({
           </div>
         )}
       </div>
+      {selectionMenu !== null && (
+        <ContextMenu
+          open
+          x={selectionMenu.x}
+          y={selectionMenu.y}
+          items={selectionItems}
+          onSelect={onSelectionSelect}
+          onClose={() => setSelectionMenu(null)}
+        />
+      )}
     </div>
   )
 }

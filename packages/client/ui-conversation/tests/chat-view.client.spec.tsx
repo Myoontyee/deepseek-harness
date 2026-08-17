@@ -4,7 +4,7 @@
 // ObservableSnapshot fake, no wire or Tool presentation plugin.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { useEffect } from 'react'
 import type {
   AssistantMessageNode, CommandNode, CompactionSummaryNode, ConversationNode, ConversationSnapshot,
@@ -22,6 +22,7 @@ import type {
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
 import { createChatStore } from '../src/client/stores.ts'
+import type { InputState } from '../src/client/input/contract.ts'
 import { ChatView } from '../src/client/chat/ChatView.tsx'
 import { zh } from '../src/client/locales.ts'
 import { AssistantNodeView } from '../src/client/chat/AssistantNodeView.tsx'
@@ -46,6 +47,9 @@ beforeEach(() => {
 
 const SID = 's1' as SessionId
 type RoutedChatNodeOwner = ChatNodeOwnerProps & { readonly node: ChatNode }
+
+/** Static input snapshot backing the kit stub; message views only read the draft. */
+const INPUT_SNAPSHOT: InputState = { draft: '', imageIds: [], draftRev: 0, phase: 'plain', occurrences: [], queue: [] }
 
 function snapshotBase(): ConversationSnapshot {
   return {
@@ -268,7 +272,9 @@ function makeHarness(init?: Partial<ConversationSnapshot>) {
     useSessions: emptySessions(),
     useWorkspaces: emptyWorkspaces(),
     useProjection: (() => undefined),
-    useInput: (() => { throw new Error('unused') }),
+    // Static input kit: PendingSteeringBubble and the message views read the
+    // draft through this binding, so it must return a valid snapshot.
+    useInput: bindSnapshotSelector({ getSnapshot: () => INPUT_SNAPSHOT, subscribe: () => () => {} }),
     inputActions: {
       setDraft: () => {},
       addImages: () => true,
@@ -1353,5 +1359,52 @@ describe('ChatView', () => {
     const failedView = render(<failed.ChatView {...failed.props} />)
     expect(failedView.getByText('Compaction cancelled.')).toBeTruthy()
     expect(failedView.container.querySelector('[data-state="error"]')).not.toBeNull()
+  })
+})
+
+describe('ChatView selection menu', () => {
+  const root = (view: ReturnType<typeof render>): HTMLElement => (
+    view.container.querySelector('[class*="root"]') as HTMLElement
+  )
+
+  it('right-click over a live selection copies or explains it into the composer draft', () => {
+    const setDraft = vi.fn()
+    const h = makeHarness()
+    h.props.inputActions.setDraft = setDraft
+    h.props.useInput = bindSnapshotSelector({
+      getSnapshot: () => ({ ...INPUT_SNAPSHOT, draft: 'existing' }),
+      subscribe: () => () => {},
+    }) as typeof h.props.useInput
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    const spy = vi.spyOn(window, 'getSelection').mockReturnValue({ toString: () => 'selected text' } as unknown as Selection)
+    try {
+      const view = render(<h.ChatView {...h.props} />)
+      fireEvent.contextMenu(root(view), { clientX: 40, clientY: 40 })
+      expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['复制', '解释所选内容'])
+      fireEvent.click(screen.getByRole('menuitem', { name: '解释所选内容' }))
+      expect(setDraft).toHaveBeenCalledWith('existing\n\n解释以下内容：\n\nselected text')
+      expect(screen.queryByRole('menu')).toBeNull()
+      fireEvent.contextMenu(root(view), { clientX: 40, clientY: 40 })
+      fireEvent.click(screen.getByRole('menuitem', { name: '复制' }))
+      expect(writeText).toHaveBeenCalledWith('selected text')
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('no selection leaves the native context menu alone', () => {
+    const h = makeHarness()
+    const spy = vi.spyOn(window, 'getSelection').mockReturnValue({ toString: () => '   ' } as unknown as Selection)
+    try {
+      const view = render(<h.ChatView {...h.props} />)
+      fireEvent.contextMenu(root(view), { clientX: 10, clientY: 10 })
+      expect(screen.queryByRole('menu')).toBeNull()
+    } finally {
+      spy.mockRestore()
+    }
   })
 })

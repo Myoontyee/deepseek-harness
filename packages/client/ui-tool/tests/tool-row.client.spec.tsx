@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 import type { RunningToolCall, ToolResultNode } from '@deepseek-ai/dsh-client-runtime/client'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
@@ -371,6 +371,81 @@ describe('ToolRow', () => {
     expect(outputOnly.queryByText('IN')).toBeNull()
     expect(outputOnly.getByText('OUT')).toBeTruthy()
     expect(outputOnly.getByText('only out')).toBeTruthy()
+  })
+
+  it('file rows open a right-click menu with copy-path and open-file; open-file runs and closes', () => {
+    const open = vi.fn()
+    const view = render(
+      <ToolRow {...rowProps} variant="read" title="Read" summary="src/a.ts" filePath="src/a.ts" onOpenFile={open} />,
+    )
+    fireEvent.contextMenu(view.container.querySelector('[data-variant="read"]') as HTMLElement, { clientX: 40, clientY: 40 })
+    expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['复制路径', '打开文件'])
+    fireEvent.click(screen.getByRole('menuitem', { name: '打开文件' }))
+    expect(open).toHaveBeenCalledWith('src/a.ts')
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('copy-path writes the path, swaps the item to the copied label, then closes itself', async () => {
+    vi.useFakeTimers()
+    try {
+      const writeText = vi.fn().mockResolvedValue(undefined)
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText },
+      })
+      const view = render(
+        <ToolRow {...rowProps} variant="write" title="Write" summary="作文.md" filePath="作文.md" />,
+      )
+      fireEvent.contextMenu(view.container.querySelector('[data-variant="write"]') as HTMLElement, { clientX: 10, clientY: 10 })
+      // Without onOpenFile only the path action exists.
+      expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['复制路径'])
+      fireEvent.click(screen.getByRole('menuitem', { name: '复制路径' }))
+      expect(writeText).toHaveBeenCalledWith('作文.md')
+      await act(async () => { await Promise.resolve() })
+      expect(screen.getByRole('menuitem', { name: '复制成功' })).toBeTruthy()
+      await vi.advanceTimersByTimeAsync(800)
+      expect(screen.queryByRole('menu')).toBeNull()
+      expect(screen.queryByRole('menuitem', { name: '复制成功' })).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('rows without a path never open a context menu', () => {
+    const view = render(<ToolRow {...rowProps} />)
+    fireEvent.contextMenu(view.container.querySelector('[data-variant="bash"]') as HTMLElement, { clientX: 10, clientY: 10 })
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('an error row hides the file actions (the failure line replaces the path)', () => {
+    const open = vi.fn()
+    const view = render(
+      <ToolRow
+        {...rowProps}
+        variant="read"
+        title="Read"
+        summary="src/a.ts"
+        filePath="src/a.ts"
+        onOpenFile={open}
+        state="error"
+        errorSummary="boom"
+      />,
+    )
+    fireEvent.contextMenu(view.container.querySelector('[data-variant="read"]') as HTMLElement, { clientX: 10, clientY: 10 })
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('a live selection yields to the selection menu (no row menu opens)', () => {
+    const spy = vi.spyOn(window, 'getSelection').mockReturnValue({ toString: () => 'sel' } as unknown as Selection)
+    try {
+      const view = render(
+        <ToolRow {...rowProps} variant="read" title="Read" summary="src/a.ts" filePath="src/a.ts" onOpenFile={() => {}} />,
+      )
+      fireEvent.contextMenu(view.container.querySelector('[data-variant="read"]') as HTMLElement, { clientX: 10, clientY: 10 })
+      expect(screen.queryByRole('menu')).toBeNull()
+    } finally {
+      spy.mockRestore()
+    }
   })
 })
 
