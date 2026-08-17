@@ -512,4 +512,80 @@ describe('workspace browser rows', () => {
     )
     expect(screen.getByRole('treeitem').className).toMatch(/dropAfter/)
   })
+
+  describe('session row context menu', () => {
+    const node: SessionNode = {
+      id: sid('s1'), title: 'One', blank: false, running: false,
+      runningSubagentCount: 0, completed: false, updatedAt: 0,
+    }
+
+    it('right-click opens the menu with the full action set; pin moves the session to the front', () => {
+      const onPin = vi.fn()
+      const view = render(
+        <SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+          onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()}
+          onPin={onPin} workspaceId={wid('w1')} cwd="C:\\work" firstSessionId={sid('s0')} t={t} />,
+      )
+      fireEvent.contextMenu(view.container.querySelector('[class*="sessionRow"]') as HTMLElement, { clientX: 40, clientY: 40 })
+      expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
+        '重命名', '分叉会话', '归档会话', '置顶聊天', '复制工作目录', '复制会话 ID', '复制会话链接',
+      ])
+      fireEvent.click(screen.getByRole('menuitem', { name: '置顶聊天' }))
+      expect(onPin).toHaveBeenCalledWith(sid('s1'), wid('w1'), sid('s0'))
+      expect(screen.queryByRole('menu')).toBeNull()
+    })
+
+    it('pin is disabled for the first session; copy actions write the clipboard', async () => {
+      const restore = installClipboard(vi.fn(async () => {}))
+      try {
+        const view = render(
+          <SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+            onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()}
+            onPin={vi.fn()} workspaceId={wid('w1')} cwd="C:\\work" firstSessionId={sid('s1')} t={t} />,
+        )
+        const row = view.container.querySelector('[class*="sessionRow"]') as HTMLElement
+        fireEvent.contextMenu(row, { clientX: 10, clientY: 10 })
+        const pin = screen.getByRole('menuitem', { name: '置顶聊天' }) as HTMLButtonElement
+        expect(pin.disabled).toBe(true)
+        fireEvent.click(screen.getByRole('menuitem', { name: '复制会话 ID' }))
+        const clipboard = navigator.clipboard as unknown as { writeText: ReturnType<typeof vi.fn> }
+        await act(async () => { await Promise.resolve() })
+        expect(clipboard.writeText).toHaveBeenCalledWith('s1')
+      } finally {
+        restore()
+      }
+    })
+
+    it('flat rows (no workspace context) omit pin and copy-cwd; blank rows never open a menu', () => {
+      const blank: SessionNode = { ...node, id: sid('blank'), blank: true }
+      const view = render(
+        <SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+          onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />,
+      )
+      fireEvent.contextMenu(view.container.querySelector('[class*="sessionRow"]') as HTMLElement, { clientX: 10, clientY: 10 })
+      expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
+        '重命名', '分叉会话', '归档会话', '复制会话 ID', '复制会话链接',
+      ])
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(screen.queryByRole('menu')).toBeNull()
+
+      const blankView = render(
+        <SessionNodeItem node={blank} currentId={undefined} now={0} onOpen={vi.fn()}
+          onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />,
+      )
+      fireEvent.contextMenu(blankView.container.querySelector('[class*="sessionRow"]') as HTMLElement, { clientX: 10, clientY: 10 })
+      expect(screen.queryByRole('menu')).toBeNull()
+    })
+
+    it('right-click does not open the session', () => {
+      const onOpen = vi.fn()
+      const view = render(
+        <SessionNodeItem node={node} currentId={undefined} now={0} onOpen={onOpen}
+          onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />,
+      )
+      fireEvent.contextMenu(view.container.querySelector('[class*="sessionRow"]') as HTMLElement, { clientX: 10, clientY: 10 })
+      expect(onOpen).not.toHaveBeenCalled()
+      expect(screen.getByRole('menu')).toBeDefined()
+    })
+  })
 })

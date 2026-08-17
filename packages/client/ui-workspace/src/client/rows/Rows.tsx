@@ -5,14 +5,15 @@
  * except workspace Rename/Delete and session Rename/Fork/Archive; the session
  * and workspace hover cards are suppressed while a menu is open.
  */
-import { useState } from 'react'
+import { useState, type MouseEvent as ReactMouseEvent } from 'react'
 import clsx from 'clsx'
 import {
-  HoverCard, IconArchiveOutline20, IconBranchOutline16, IconEditOutline16,
+  ContextMenu, HoverCard, IconArchiveOutline20, IconBranchOutline16, IconEditOutline16,
   IconEllipsisOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16,
-  IconTrashOutline16, IconTriangleRightFill14, Menu, StateDot,
+  IconTrashOutline16, IconTriangleRightFill14, Menu, StateDot, writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { MenuEntry, StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-runtime/client'
 import type { WorkspaceBrowserProps } from '../contract/slots.ts'
 import type { GroupNode, SearchResultNode, SessionNode } from '../tree.ts'
 import { relativeTime } from '../tree.ts'
@@ -350,7 +351,10 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
  * @param props.t - the browser root's locale seat.
  * @returns the session row.
  */
-export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork, onArchive, drag, flat = false, t }: {
+export function SessionNodeItem({
+  node, currentId, now, onOpen, onRename, onFork, onArchive, onPin,
+  workspaceId, cwd, firstSessionId, drag, flat = false, t,
+}: {
   node: SessionNode
   currentId: string | undefined
   now: number
@@ -361,6 +365,14 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   onFork: (id: SessionNode['id']) => void
   /** Archive this session (row menu action; commits without a dialog). */
   onArchive: (id: SessionNode['id']) => void
+  /** Pin this session to the top of its workspace (row menu action). */
+  onPin?: ((id: SessionNode['id'], workspaceId: WorkspaceId, beforeSessionId: SessionId) => void) | undefined
+  /** The owning workspace id; absent on the flat list, which spans workspaces. */
+  workspaceId?: WorkspaceId | undefined
+  /** The owning workspace working directory; absent on the flat list. */
+  cwd?: string | undefined
+  /** The workspace's first visible session id (the pin anchor); absent on the flat list. */
+  firstSessionId?: SessionId | undefined
   /** Present only on draggable rows (workspace-group sessions outside search). */
   drag?: RowDragProps | undefined
   /** The row is rendered without a parent Workspace header. */
@@ -374,15 +386,50 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   const primaryStatus = statuses[0]
   const showStatus = primaryStatus.state !== 'done' || row.completed
   const [menuOpen, setMenuOpen] = useState(false)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
   // Archive hides the row through the registry-global archive set and never
   // touches the session log, so it is not styled as destructive and needs no
   // confirmation dialog.
-  const sessionMenuItems = [
+  const sessionMenuItems: MenuEntry[] = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutline16 /> },
     { id: 'fork', label: t('menu.fork'), icon: <IconBranchOutline16 /> },
     // 20-native glyph in the menu's 16px icon slot (Menu.module.css .itemIcon).
     { id: 'archive', label: t('menu.archiveSession'), icon: <IconArchiveOutline20 size={16} /> },
   ]
+  if (!row.blank && workspaceId !== undefined && firstSessionId !== undefined && onPin !== undefined) {
+    sessionMenuItems.push({
+      id: 'pin', label: t('menu.pin'), disabled: node.id === firstSessionId,
+    })
+  }
+  if (!row.blank) {
+    sessionMenuItems.push(
+      { type: 'separator', id: 'sep-copy' },
+      ...(cwd !== undefined ? [{ id: 'copy-cwd', label: t('menu.copyCwd') }] : []),
+      { id: 'copy-id', label: t('menu.copySessionId') },
+      { id: 'copy-link', label: t('menu.copySessionLink') },
+    )
+  }
+  const onSessionMenuSelect = (id: string): void => {
+    setMenuOpen(false)
+    setCtxMenu(null)
+    if (id === 'rename') { onRename(node.id, row.title); return }
+    if (id === 'fork') { onFork(node.id); return }
+    if (id === 'archive') { onArchive(node.id); return }
+    if (id === 'pin') {
+      if (workspaceId !== undefined && firstSessionId !== undefined) onPin?.(node.id, workspaceId, firstSessionId)
+      return
+    }
+    if (id === 'copy-cwd') { void writeClipboard(cwd ?? ''); return }
+    if (id === 'copy-id') { void writeClipboard(node.id); return }
+    if (id === 'copy-link') { void writeClipboard(`${location.origin}/?session=${node.id}`); return }
+  }
+  const onRowContextMenu = (event: ReactMouseEvent<HTMLDivElement>): void => {
+    if (row.blank) return
+    event.preventDefault()
+    event.stopPropagation()
+    setMenuOpen(false)
+    setCtxMenu({ x: event.clientX, y: event.clientY })
+  }
   // Figma session cell: pad 8, status slot 16, then a 4px title gap.
   const ownRow = (
     <div
@@ -394,6 +441,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
       role="treeitem"
       aria-selected={selected}
       onClick={() => { onOpen(node.id) }}
+      onContextMenu={onRowContextMenu}
       draggable={drag !== undefined}
       onDragStart={drag === undefined
         ? undefined
@@ -439,12 +487,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
             open={menuOpen}
             onClose={() => { setMenuOpen(false) }}
             items={sessionMenuItems}
-            onSelect={(id) => {
-              setMenuOpen(false)
-              if (id === 'rename') onRename(node.id, row.title)
-              if (id === 'fork') onFork(node.id)
-              if (id === 'archive') onArchive(node.id)
-            }}
+            onSelect={onSessionMenuSelect}
             portal
             closeOnPointerLeave
             anchor={(
@@ -452,13 +495,23 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
                 type="button"
                 className={css.iconButton}
                 aria-label={t('actions.session.aria', { name: title })}
-                onClick={(e) => { e.stopPropagation(); setMenuOpen(v => !v) }}
+                onClick={(e) => { e.stopPropagation(); setCtxMenu(null); setMenuOpen(v => !v) }}
               >
                 <IconEllipsisOutline16 />
               </button>
             )}
           />
         </span>
+      )}
+      {ctxMenu !== null && (
+        <ContextMenu
+          open
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={sessionMenuItems}
+          onSelect={onSessionMenuSelect}
+          onClose={() => setCtxMenu(null)}
+        />
       )}
     </div>
   )

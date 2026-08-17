@@ -516,6 +516,12 @@ function SessionTree({
                     onRename={onSessionRename}
                     onFork={forkSession}
                     onArchive={onSessionArchive}
+                    onPin={(sessionId, wsId, beforeSessionId) => {
+                      void insertSessionBefore(wsId, sessionId, beforeSessionId)
+                    }}
+                    workspaceId={group.workspaceId}
+                    cwd={group.cwd}
+                    firstSessionId={group.sessions[0]?.id}
                     drag={dragProps}
                     t={t}
                   />
