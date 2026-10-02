@@ -19,6 +19,7 @@
 
 | 工具包 | 模型可见名称 | 依赖 | 写入／影响 | 随产品发布的别名 | 部署说明 |
 | --- | --- | --- | --- | --- | --- |
+| `@deepseek-ai/dsh-api-session-controller` | `list_sessions`, `send_session_message` | `ctx.tools`, `ctx.sessionController`, `ctx.agents`, `ctx.workspaceRegistry` | `tool/call`, `tool/result`, `agent/inbox/spliced`, `user/message` | - | - |
 | `@deepseek-ai/dsh-plugin-manager` | `plugin_manager` | `ctx.tools`, `ctx.pluginManager`, `ctx.sandboxPolicy` | `tool/call`, `tool/result`, `user/message` | - | - |
 | `@deepseek-ai/dsh-mcp-resources` | `list_mcp_resource_templates`, `list_mcp_resources`, `read_mcp_resource` | `ctx.tools`, `ctx.mcpResources` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-experimental-browser-use-stagehand-native` | `stagehand_act`、`stagehand_extract`、`stagehand_navigate`、`stagehand_observe`、`stagehand_screenshot`、`stagehand_tabs` | `ctx.browserUse`、`ctx.agents`、`ctx.tools`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | - |
@@ -49,6 +50,59 @@
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-workspace-dependencies` | `load_workspace_dependencies` | `ctx.tools` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
+
+<a id="deepseek-aidsh-api-session-controller"></a>
+
+## `@deepseek-ai/dsh-api-session-controller`
+
+### `list_sessions`
+
+查找当前 Host 上已有的普通会话，包括其他项目的会话，以便联系用户指定的对话。这些是独立会话，不是子代理。如果还有更多匹配项，请缩小查询范围。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Optional title, session id, or working-directory fragment."
+    }
+  }
+}
+```
+
+源码：[`packages/api/session-controller/src/session-tools.ts`](../packages/api/session-controller/src/session-tools.ts)
+
+### `send_session_message`
+
+仅在用户要求联系目标时，向当前 Host 上已有的独立会话发送文本。目标会话将排队开始新一轮。返回值表示已接受，不表示已完成。启用 reply_requested 后，目标的最终回复会作为新消息返回一次；不要轮询或重复发送请求。收到反馈本身并不授权再次发送消息。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "description": "Exact target identity from list_sessions or a user-provided deep link."
+    },
+    "message": {
+      "type": "string",
+      "description": "Self-contained message for the target. Send only relevant context."
+    },
+    "reply_requested": {
+      "type": "boolean",
+      "description": "Whether to return one final response automatically. Set false for feedback or information that needs no answer."
+    }
+  },
+  "required": [
+    "session_id",
+    "message",
+    "reply_requested"
+  ]
+}
+```
+
+源码：[`packages/api/session-controller/src/session-tools.ts`](../packages/api/session-controller/src/session-tools.ts)
 
 <a id="deepseek-aidsh-plugin-manager"></a>
 
