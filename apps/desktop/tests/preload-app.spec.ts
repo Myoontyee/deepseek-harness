@@ -191,6 +191,49 @@ it('withholds the product API from same-origin child frames', async () => {
   expect(electron.contextBridge.exposeInMainWorld).toHaveBeenCalledWith('dshDesktop', { protocolVersion: 1 })
 })
 
+it('receives pending and later conversation links only while subscribed', async () => {
+  vi.stubGlobal('location', new URL('dsh-app://app/'))
+  electron.ipcRenderer.invoke.mockResolvedValueOnce('initial-session').mockResolvedValueOnce('later-session')
+  await import('../src/preload-app.ts')
+  const api = electron.contextBridge.exposeInMainWorld.mock.calls.find(([name]) => name === 'dshDesktop')?.[1] as DshDesktopProductApi
+  const listener = vi.fn()
+  const off = api.sessions.subscribe(listener)
+  await Promise.resolve()
+  expect(listener).toHaveBeenCalledExactlyOnceWith('initial-session')
+  const handler = electron.ipcRenderer.on.mock.calls.find(([name]) => name === DESKTOP_IPC.sessionLinkChanged)![1] as () => void
+  handler()
+  await Promise.resolve()
+  expect(listener).toHaveBeenLastCalledWith('later-session')
+  expect(electron.ipcRenderer.invoke).toHaveBeenCalledWith(DESKTOP_IPC.takeSessionLink)
+  electron.ipcRenderer.invoke.mockResolvedValueOnce('disposed-session')
+  handler()
+  off()
+  await Promise.resolve()
+  expect(listener).toHaveBeenCalledTimes(2)
+  expect(electron.ipcRenderer.off).toHaveBeenCalledWith(DESKTOP_IPC.sessionLinkChanged, handler)
+})
+
+it('contains a failed conversation-link read and a throwing listener', async () => {
+  vi.stubGlobal('location', new URL('dsh-app://app/'))
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
+  electron.ipcRenderer.invoke.mockRejectedValueOnce(new Error('window reloaded'))
+  await import('../src/preload-app.ts')
+  const api = electron.contextBridge.exposeInMainWorld.mock.calls.find(([name]) => name === 'dshDesktop')?.[1] as DshDesktopProductApi
+  const listener = vi.fn(() => { throw new Error('consumer disposed') })
+  const off = api.sessions.subscribe(listener)
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(listener).not.toHaveBeenCalled()
+  const handler = electron.ipcRenderer.on.mock.calls.find(([name]) => name === DESKTOP_IPC.sessionLinkChanged)![1] as () => void
+  electron.ipcRenderer.invoke.mockResolvedValueOnce('later-session')
+  handler()
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(listener).toHaveBeenCalledOnce()
+  expect(console.warn).toHaveBeenCalledTimes(2)
+  off()
+})
+
 it('forwards only the focused product iframe and releases native input subscriptions', async () => {
   vi.stubGlobal('location', new URL('dsh-app://app/'))
   await import('../src/preload-app.ts')

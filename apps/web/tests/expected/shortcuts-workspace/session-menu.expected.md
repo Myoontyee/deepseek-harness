@@ -3,3 +3,9 @@
   - menuitem "Rename"
   - menuitem "Fork session"
   - menuitem "Archive session"
+  - separator
+  - menuitem "Copy deep link"
+  - menuitem "Copy as Markdown"
+  - separator
+  - menuitem "Copy working directory"
+  - menuitem "Open working directory"

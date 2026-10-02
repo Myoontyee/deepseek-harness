@@ -57,6 +57,8 @@ Web bundle 将本包与 Connection、`dsh-commands`、`dsh-client-ui-commands` �
 
 ### 预期行为
 
+侧栏的“复制为 Markdown”读取 `api/session.export?sessionId=<id>&format=markdown&locale=zh`（`en` 使用英文角色标题）。该认证 GET/HEAD 路由返回 `text/markdown; charset=utf-8` 并设置 `Cache-Control: no-store`。它获取并释放完整 Session observation，不激活 Agent，也不要求 ZIP 附件服务。所有已提交的用户与助手正文按事件顺序保留，包括上下文压缩前的原始消息；内部上下文、思考、工具载荷和未完成的流式输出不包含在内。附件以文件名和图片占位说明表示，不包含附件字节或传输链接。默认 ZIP 路由保持原有行为。Markdown 只包含所选对话，不含子会话。
+
 弹窗报告三个阶段：准备中、开始下载或失败。关闭弹窗不会取消正在进行的下载，该操作随后结束时弹窗也不会重新打开。每个会话同时只允许一项下载，重复操作共用该任务。导出包含实时会话的最新事件：Host 端点在读取前会 flush 活动的根会话，因此斜杠命令触发的 ZIP 会包含启动下载的 `command/run` 与 `command/done` 事件对；非活动的持久化会话不需要 flush。每份逻辑日志在归档中使用当前 generation 的规范文件名（v0 为 `session.jsonl`，其他版本为 `session.vN.jsonl`），每个子会话目录下也遵循同一规则。图片使用 `media/<attachmentId>.<ext>`，通用文件使用 `files/<digest-prefix>/<digest>/<name>`。通用文件以有界分块读取并压缩，因此导出大型上传文件时不会把它完整缓冲进内存。
 
 附件收集读取内置 Session 事件声明的内容字段与已完成的 assistant 流块，包括扁平的 V4 tool 角色消息。未知事件载荷与无关字段在导出日志中保持不变，但不会触发附件读取。

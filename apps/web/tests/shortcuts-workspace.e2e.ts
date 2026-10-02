@@ -180,7 +180,7 @@ describe.skipIf(mode === 'record')('web e2e: workspace shortcuts', () => {
     ])
     await expect.poll(() => opener.getAttribute('data-state')).toBe('idle')
     await compareOrRefreshGolden(join(root, 'files-open.expected.md'),
-      await captureStableAria(page, '[data-files-state="tree"]', scaffold.workspaceCwd), mode)
+      (await captureStableAria(page, '[data-files-state="tree"]', scaffold.workspaceCwd)).replaceAll('{{cwd}}\\', '{{cwd}}/'), mode)
     await opener.getByRole('button', { name: 'More ways to open', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Finder (default)', exact: true }).waitFor()
     await page.keyboard.press('Escape')

@@ -18,6 +18,7 @@ import {
   type SessionLogExportReady,
 } from './archive.ts'
 import { SESSION_LOG_EXPORT_PATH } from './routes.ts'
+import { sessionMarkdown } from './markdown.ts'
 
 export {
   DEFAULT_SESSION_LOG_COMPRESSION_LEVEL,
@@ -114,12 +115,31 @@ async function sessionLogExportResponse(
   const query = Object.fromEntries(url.searchParams)
   const sessionIdValue = query['sessionId']
   const descendantsValue = query['includeDescendants']
+  const format = query['format'] ?? 'zip'
   if (sessionIdValue === undefined || sessionIdValue.length === 0
+    || (format !== 'zip' && format !== 'markdown')
     || (descendantsValue !== undefined && descendantsValue !== 'true' && descendantsValue !== 'false')) {
     return new Response('missing or invalid sessionId query parameter', { status: 400 })
   }
   const sessionId = brandString<SessionId>(sessionIdValue)
   const deps = sessionLogExportDeps(ctx)
+  if (format === 'markdown') {
+    if (deps.sessionQuery === undefined) {
+      return new Response('session Markdown export is unavailable', { status: 500 })
+    }
+    try {
+      using observation = await deps.sessionQuery.observeSession(sessionId, {
+        signal: request.signal, projectionMode: 'none',
+      })
+      request.signal.throwIfAborted()
+      return new Response(sessionMarkdown(observation.events, query['locale'] === 'zh' ? 'zh' : 'en'), {
+        headers: { 'content-type': 'text/markdown; charset=utf-8', 'cache-control': 'no-store' },
+      })
+    } catch {
+      request.signal.throwIfAborted()
+      return new Response('session Markdown export failed to read the conversation', { status: 500 })
+    }
+  }
   if (deps.sessionQuery === undefined
     || deps.sessionPersistence === undefined
     || deps.attachments === undefined) {

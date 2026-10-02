@@ -294,6 +294,11 @@ export type RowToast =
   | { kind: 'unpinFailed' }
   | { kind: 'archivedNotOpenable' }
   | { kind: 'defaultWorkspaceFailed' }
+  | { kind: 'sessionLinkUnavailable' }
+  | { kind: 'copied' }
+  | { kind: 'copyFailed' }
+  | { kind: 'exportFailed' }
+  | { kind: 'openDirectoryFailed' }
   /**
    * An explicit New Session request that failed. `message` is untranslated:
    * a Host refusal as `code: message` — the stable code stays in the copy so
@@ -303,6 +308,18 @@ export type RowToast =
 
 /** The notice on display; `seq` keys remounts so a repeated notice restarts its hold. */
 export type RowToastState = RowToast & { seq: number }
+
+/** Host and clipboard operations shared by the utility menu entries. */
+export interface SessionUtilityInjected {
+  /** Copy a Desktop conversation link. */
+  copySessionLink: (sessionId: SessionId) => void
+  /** Copy the complete committed conversation, including older history. */
+  copySessionMarkdown: (sessionId: SessionId, displayTitle: string) => void
+  /** Copy this Session's working directory. */
+  copySessionDirectory: (path: string) => void
+  /** Ask the Host to open this Session's working directory. */
+  openSessionDirectory: (path: string) => void
+}
 
 /**
  * Pin action share (menu row and hover button). The callbacks carry the whole

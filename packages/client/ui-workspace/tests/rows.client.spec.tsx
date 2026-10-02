@@ -653,6 +653,38 @@ describe('workspace browser rows', () => {
     expect(onOpen).not.toHaveBeenCalled()
   })
 
+  it('opens the same session actions on right-click without changing the selected conversation', () => {
+    const onOpen = vi.fn()
+    const node: SessionNode = {
+      id: sid('context-target'), title: 'Context target', blank: false, running: false,
+      runningSubagentCount: 0, completed: false, updatedAt: 0, pinned: false, archived: false,
+    }
+    render(<SessionNodeItem node={node} currentId={sid('another')} now={0} onOpen={onOpen} t={t} />)
+    const row = screen.getByRole('treeitem')
+    const event = createEvent.contextMenu(row, { clientX: 80, clientY: 130 })
+    fireEvent(row, event)
+    expect(event.defaultPrevented).toBe(true)
+    expect(screen.getByRole('menu')).toBeTruthy()
+    expect(onOpen).not.toHaveBeenCalled()
+    expect(row.getAttribute('aria-selected')).toBe('false')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).toBeNull()
+    fireEvent.contextMenu(row, { clientX: 100, clientY: 170 })
+    expect(screen.getByRole('menu')).toBeTruthy()
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
+  it('does not offer a context menu for a provisional blank conversation', () => {
+    const node: SessionNode = {
+      id: sid('blank-context'), title: '', blank: true, running: false,
+      runningSubagentCount: 0, completed: false, updatedAt: 0, pinned: false, archived: false,
+    }
+    render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()} t={t} />)
+    fireEvent.contextMenu(screen.getByRole('treeitem'))
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
   it('renders the menu list with the row identity and open state, and returns focus to the trigger after an entry closes it', async () => {
     const onOpen = vi.fn()
     const onEntry = vi.fn()

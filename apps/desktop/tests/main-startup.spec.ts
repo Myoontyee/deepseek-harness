@@ -437,6 +437,37 @@ afterEach(async () => {
 })
 
 describe('desktop main startup', () => {
+  it('retains a cold-start conversation link until the owned product renderer requests it', async () => {
+    vi.stubGlobal('process', { ...process, argv: ['DeepSeek Harness.exe', 'dsh://session/local%20session'] })
+    await readyForUpdate()
+    expect(() => invoke(DESKTOP_IPC.takeSessionLink, 'shell')).toThrow(/rejected/u)
+    expect(invoke(DESKTOP_IPC.takeSessionLink, 'app')).toBe('local session')
+    expect(invoke(DESKTOP_IPC.takeSessionLink, 'app')).toBeUndefined()
+  })
+
+  it('receives conversation links from a second Windows instance and the operating-system URL event', async () => {
+    await readyForUpdate()
+    const window = harness.windows[0]!
+    harness.app.emit('second-instance', {}, ['DeepSeek Harness.exe', 'dsh://session/from-arguments'])
+    expect(window.webContents.send).toHaveBeenCalledWith(DESKTOP_IPC.sessionLinkChanged)
+    expect(invoke(DESKTOP_IPC.takeSessionLink, 'app')).toBe('from-arguments')
+    const event = { preventDefault: vi.fn() }
+    harness.app.emit('open-url', event, 'dsh://session/from-event')
+    expect(event.preventDefault).toHaveBeenCalledOnce()
+    expect(invoke(DESKTOP_IPC.takeSessionLink, 'app')).toBe('from-event')
+    expect(window.urls).toEqual(['dsh-app://app/'])
+  })
+
+  it('does not dispatch unrelated URLs or let a foreign product window consume a conversation link', async () => {
+    await readyForUpdate()
+    harness.app.emit('open-url', { preventDefault: vi.fn() }, 'https://example.com/')
+    expect(invoke(DESKTOP_IPC.takeSessionLink, 'app')).toBeUndefined()
+    harness.app.emit('open-url', { preventDefault: vi.fn() }, 'dsh://session/owned')
+    const take = harness.handlers.get(DESKTOP_IPC.takeSessionLink)!
+    expect(() => take({ sender: {}, senderFrame: { url: 'dsh-app://app/' } })).toThrow(/rejected/u)
+    expect(invoke(DESKTOP_IPC.takeSessionLink, 'app')).toBe('owned')
+  })
+
   it('routes shell update documents and assets through the registered main protocol handler', async () => {
     const root = join(import.meta.dirname, '..')
     vi.spyOn(harness.app, 'getAppPath').mockReturnValue(root)
@@ -1075,7 +1106,7 @@ describe('desktop main startup', () => {
       expect(window.show.mock.invocationCallOrder[0]).toBeLessThan(window.moveTop.mock.invocationCallOrder[0]!)
     }
     window.destroy()
-    harness.app.emit('second-instance')
+    harness.app.emit('second-instance', {}, [])
     const replacement = harness.windows[1]!
     await replacement.shown.promise
     expect(replacement.show).toHaveBeenCalledOnce()
@@ -1116,7 +1147,7 @@ describe('desktop main startup', () => {
     expect(harness.dialog.showMessageBox).not.toHaveBeenCalled()
     expect(window.hide).toHaveBeenCalledOnce()
     await host.stopping.promise
-    harness.app.emit('second-instance')
+    harness.app.emit('second-instance', {}, [])
     expect(window.show).not.toHaveBeenCalled()
     expect(window.focus).not.toHaveBeenCalled()
     host.exited.resolve()
@@ -1140,7 +1171,7 @@ describe('desktop main startup', () => {
     harness.trays[0]!.emit('click')
     expect(window.show).toHaveBeenCalledOnce()
     expect(window.focus).toHaveBeenCalled()
-    harness.app.emit('second-instance')
+    harness.app.emit('second-instance', {}, [])
     expect(window.show).toHaveBeenCalledTimes(2)
     // Locale changes relabel the tray together with the application menu.
     const relabels = harness.trays[0]!.setContextMenu.mock.calls.length

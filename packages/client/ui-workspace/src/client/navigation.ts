@@ -25,6 +25,10 @@ interface MainSelection {
   readonly subagentAddress?: SubagentAddress
 }
 
+interface DesktopSessionLinkBridge {
+  subscribe(listener: (sessionId: string) => void): () => void
+}
+
 /** Workspace archive and directory operations consumed by Client UI domains. */
 export interface UiWorkspace {
   /**
@@ -283,12 +287,25 @@ class UiWorkspaceService extends Service implements UiWorkspace {
 
   private watchNavigation(): () => void {
     let initial: 'waiting' | 'connecting' | 'done' = 'waiting'
+    let pendingSessionLink: string | undefined
     const reconcile = (): void => {
       if (this.lifetime.signal.aborted) return
-      if (this.clearArchivedCurrent()) return
-      if (initial !== 'waiting') return
       const workspace = this.workspaces.list.getSnapshot()
       const sessions = this.sessions.list.getSnapshot()
+      if (pendingSessionLink !== undefined && workspace.phase === 'ready' && sessions.phase === 'ready') {
+        const requested = pendingSessionLink
+        pendingSessionLink = undefined
+        const sessionId = sessions.ids.find(id => id === requested)
+        if (sessionId === undefined || workspace.archivedSessionIds.includes(sessionId)) {
+          this.notify({ kind: 'sessionLinkUnavailable' })
+        } else {
+          initial = 'done'
+          this.openSession(sessionId)
+          return
+        }
+      }
+      if (this.clearArchivedCurrent()) return
+      if (initial !== 'waiting') return
       if (workspace.phase !== 'ready' || sessions.phase !== 'ready') return
       if (this.mainReference !== undefined) {
         initial = 'done'
@@ -307,9 +324,17 @@ class UiWorkspaceService extends Service implements UiWorkspace {
 
     const disposeWorkspaces = this.workspaces.list.subscribe(reconcile)
     const disposeSessions = this.sessions.list.subscribe(reconcile)
+    const desktop = (globalThis as typeof globalThis & {
+      dshDesktop?: { readonly protocolVersion: number; readonly sessions?: DesktopSessionLinkBridge }
+    }).dshDesktop
+    const disposeLinks = desktop?.protocolVersion === 1 ? desktop.sessions?.subscribe((sessionId) => {
+      pendingSessionLink = sessionId
+      reconcile()
+    }) : undefined
     reconcile()
     return () => {
       this.lifetime.abort()
+      disposeLinks?.()
       disposeSessions()
       disposeWorkspaces()
     }

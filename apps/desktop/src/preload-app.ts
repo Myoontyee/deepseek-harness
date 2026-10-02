@@ -15,6 +15,22 @@ function createProductApi(): DshDesktopProductApi {
     protocolVersion: 1,
     browser: createDesktopBrowserBridge(),
     deviceInfo: () => ipcRenderer.invoke(DESKTOP_IPC.deviceInfo) as Promise<string>,
+    sessions: {
+      subscribe(listener) {
+        let disposed = false
+        const receive = (): void => {
+          void (ipcRenderer.invoke(DESKTOP_IPC.takeSessionLink) as Promise<string | undefined>)
+            .then((sessionId) => { if (!disposed && sessionId !== undefined) listener(sessionId) })
+            .catch((error: unknown) => { console.warn('desktop conversation link delivery failed:', error) })
+        }
+        ipcRenderer.on(DESKTOP_IPC.sessionLinkChanged, receive)
+        receive()
+        return () => {
+          disposed = true
+          ipcRenderer.off(DESKTOP_IPC.sessionLinkChanged, receive)
+        }
+      },
+    },
     keyboard: {
       closeWindow: revision => ipcRenderer.invoke(DESKTOP_IPC.shortcutsCloseWindow, revision) as Promise<void>,
       subscribe: (listener) => {

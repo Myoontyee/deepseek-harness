@@ -26,6 +26,9 @@ export function RowActionToast({ useToast, useStore, dismissToast, undoArchive, 
   const toast = useToast(current => current)
   const archivedRowsVisible = useStore(state => (state.archivedFilter ?? 'default') !== 'default')
   if (toast === null) return null
+  if (toast.kind === 'copied') {
+    return <Toast key={`toast-${String(toast.seq)}`} text={t('toast.copied')} tone="success" onDone={dismissToast} />
+  }
   if (toast.kind === 'archived' || toast.kind === 'stoppedAndArchived') {
     const { sessionId } = toast
     return (
@@ -67,7 +70,7 @@ export function RowActionToast({ useToast, useStore, dismissToast, undoArchive, 
 
 /** The copy of one plain warning, keyed by the notice kind the union closes over. */
 function plainNoticeText(
-  toast: Exclude<RowToastState, { kind: 'archived' | 'stoppedAndArchived' | 'createFailed' }>,
+  toast: Exclude<RowToastState, { kind: 'archived' | 'stoppedAndArchived' | 'createFailed' | 'copied' }>,
   t: RowToastProps['t'],
 ): string {
   switch (toast.kind) {
@@ -75,6 +78,10 @@ function plainNoticeText(
     case 'unpinFailed': return t('toast.unpinFailed')
     case 'defaultWorkspaceFailed': return t('defaultWorkspace.failed')
     case 'archivedNotOpenable': return t('toast.archivedNotOpenable')
+    case 'sessionLinkUnavailable': return t('toast.sessionLinkUnavailable')
+    case 'copyFailed': return t('toast.copyFailed')
+    case 'exportFailed': return t('toast.exportFailed')
+    case 'openDirectoryFailed': return t('toast.openDirectoryFailed')
     /* v8 ignore next 2 -- closed-union backstop; only reached if a notice kind is forged */
     default:
       return assertNever(toast)

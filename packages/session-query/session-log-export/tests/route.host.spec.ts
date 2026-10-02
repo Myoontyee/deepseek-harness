@@ -1,11 +1,12 @@
 import { Context } from '@deepseek-ai/cordis'
 import { HostConnectionService } from '@deepseek-ai/dsh-client-connection'
 import type { BrowserAuth } from '@deepseek-ai/dsh-client-connection/src/browser-auth.ts'
-import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
-import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
+import { SESSION_FORMAT_VERSION, SessionSeq } from '@deepseek-ai/dsh-session'
+import { brandString } from '@deepseek-ai/dsh-brand'
+import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionHandle } from '@deepseek-ai/dsh-session-persistence'
 import { strFromU8, unzipSync } from 'fflate'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   Config,
   SESSION_LOG_FILENAME,
@@ -102,6 +103,41 @@ describe('Session log export Fetch route', () => {
     expect(Config({ compressionLevel: 9 })).toEqual({ compressionLevel: 9 })
     for (const compressionLevel of [-1, 10, 1.5]) {
       expect(() => Config({ compressionLevel } as never)).toThrow()
+    }
+  })
+
+  it('exports Markdown from a complete observation and releases the lease without requiring ZIP services', async () => {
+    const ctx = new Context()
+    ctx.provide('commands', { register: () => () => {} } as never)
+    const release = vi.fn()
+    const events: SessionEvent[] = [{
+      type: 'user/message', seq: SessionSeq(0), time: 1, surfaceOp: 'append',
+      data: {
+        role: 'user', id: brandString<SessionEvent<'user/message'>['data']['id']>('message'),
+        source: { kind: 'user' }, content: [{ type: 'text', text: 'Full conversation' }],
+      },
+    }]
+    const observeSession = vi.fn(async () => ({ events, [Symbol.dispose]: release }))
+    ctx.provide('sessionQuery', { observeSession } as never)
+    const connection = new HostConnectionService(ctx, [], {} as BrowserAuth)
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber
+    try {
+      const shared = connection.createSharedFetchHandler('/api')
+      const response = await shared.fetch(new Request(
+        `http://host${SESSION_LOG_EXPORT_PATH}?sessionId=session-1&format=markdown&locale=zh`,
+      ))
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toBe('text/markdown; charset=utf-8')
+      expect(await response.text()).toBe('## 用户\n\nFull conversation\n')
+      expect(observeSession).toHaveBeenCalledWith(sid('session-1'), expect.objectContaining({ projectionMode: 'none' }))
+      expect(release).toHaveBeenCalledOnce()
+      const invalid = await shared.fetch(new Request(
+        `http://host${SESSION_LOG_EXPORT_PATH}?sessionId=session-1&format=html`,
+      ))
+      expect(invalid.status).toBe(400)
+    } finally {
+      await fiber.dispose()
     }
   })
 })

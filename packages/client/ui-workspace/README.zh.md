@@ -51,6 +51,10 @@ kind: "package-reference"
 
 ### 管理会话
 
+右键任意非空会话行可在指针位置打开与省略号按钮相同的菜单，不改变当前选中的会话。按 Escape、点击菜单外或选择操作即可关闭。菜单还提供“复制深度链接”“复制为 Markdown”“复制工作目录”和“打开工作目录”。目录操作使用会话的实际 cwd，未知时禁用；打开目录复用 Host 能力并在失败时提示。剪贴板写入成功后才显示“已复制”。
+
+“复制为 Markdown”通过 [session-log-export](../../session-query/session-log-export/README.zh.md) 读取所有已提交的用户与助手正文，保留 Markdown 和上下文压缩前的旧消息；不包含内部上下文、思考、工具载荷及未完成的流式输出，附件以名称或占位说明表示。Desktop 链接采用 `dsh://session/<编码ID>`，等会话与工作区列表就绪后仅打开本机已有、未归档会话。未知或归档目标显示提示，不创建或自动恢复会话。协议规则见 [Desktop 文档](../../../apps/desktop/README.zh.md)。
+
 Session 行内的 Rename 操作打开一个以该行显示标题预填的对话框；确认未修改的标题是有意允许的——这正是把当前自动标题钉住、不再被重新生成覆盖的手势。双击标题也会打开 Rename；对于未归档 Session，先发生的点击会打开其对话。Rename 使用临时 `workspaceOperation` reference，并等待首次历史打开。行内 Fork 在源会话最后一个已完成轮次处 fork，通过 Session Controller 递增继承的持久化标题，不 retain 子会话、不打开其历史，也不改变选择。Workspace 行内的 Delete 操作会打开确认框，说明保留边界；成功后该分组被移除，其 Session 则留在 Ungrouped 下。Pin、Rename、Fork、Archive 本身就是 `sidebar.workspaces.session.menu.item` 列表的条目（pin 与 archive 同时也是 `sidebar.workspaces.session.row.action` 的条目），因此客户端插件的 action 由其 `order` 决定落在哪个位置。
 
 对静止的 Session，Archive 不经确认对话框直接提交，并保留 Session 的记账位置。仍有工作在跑的 Session 是唯一会先询问的情形：Host 拒绝普通归档并列出这些工作，侧栏随即打开"停止并归档"对话框，按族列出——进行中的回合、运行中的子代理、后台任务、定时提醒，各带名称——并写明恢复路径；确认后请 Host 按停止按钮同样的方式停止这些工作，归档集合持久化后即完成归档，停止在后台收敛；取消则让 Session 继续运行并保持可见。视图选项以一组显式三选一控制显隐：隐藏已归档（默认项）隐藏已归档 Session，全部对话（显示已归档）将其纳入列表，仅显示已归档则隐藏普通 Session，并丢弃没有归档 Session 的 Workspace；树形分组下，被丢弃 Workspace 的子级挂到最近一个仍显示的祖先下。可见的归档行置灰，并提供无障碍说明，告知取消归档后才能打开；Rename、Fork 与取消归档仍然可用。归档成功后的提示提供"撤销"动作，并在归档行仍被隐藏时附带"筛选已归档会话"动作，后者直接把筛选切到全部对话（显示已归档）；停止并归档显示同样的提示但措辞不同，撤销只恢复 Session，不会让被停止的工作继续。取消归档移除归档标记，但不恢复置顶，也不改变保存的位置。列表为空时显示居中的"图标在上、文字在下"占位；仅显示已归档视图用自己的文案（暂无已归档会话），并附"查看其他会话"文字按钮，点击把筛选切回隐藏已归档。

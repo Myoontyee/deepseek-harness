@@ -59,8 +59,22 @@ import { DesktopUpdateOverlays } from './update-overlay.ts'
 import { DesktopQuitConfirmation } from './quit-confirmation.ts'
 import { DesktopTray } from './tray.ts'
 import { DesktopBackgroundNotice } from './background-notice.ts'
+import { parseDesktopLink } from './deep-links.ts'
 
 let focusPrimaryWindow = (): void => {}
+let notifySessionLink = (): void => {}
+let pendingSessionLink: string | undefined
+
+function receiveDesktopLink(value: string): boolean {
+  const link = parseDesktopLink(value)
+  if (link === undefined) return false
+  if (link.kind === 'session') {
+    pendingSessionLink = link.sessionId
+    notifySessionLink()
+  }
+  return true
+}
+
 let stopForRecovery = async (): Promise<void> => {}
 let shuttingDown = false
 /**
@@ -422,6 +436,16 @@ async function main(): Promise<void> {
       throw new Error('dsh desktop: rejected IPC from an unowned renderer')
     }
   }
+  notifySessionLink = () => {
+    if (quitting || mainWindow === undefined || mainWindow.isDestroyed()) return
+    mainWindow.webContents.send(DESKTOP_IPC.sessionLinkChanged)
+  }
+  ipcMain.handle(DESKTOP_IPC.takeSessionLink, (event) => {
+    assertProductSender(event)
+    const sessionId = pendingSessionLink
+    pendingSessionLink = undefined
+    return sessionId
+  })
   let navigation: { window: BrowserWindow; url: string; promise: Promise<void> } | undefined
   const navigateMain = (url: string): Promise<void> => {
     const window = mainWindow
@@ -1226,10 +1250,6 @@ async function main(): Promise<void> {
   }
 
   if (app.isPackaged || process.env.DSH_DESKTOP_DEV_APP === '1') app.setAsDefaultProtocolClient('dsh')
-  app.on('open-url', (event, url) => {
-    event.preventDefault()
-    if (url === 'dsh://open' || url === 'dsh://open/') focusPrimaryWindow()
-  })
 
   app.on('activate', (_event, hasVisibleWindows) => {
     if (!hasVisibleWindows) focusPrimaryWindow()
@@ -1334,6 +1354,17 @@ async function main(): Promise<void> {
 }
 
 const ownsDesktopInstance = claimDesktopSingleInstance(app, () => { focusPrimaryWindow() })
+
+if (ownsDesktopInstance) {
+  for (const argument of process.argv) receiveDesktopLink(argument)
+  app.on('open-url', (event, url) => {
+    event.preventDefault()
+    if (receiveDesktopLink(url)) focusPrimaryWindow()
+  })
+  app.on('second-instance', (_event, commandLine) => {
+    for (const argument of commandLine) receiveDesktopLink(argument)
+  })
+}
 
 if (ownsDesktopInstance) void app.whenReady().then(main).catch(async (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error)

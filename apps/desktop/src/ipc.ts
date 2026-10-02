@@ -21,6 +21,8 @@ export const DESKTOP_IPC = {
   browserRelease: 'dsh-desktop:browser-release',
   browserOpenRequested: 'dsh-desktop:browser-open-requested',
   directoryPick: 'dsh-desktop:directory-pick',
+  takeSessionLink: 'dsh-desktop:take-session-link',
+  sessionLinkChanged: 'dsh-desktop:session-link-changed',
   deviceInfo: 'dsh-desktop:device-info',
   localeBootstrap: 'dsh-desktop:locale-bootstrap',
   localeChanged: 'dsh-desktop:locale-changed',
@@ -74,6 +76,15 @@ export interface DshDesktopProductApi {
   readonly browser: DesktopBrowserBridge
   readonly keyboard: DesktopKeyboardApi
   readonly shortcuts: DesktopShortcutsApi
+  /** External conversation links are delivered after the product document subscribes. */
+  readonly sessions: {
+    /**
+     * Receive pending and subsequent local conversation identities.
+     * @param listener - Product navigation callback; it resolves identities against its local Session catalog.
+     * @returns Disposer that stops delivery to this subscription.
+     */
+    subscribe(listener: (sessionId: string) => void): () => void
+  }
   /**
    * Local machine description for the feedback questionnaire.
    * @returns `name=value` fields separated by `; `, with no hostname, user name, or serial number.

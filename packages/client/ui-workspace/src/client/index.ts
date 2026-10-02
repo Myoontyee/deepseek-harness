@@ -23,6 +23,7 @@ import type {
   IWorkspaces, SessionActivity, WorkspaceArchiveError, WorkspaceSnapshot,
 } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { HostObservable, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 // Type-only: pulls the Controller service merges.
@@ -39,7 +40,7 @@ import {
   type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
   type SessionArchiveConfirmInjected, type SessionArchiveConfirmRequest,
   type RenameSessionInjected, type RowToast, type RowToastInjected, type RowToastState, type SessionRenameDialogInjected,
-  type WorkspaceBrowserInjected, type WorkspacePickerInjected,
+  type WorkspaceBrowserInjected, type WorkspacePickerInjected, type SessionUtilityInjected,
 } from './contract/slots.ts'
 import { createWorkspaceShortcutControls, installWorkspaceShortcuts } from './shortcuts.ts'
 import { UiWorkspaceService } from './navigation.ts'
@@ -51,6 +52,7 @@ import { ForkSessionMenuItem } from './session-actions/ForkSession.tsx'
 import { PinSessionMenuItem, PinSessionRowButton } from './session-actions/PinSession.tsx'
 import { RenameSessionMenuItem, SessionRenameDialog } from './session-actions/RenameSession.tsx'
 import { RowActionToast } from './session-actions/RowActionToast.tsx'
+import { CopySessionDirectoryMenuItem, CopySessionLinkMenuItem, CopySessionMarkdownMenuItem, OpenSessionDirectoryMenuItem } from './session-actions/SessionUtilities.tsx'
 import { WorkspacePicker } from './WorkspacePicker.tsx'
 import { en, zh, type WorkspaceKey } from './locales.ts'
 
@@ -217,6 +219,46 @@ export function apply(ctx: Context): void {
     },
   })
   const renameInjected = (): RenameSessionInjected => ({ requestSessionRename })
+  const exportRequests = new Set<AbortController>()
+  let copyIntent = 0
+  const beginCopy = (): number => {
+    for (const request of exportRequests) request.abort()
+    return ++copyIntent
+  }
+  ctx.effect(() => () => {
+    ++copyIntent
+    for (const request of exportRequests) request.abort()
+  })
+  const copyText = async (text: string, intent: number): Promise<void> => {
+    if (intent !== copyIntent) return
+    const copied = await writeClipboard(text)
+    if (intent === copyIntent) notify({ kind: copied ? 'copied' : 'copyFailed' })
+  }
+  const utilityInjected = (): SessionUtilityInjected => ({
+    copySessionLink: (sessionId) => { void copyText(`dsh://session/${encodeURIComponent(sessionId)}`, beginCopy()) },
+    copySessionDirectory: (path) => { void copyText(path, beginCopy()) },
+    copySessionMarkdown: (sessionId, displayTitle) => {
+      const intent = beginCopy()
+      const abort = new AbortController()
+      exportRequests.add(abort)
+      const query = new URLSearchParams({ sessionId, format: 'markdown', locale: ctx.locale.getLocale().active })
+      // Document-relative routes preserve reverse-proxy prefixes, as the ZIP exporter does.
+      void fetch(`api/session.export?${query.toString()}`, { signal: abort.signal }).then(async (response) => {
+        if (!response.ok) throw new Error(`Markdown export: HTTP ${response.status}`)
+        const transcript = await response.text()
+        if (abort.signal.aborted) return
+        const title = displayTitle.replace(/[\r\n]+/g, ' ').trim()
+        await copyText(title === '' ? transcript : `# ${title}\n\n${transcript}`, intent)
+      }).catch(() => {
+        if (!abort.signal.aborted) notify({ kind: 'exportFailed' })
+      }).finally(() => { exportRequests.delete(abort) })
+    },
+    openSessionDirectory: (path) => {
+      void ctx.remote.session.openWorkspacePath({ path }).then((result) => {
+        if (!result.ok) notify({ kind: 'openDirectoryFailed' })
+      }).catch(() => { notify({ kind: 'openDirectoryFailed' }) })
+    },
+  })
   const renameDialogInjected = (): SessionRenameDialogInjected => ({
     hooks: { renameRequest },
     settleSessionRename: shortcutControls.closeRename,
@@ -287,6 +329,10 @@ export function apply(ctx: Context): void {
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'rename', order: 200, locale: NS, inject: renameInjected }, RenameSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'fork', order: 300, locale: NS, inject: forkInjected }, ForkSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'archive', order: 400, locale: NS, inject: archiveInjected }, ArchiveSessionMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'copy-link', order: 500, locale: NS, inject: utilityInjected }, CopySessionLinkMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'copy-markdown', order: 600, locale: NS, inject: utilityInjected }, CopySessionMarkdownMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'copy-directory', order: 700, locale: NS, inject: utilityInjected }, CopySessionDirectoryMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'open-directory', order: 800, locale: NS, inject: utilityInjected }, OpenSessionDirectoryMenuItem)
   })
   ctx.slots.inject('sidebar.workspaces.session.row.action', function* () {
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.row.action', id: 'archive', order: 100, locale: NS, inject: archiveInjected }, ArchiveSessionRowButton)

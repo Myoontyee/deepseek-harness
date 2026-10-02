@@ -15,7 +15,7 @@ import type { WorkspaceBrowserInjected, WorkspacePickerInjected } from '@deepsee
 import {
   type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
   type RenameSessionInjected, type RowToastInjected, type SessionArchiveConfirmInjected, type SessionRenameDialogInjected,
-  type WorkspaceViewStoreHandle,
+  type WorkspaceViewStoreHandle, type SessionUtilityInjected,
 } from '../src/client/contract/slots.ts'
 import { WorkspaceBrowser } from '../src/client/rows/WorkspaceBrowser.tsx'
 import { ArchiveSessionMenuItem, ArchiveSessionRowButton, SessionArchiveConfirmDialog } from '../src/client/session-actions/ArchiveSession.tsx'
@@ -23,6 +23,7 @@ import { ForkSessionMenuItem } from '../src/client/session-actions/ForkSession.t
 import { PinSessionMenuItem, PinSessionRowButton } from '../src/client/session-actions/PinSession.tsx'
 import { RenameSessionMenuItem, SessionRenameDialog } from '../src/client/session-actions/RenameSession.tsx'
 import { RowActionToast } from '../src/client/session-actions/RowActionToast.tsx'
+import { CopySessionDirectoryMenuItem, CopySessionLinkMenuItem, CopySessionMarkdownMenuItem, OpenSessionDirectoryMenuItem } from '../src/client/session-actions/SessionUtilities.tsx'
 import { WorkspacePicker } from '../src/client/WorkspacePicker.tsx'
 import { FLAT_SESSION_ORDER_KEY } from '../src/client/stores.ts'
 import { UNGROUPED_KEY } from '../src/client/tree.ts'
@@ -178,6 +179,48 @@ function viewInstance(slots: SlotRegistry) {
 const settled = (): Promise<void> => new Promise((resolve) => { setTimeout(resolve, 0) })
 
 describe('ui-workspace apply', () => {
+  it('copies a row-specific link, full Markdown response, and working directory with honest feedback', async () => {
+    const b = await bench()
+    onTestFinished(() => b.ctx.fiber.dispose())
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const writeText = vi.fn(async () => {})
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    const fetcher = vi.fn(async () => new Response('## 用户\n\nOlder **message**\n'))
+    vi.stubGlobal('fetch', fetcher)
+    declare(b.slots, 'sidebar.workspaces', 'shell.overlay')
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    const face = faceOf(entry(b.slots, MENU_ITEM, 'copy-link')) as SessionUtilityInjected
+    const notices = faceOf(entry(b.slots, 'shell.overlay', 'workspace.row-toast')) as RowToastInjected
+    face.copySessionLink(sid('session/with space'))
+    await settled()
+    expect(writeText).toHaveBeenLastCalledWith('dsh://session/session%2Fwith%20space')
+    expect(notices.hooks.toast.getSnapshot()?.kind).toBe('copied')
+    face.copySessionMarkdown(sid('other'), 'Conversation')
+    await settled()
+    expect(fetcher).toHaveBeenCalledWith('api/session.export?sessionId=other&format=markdown&locale=zh', expect.objectContaining({ signal: expect.any(AbortSignal) }))
+    expect(writeText).toHaveBeenLastCalledWith('# Conversation\n\n## 用户\n\nOlder **message**\n')
+    face.copySessionDirectory('D:\\Worktree')
+    await settled()
+    expect(writeText).toHaveBeenLastCalledWith('D:\\Worktree')
+    writeText.mockRejectedValueOnce(new Error('denied'))
+    face.copySessionLink(sid('other'))
+    await settled()
+    expect(notices.hooks.toast.getSnapshot()?.kind).toBe('copyFailed')
+    fetcher.mockRejectedValueOnce(new Error('offline'))
+    face.copySessionMarkdown(sid('other'), 'Conversation')
+    await settled()
+    expect(notices.hooks.toast.getSnapshot()?.kind).toBe('exportFailed')
+    let finishOlder!: (response: Response) => void
+    fetcher.mockImplementationOnce(() => new Promise<Response>((resolve) => { finishOlder = resolve }))
+    face.copySessionMarkdown(sid('slow'), 'Older request')
+    face.copySessionLink(sid('latest'))
+    await settled()
+    finishOlder(new Response('Must never overwrite the latest copy'))
+    await settled()
+    expect(writeText).toHaveBeenLastCalledWith('dsh://session/latest')
+    expect(writeText.mock.calls.flat()).not.toContain(expect.stringContaining('Must never overwrite'))
+  })
+
   it('keeps the host Loader entry inert', () => {
     expect(hostApply).not.toThrow()
   })
@@ -218,7 +261,7 @@ describe('ui-workspace apply', () => {
     await Promise.resolve()
     expect(after.slots.entries('conversation.hero.workspace')[0]!.component).toBe(WorkspacePicker)
     // The row actions follow the browser's own declaration, whenever it lands.
-    expect(after.slots.entries(MENU_ITEM)).toHaveLength(4)
+    expect(after.slots.entries(MENU_ITEM)).toHaveLength(8)
     expect(after.slots.entries(ROW_ACTION)).toHaveLength(2)
     expect(after.slots.entries('shell.overlay')).toHaveLength(3)
   })
@@ -241,6 +284,10 @@ describe('ui-workspace apply', () => {
       ['rename', 200, RenameSessionMenuItem, 'workspace'],
       ['fork', 300, ForkSessionMenuItem, 'workspace'],
       ['archive', 400, ArchiveSessionMenuItem, 'workspace'],
+      ['copy-link', 500, CopySessionLinkMenuItem, 'workspace'],
+      ['copy-markdown', 600, CopySessionMarkdownMenuItem, 'workspace'],
+      ['copy-directory', 700, CopySessionDirectoryMenuItem, 'workspace'],
+      ['open-directory', 800, OpenSessionDirectoryMenuItem, 'workspace'],
     ])
     expect(rows(ROW_ACTION)).toEqual([
       ['archive', 100, ArchiveSessionRowButton, 'workspace'],
@@ -596,7 +643,7 @@ describe('ui-workspace apply', () => {
     declare(b.slots, 'sidebar.workspaces', 'conversation.hero.workspace', 'conversation.empty.workspace', 'shell.overlay')
     const fiber = b.ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
-    expect(b.slots.entries(MENU_ITEM)).toHaveLength(4)
+    expect(b.slots.entries(MENU_ITEM)).toHaveLength(8)
     expect(b.slots.entries(ROW_ACTION)).toHaveLength(2)
     expect(b.slots.entries('shell.overlay')).toHaveLength(3)
     await fiber.dispose()

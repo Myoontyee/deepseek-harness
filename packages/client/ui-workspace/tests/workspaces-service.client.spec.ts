@@ -301,7 +301,72 @@ function bench(options: BenchOptions = {}) {
   return { ctx, directoryPicker, sessions, uiWorkspace, workspaces, layout, selectPanel, view, notify }
 }
 
+function desktopSessionLinks(initial?: string) {
+  let listener: ((sessionId: string) => void) | undefined
+  const dispose = vi.fn(() => { listener = undefined })
+  vi.stubGlobal('dshDesktop', { protocolVersion: 1, sessions: {
+    subscribe(receive: (sessionId: string) => void) {
+      listener = receive
+      if (initial !== undefined) receive(initial)
+      return dispose
+    },
+  } })
+  return { dispose, open: (sessionId: string) => { listener?.(sessionId) } }
+}
+
 describe('UiWorkspaceService', () => {
+  it('opens a pending Desktop conversation link after both startup lists instead of restoring the old selection', () => {
+    persistSelection({ sessionId: sid('previous') })
+    desktopSessionLinks('linked')
+    const b = bench()
+    b.sessions.list.set(sessionState([summary('previous'), summary('linked')]))
+    expect(b.sessions.retain).not.toHaveBeenCalled()
+    b.workspaces.list.set(workspaceState())
+    expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('linked'), { source: 'mainView' })
+    expect(b.sessions.create).not.toHaveBeenCalled()
+    expect(b.selectPanel).toHaveBeenCalledWith(null)
+  })
+
+  it('opens live Desktop links only for existing unarchived conversations and disposes its subscription', async () => {
+    const links = desktopSessionLinks()
+    const b = bench({ sessions: sessionState([summary('linked'), summary('archived')]),
+      workspaces: workspaceState([], [sid('archived')]) })
+    links.open('linked')
+    expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('linked'), { source: 'mainView' })
+    links.open('not-a-local-session')
+    links.open('archived')
+    expect(b.sessions.retain).toHaveBeenCalledOnce()
+    expect(b.sessions.create).not.toHaveBeenCalled()
+    expect(b.notify.mock.calls).toEqual([[{ kind: 'sessionLinkUnavailable' }], [{ kind: 'sessionLinkUnavailable' }]])
+    await b.ctx.fiber.dispose()
+    expect(links.dispose).toHaveBeenCalledOnce()
+    links.open('linked')
+    expect(b.sessions.retain).toHaveBeenCalledOnce()
+  })
+
+  it('keeps the latest Desktop link while the local conversation list loads', () => {
+    const links = desktopSessionLinks('old-link')
+    const b = bench()
+    links.open('new-link')
+    b.workspaces.list.set(workspaceState())
+    b.sessions.list.set(sessionState([summary('old-link'), summary('new-link')]))
+    expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('new-link'), { source: 'mainView' })
+  })
+
+  it('keeps a Desktop link selected when startup workspace restoration finishes later', async () => {
+    persistSelection({ sessionId: sid('blank') })
+    const pending = Promise.withResolvers<SessionId>()
+    const links = desktopSessionLinks()
+    const b = bench({ workspaces: workspaceState([workspace('a', [sid('blank')])]),
+      sessions: sessionState([summary('blank', { blank: true, cwd: '/w/a' }), summary('linked')]),
+      configureSessions: (sessions) => { sessions.create.mockReturnValueOnce(pending.promise) } })
+    expect(b.sessions.create).toHaveBeenCalledOnce()
+    links.open('linked')
+    pending.resolve(sid('blank'))
+    await setImmediate()
+    expect(b.sessions.retain).toHaveBeenCalledExactlyOnceWith(sid('linked'), { source: 'mainView' })
+  })
+
   it('prepares and selects the default Workspace after both startup baselines', async () => {
     const b = bench({ configureWorkspaces: (workspaces) => {
       workspaces.initializeDefault.mockImplementation(async () => {
