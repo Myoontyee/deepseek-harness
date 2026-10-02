@@ -2,8 +2,9 @@
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { LexicalEditor, NodeKey } from 'lexical'
 import {
-  $addUpdateTag, $createParagraphNode, $createTextNode, $getRoot, $getSelection, $isRangeSelection,
-  BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_CRITICAL, createEditor, HISTORY_MERGE_TAG, PASTE_TAG,
+  $addUpdateTag, $createParagraphNode, $createTextNode, $getRoot, $getSelection, $hasUpdateTag, $isRangeSelection, $isTextNode,
+  BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_CRITICAL, COMPOSITION_START_TAG,
+  CONTROLLED_TEXT_INSERTION_COMMAND, createEditor, HISTORY_MERGE_TAG, PASTE_TAG,
   RootNode, SELECTION_CHANGE_COMMAND, SKIP_DOM_SELECTION_TAG,
 } from 'lexical'
 import { registerPlainText } from '@lexical/plain-text'
@@ -76,6 +77,20 @@ export class DraftEditorRuntime {
     }
     const unregister = mergeRegister(
       registerPlainText(this.editor),
+      this.editor.registerCommand(CONTROLLED_TEXT_INSERTION_COMMAND, (text) => {
+        if (text !== '\u200b' || !$hasUpdateTag(COMPOSITION_START_TAG)) return false
+        const browser = this.editor.getRootElement()?.ownerDocument.defaultView?.navigator
+        if (browser?.userAgent.includes('Windows') !== true) return false
+        const selection = $getSelection()
+        if (!$isRangeSelection(selection) || selection.isCollapsed()
+          || selection.anchor.key !== selection.focus.key) return false
+        const node = selection.anchor.getNode()
+        // Windows IMEs can retain the original replacement offsets after compositionstart.
+        // Shrinking this range to Lexical's placeholder would make the native edit consume
+        // following text. An existing plain text node can receive that edit directly.
+        return $isTextNode(node) && node.isSimpleText()
+          && node.getFormat() === selection.format && node.getStyle() === selection.style
+      }, COMMAND_PRIORITY_CRITICAL),
       this.editor.registerCommand(BLUR_COMMAND, () => {
         // Finish this batch before an explicit focus can restore its updated selection.
         this.editor.update(preserveExternalSelection, { discrete: true })
