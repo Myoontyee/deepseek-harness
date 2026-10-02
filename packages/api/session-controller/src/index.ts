@@ -28,6 +28,8 @@ import { installModelSelectionProjection } from './model-selection-projection.ts
 import { SessionSkillCatalog } from './skill-catalog.ts'
 import { SessionMediaReferences } from './media-references.ts'
 import { ArchivedSessionGate } from './archived-session-gate.ts'
+import { SessionRelay } from './session-relay.ts'
+import type { SessionRelayRequest, SessionRelayValue } from './types.ts'
 import type {
   ModelCatalog,
   SessionWorkspacePathApplication,
@@ -79,6 +81,10 @@ declare module '@deepseek-ai/cordis' {
 export interface Config {
   /** Override platform desktop-opener detection. */
   readonly nativeOpen?: boolean
+  /** Maximum text length accepted by a Session relay. */
+  readonly relayMaxMessageChars?: number
+  /** Maximum complete automatic feedback text length. */
+  readonly relayMaxFeedbackChars?: number
 }
 
 /** Host integrations replaceable by direct unit tests. */
@@ -113,7 +119,11 @@ export class SessionController extends TypertRemoteService {
 
   static Config: z<Config> = z.object({
     nativeOpen: z.boolean(),
+    relayMaxMessageChars: z.number().min(1).default(16000),
+    relayMaxFeedbackChars: z.number().min(256).default(32000),
   })
+
+  private readonly relay: SessionRelay
 
   private readonly agents: ApiSessionAgentController
   private readonly commands: SessionCommandController
@@ -136,6 +146,10 @@ export class SessionController extends TypertRemoteService {
     super(ctx, 'sessionController', { namespace: 'session' })
     installModelSelectionProjection(ctx)
     this.agents = new ApiSessionAgentController(ctx)
+    this.relay = new SessionRelay(ctx, id => this.agents.resolveAgent(id), {
+      maxMessageChars: config.relayMaxMessageChars ?? 16000,
+      maxFeedbackChars: config.relayMaxFeedbackChars ?? 32000,
+    })
     this.commands = new SessionCommandController(ctx, this.agents, process.cwd())
     ctx.effect(() => ctx.fileUploads.registerAgentResolver(async (sessionId) => {
       const result = await this.agents.resolveAgent(sessionId)
@@ -426,6 +440,28 @@ export class SessionController extends TypertRemoteService {
   prompt(request: SessionPromptRequest, signal: AbortSignal): Promise<SessionPromptValue> {
     signal.throwIfAborted()
     return this.commands.prompt(request)
+  }
+
+  /**
+   * Send attributed text to another existing ordinary Session.
+   * @param request - source, destination, message, and one-shot feedback preference.
+   * @param signal - caller cancellation before inbox acceptance.
+   * @returns the accepted message identity, never an inferred reply.
+   */
+  @Remote('sendMessage')
+  sendMessage(request: SessionRelayRequest, signal: AbortSignal): Promise<SessionRelayValue> {
+    return this.relay.send(request, signal)
+  }
+
+  /**
+   * Attribute a model message to its exact live calling Agent.
+   * @param sender - Agent that owns the executing tool call.
+   * @param request - addressed content without a caller-supplied source identity.
+   * @param signal - tool-call cancellation before admission.
+   * @returns the accepted message receipt.
+   */
+  sendMessageFromAgent(sender: Agent, request: Omit<SessionRelayRequest, 'sourceSessionId'>, signal: AbortSignal): Promise<SessionRelayValue> {
+    return this.relay.send({ ...request, sourceSessionId: sender.id }, signal, sender)
   }
 
   /**

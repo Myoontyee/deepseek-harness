@@ -6,6 +6,19 @@
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
+  'relay.menu': '发送会话消息…',
+  'relay.title': '发送会话消息',
+  'relay.from': '来自会话',
+  'relay.choose': '选择来源会话',
+  'relay.to': '发送给：{title}',
+  'relay.message': '消息内容',
+  'relay.placeholder': '告诉对方需要处理什么，以及必要的上下文',
+  'relay.reply': '处理结束后自动反馈给来源会话',
+  'relay.hint': '消息将进入对方的下一轮。反馈会回到来源会话，并唤醒它继续处理。',
+  'relay.send': '发送',
+  'relay.sent': '消息已投递，等待对方处理',
+  'relay.none': '还没有其他可用的普通会话',
+  'relay.limit': '最多 16,000 个字符',
   'defaultWorkspace.failed': '无法创建默认工作区，请通过“选择工作区”选择文件夹',
   'group.ungrouped': '未分组',
   'session.new': '新会话',
@@ -134,6 +147,19 @@ export type WorkspaceKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
+  'relay.menu': 'Send session message…',
+  'relay.title': 'Send session message',
+  'relay.from': 'From session',
+  'relay.choose': 'Choose a source session',
+  'relay.to': 'To: {title}',
+  'relay.message': 'Message',
+  'relay.placeholder': 'Describe the task and include the context the recipient needs',
+  'relay.reply': 'Return feedback to the source session when finished',
+  'relay.hint': 'The message starts a queued turn. Feedback returns to the source session and wakes it to continue.',
+  'relay.send': 'Send',
+  'relay.sent': 'Message delivered; awaiting the recipient',
+  'relay.none': 'No other ordinary session is available',
+  'relay.limit': 'Up to 16,000 characters',
   'defaultWorkspace.failed': 'Unable to create default workspace. Use Choose workspace to select a folder.',
   'group.ungrouped': 'Ungrouped',
   'session.new': 'New Session',

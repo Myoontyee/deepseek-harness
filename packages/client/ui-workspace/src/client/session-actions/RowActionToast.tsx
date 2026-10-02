@@ -26,6 +26,9 @@ export function RowActionToast({ useToast, useStore, dismissToast, undoArchive, 
   const toast = useToast(current => current)
   const archivedRowsVisible = useStore(state => (state.archivedFilter ?? 'default') !== 'default')
   if (toast === null) return null
+  if (toast.kind === 'relaySent') {
+    return <Toast key={toast.seq} text={t('relay.sent')} tone="success" onDone={dismissToast} />
+  }
   if (toast.kind === 'copied') {
     return <Toast key={`toast-${String(toast.seq)}`} text={t('toast.copied')} tone="success" onDone={dismissToast} />
   }
@@ -70,7 +73,7 @@ export function RowActionToast({ useToast, useStore, dismissToast, undoArchive, 
 
 /** The copy of one plain warning, keyed by the notice kind the union closes over. */
 function plainNoticeText(
-  toast: Exclude<RowToastState, { kind: 'archived' | 'stoppedAndArchived' | 'createFailed' | 'copied' }>,
+  toast: Exclude<RowToastState, { kind: 'archived' | 'stoppedAndArchived' | 'createFailed' | 'copied' | 'relaySent' }>,
   t: RowToastProps['t'],
 ): string {
   switch (toast.kind) {

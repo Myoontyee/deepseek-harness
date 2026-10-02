@@ -27,6 +27,8 @@ This package lets users browse grouped or flat Session lists, choose a Workspace
 <a id="use-this-package"></a>
 ## Use this package
 
+The Session row menu includes **Send session message…**. Its dialog chooses another ordinary Session as the source, accepts a text draft, and defaults to one automatic feedback message. Archived Sessions and subagents are excluded as sources. A successful send closes the dialog and reports acceptance through the shared toast; a failure keeps the draft and the same retry identity. The dialog remains outside the row menu, so closing that menu does not discard the draft. [Session Controller](../../api/session-controller/README.md) owns routing and feedback semantics.
+
 Use the sidebar to browse Workspaces and their Sessions, reorder them, and start new ones; use the picker in the Session Intent hero to choose a Workspace for a new session. An open Workspace shows five idle, non-blank Sessions by default. Running Sessions, including parents with running children, remain visible in their ordered positions without using that quota; the selected blank **New Session** is also an extra row until its first prompt. Each **Show more** click reveals up to five more idle Sessions; after the final batch, **Show less** restores the initial rows while keeping running Sessions visible. Closing and reopening the Workspace also restores this folded projection.
 
 History rows without a stored title use the localized unnamed label (未命名 / Untitled), rather than a directory name. The current blank row remains New Session; other blank rows remain hidden. Rename drafts use the stored title, or start empty when unnamed; unnamed rows do not offer title copying.

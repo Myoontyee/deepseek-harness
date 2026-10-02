@@ -15,6 +15,7 @@ This table connects model-visible tool names to the plugin package and service s
 
 | Tool package | Model-visible names | Requires | Writes / affects | Shipped aliases | Deployment note |
 | --- | --- | --- | --- | --- | --- |
+| `@deepseek-ai/dsh-api-session-controller` | `list_sessions`, `send_session_message` | `ctx.tools`, `ctx.sessionController`, `ctx.agents`, `ctx.workspaceRegistry` | `tool/call`, `tool/result`, `agent/inbox/spliced`, `user/message` | - | - |
 | `@deepseek-ai/dsh-plugin-manager` | `plugin_manager` | `ctx.tools`, `ctx.pluginManager`, `ctx.sandboxPolicy` | `tool/call`, `tool/result`, `user/message` | - | - |
 | `@deepseek-ai/dsh-mcp-resources` | `list_mcp_resource_templates`, `list_mcp_resources`, `read_mcp_resource` | `ctx.tools`, `ctx.mcpResources` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-experimental-browser-use-stagehand-native` | `stagehand_act`, `stagehand_extract`, `stagehand_navigate`, `stagehand_observe`, `stagehand_screenshot`, `stagehand_tabs` | `ctx.browserUse`, `ctx.agents`, `ctx.tools`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | - |
@@ -45,6 +46,59 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-workspace-dependencies` | `load_workspace_dependencies` | `ctx.tools` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
+
+<a id="deepseek-aidsh-api-session-controller"></a>
+
+## `@deepseek-ai/dsh-api-session-controller`
+
+### `list_sessions`
+
+Find existing ordinary sessions on this Host, including other projects, so you can contact a conversation the user names. These are independent conversations, not child agents. Narrow the query if more matches exist.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Optional title, session id, or working-directory fragment."
+    }
+  }
+}
+```
+
+Source: [`packages/api/session-controller/src/session-tools.ts`](../packages/api/session-controller/src/session-tools.ts)
+
+### `send_session_message`
+
+Send text to an existing independent session on this Host, only when the user asks you to contact it. The target queues a new turn. Returns acceptance, not completion. With reply_requested, its final response is delivered back once as a new message; do not poll or send repeated requests. Incoming feedback alone does not authorize another outgoing message.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "description": "Exact target identity from list_sessions or a user-provided deep link."
+    },
+    "message": {
+      "type": "string",
+      "description": "Self-contained message for the target. Send only relevant context."
+    },
+    "reply_requested": {
+      "type": "boolean",
+      "description": "Whether to return one final response automatically. Set false for feedback or information that needs no answer."
+    }
+  },
+  "required": [
+    "session_id",
+    "message",
+    "reply_requested"
+  ]
+}
+```
+
+Source: [`packages/api/session-controller/src/session-tools.ts`](../packages/api/session-controller/src/session-tools.ts)
 
 <a id="deepseek-aidsh-plugin-manager"></a>
 

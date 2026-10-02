@@ -36,6 +36,10 @@ export function turnTriggerDetails(node: ContextMessageNode): {
       title = 'message.trigger.agent'
       icon = 'agent'
       break
+    case 'session-relay':
+      title = source.feedback === true ? 'message.trigger.sessionFeedback' : 'message.trigger.sessionMessage'
+      icon = 'agent'
+      break
     case 'team-message':
       title = 'message.trigger.team'
       icon = 'team'

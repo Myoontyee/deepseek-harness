@@ -51,6 +51,8 @@ import { derive } from './session-actions/derived.ts'
 import { ForkSessionMenuItem } from './session-actions/ForkSession.tsx'
 import { PinSessionMenuItem, PinSessionRowButton } from './session-actions/PinSession.tsx'
 import { RenameSessionMenuItem, SessionRenameDialog } from './session-actions/RenameSession.tsx'
+import { SessionRelayMenuItem, SessionRelayDialog } from './session-actions/SessionRelay.tsx'
+import type { SessionRelayTarget, SessionRelayDialogInjected, SessionRelayMenuInjected } from './contract/slots.ts'
 import { RowActionToast } from './session-actions/RowActionToast.tsx'
 import { CopySessionDirectoryMenuItem, CopySessionLinkMenuItem, CopySessionMarkdownMenuItem, OpenSessionDirectoryMenuItem } from './session-actions/SessionUtilities.tsx'
 import { WorkspacePicker } from './WorkspacePicker.tsx'
@@ -96,7 +98,7 @@ const NS = 'workspace'
  * declaration through `slots.inject()` instead of assuming order.
  */
 export const inject = [
-  'slots', 'sessions', 'workspaces', 'locale', 'remote', 'remote.directoryPicker', 'layout', 'shortcuts',
+  'slots', 'sessions', 'workspaces', 'locale', 'remote', 'remote.session', 'remote.directoryPicker', 'layout', 'shortcuts',
 ]
 
 /**
@@ -152,6 +154,19 @@ export function apply(ctx: Context): void {
   // the pending rename request and the notice on display. Each business
   // writes through its own injected callback and the surface reads through
   // its bound hook.
+  const relayRequest = createSnapshotStore<SessionRelayTarget | null>(null)
+  const relayMenuInjected = (): SessionRelayMenuInjected => ({
+    requestRelay: (sessionId, title) => { relayRequest.set({ sessionId, title }) },
+  })
+  const relayDialogInjected = (): SessionRelayDialogInjected => ({
+    hooks: { relayRequest },
+    closeRelay: () => { relayRequest.set(null) },
+    sendRelay: async (sourceSessionId, targetSessionId, message, replyRequested, requestId) => {
+      const result = await ctx.remote.session.sendMessage({ sourceSessionId, targetSessionId, message, replyRequested, requestId })
+      if (!result.ok) throw new Error(result.error.message)
+      notify({ kind: 'relaySent' })
+    },
+  })
   const renameRequest = derive(shortcutControls.state, state => state.renameTarget)
   const archiveRequest = createSnapshotStore<SessionArchiveConfirmRequest | null>(null)
   const requestSessionRename = shortcutControls.rename
@@ -329,6 +344,7 @@ export function apply(ctx: Context): void {
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'rename', order: 200, locale: NS, inject: renameInjected }, RenameSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'fork', order: 300, locale: NS, inject: forkInjected }, ForkSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'archive', order: 400, locale: NS, inject: archiveInjected }, ArchiveSessionMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'relay', order: 450, locale: NS, inject: relayMenuInjected }, SessionRelayMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'copy-link', order: 500, locale: NS, inject: utilityInjected }, CopySessionLinkMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'copy-markdown', order: 600, locale: NS, inject: utilityInjected }, CopySessionMarkdownMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'copy-directory', order: 700, locale: NS, inject: utilityInjected }, CopySessionDirectoryMenuItem)
@@ -341,6 +357,7 @@ export function apply(ctx: Context): void {
   // The surfaces the actions raise live in the frame-wide layer: they must
   // outlive the row menu the action sat in.
   ctx.slots.inject('shell.overlay', function* () {
+    yield ctx.slots.register({ name: 'shell.overlay', id: 'workspace.session-relay', locale: NS, inject: relayDialogInjected }, SessionRelayDialog)
     yield ctx.slots.register({
       name: 'shell.overlay', id: 'workspace.session-rename', locale: NS, inject: renameDialogInjected,
     }, SessionRenameDialog)

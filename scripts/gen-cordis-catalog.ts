@@ -408,6 +408,8 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   SessionPageRequest: 'session.md',
   SessionPromptRequest: 'session.md',
   SessionPromptValue: 'session.md',
+  SessionRelayRequest: 'session.md',
+  SessionRelayValue: 'session.md',
   SessionRenameRequest: 'session.md',
   SessionRenameValue: 'session.md',
   SessionRespondReceipt: 'session.md',

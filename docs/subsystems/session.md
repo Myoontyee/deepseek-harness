@@ -766,6 +766,10 @@ The backends that consume this contract are on [persistence.md](persistence.md).
 
 The optional `application` selects a registered file handler without changing the system default; `workspacePathApplications({ path })` returns current handlers, names, icons, and default selection after Host path verification.
 
+## Ordinary Session messages
+
+`SessionRelayRequest` addresses `message` from `sourceSessionId` to `targetSessionId`, using a stable `requestId` for retry suppression and `replyRequested` for one automatic feedback message. `SessionRelayValue` returns `accepted: true` and the accepted `messageId`; it does not claim completion. The [Session Controller](../../packages/api/session-controller/README.md) owns admission, preset-aware resume, cancellation, and feedback limits.
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>
@@ -893,6 +897,23 @@ workspaceDesktop(): { name: string; available: boolean; fileManager: 'finder' | 
 @Remote('prompt') prompt(request: SessionPromptRequest, signal: AbortSignal): Promise<SessionPromptValue>
 
 /**
+ * Send attributed text to another existing ordinary Session.
+ * @param request - source, destination, message, and one-shot feedback preference.
+ * @param signal - caller cancellation before inbox acceptance.
+ * @returns the accepted message identity, never an inferred reply.
+ */
+@Remote('sendMessage') sendMessage(request: SessionRelayRequest, signal: AbortSignal): Promise<SessionRelayValue>
+
+/**
+ * Attribute a model message to its exact live calling Agent.
+ * @param sender - Agent that owns the executing tool call.
+ * @param request - addressed content without a caller-supplied source identity.
+ * @param signal - tool-call cancellation before admission.
+ * @returns the accepted message receipt.
+ */
+sendMessageFromAgent(sender: Agent, request: Omit<SessionRelayRequest, 'sourceSessionId'>, signal: AbortSignal): Promise<SessionRelayValue>
+
+/**
  * Read one image proven reachable from the addressed Session log.
  * @param request - Session and attachment identities used for authorization.
  * @returns the durable attachment reference and base64-encoded bytes.
@@ -946,7 +967,7 @@ workspaceDesktop(): { name: string; available: boolean; fileManager: 'finder' | 
 @Remote({ mode: 'stream' }) control(signal: AbortSignal): AsyncIterable<SessionControlFrame>
 ```
 
-Types: [SessionId](core.md) · [SessionInspection](persistence.md) · [SessionSearchRequest](session-query.md)
+Types: [Agent](core.md) · [SessionId](core.md) · [SessionInspection](persistence.md) · [SessionSearchRequest](session-query.md)
 
 Source: [`packages/api/session-controller/src/index.ts`](../../packages/api/session-controller/src/index.ts)
 

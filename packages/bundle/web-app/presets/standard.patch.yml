@@ -29,6 +29,8 @@
             name: '@deepseek-ai/dsh-tool-fs-search'
             config:
               sampleOverCapGlobResults: false
+          - id: session-message-tools
+            name: '@deepseek-ai/dsh-api-session-controller/session-tools'
           - id: tool-jobs
             name: '@deepseek-ai/dsh-tool-jobs'
           - id: skill-filesystem

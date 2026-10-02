@@ -770,6 +770,10 @@ interface TurnEndReasonMap {
 
 可选的 `application` 指定文件关联应用，不修改系统默认值；`workspacePathApplications({ path })` 在校验 Host 路径后返回当前关联应用、名称、图标和默认项。
 
+## 普通会话消息
+
+`SessionRelayRequest` 将 `message` 从 `sourceSessionId` 发往 `targetSessionId`，通过稳定的 `requestId` 避免重试重复投递，通过 `replyRequested` 请求一次自动反馈。`SessionRelayValue` 返回 `accepted: true` 和已接受的 `messageId`，不表示任务已经完成。[Session Controller](../../packages/api/session-controller/README.zh.md) 负责接受规则、按 preset 恢复、取消及反馈长度限制。
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>
@@ -897,6 +901,23 @@ workspaceDesktop(): { name: string; available: boolean; fileManager: 'finder' | 
 @Remote('prompt') prompt(request: SessionPromptRequest, signal: AbortSignal): Promise<SessionPromptValue>
 
 /**
+ * Send attributed text to another existing ordinary Session.
+ * @param request - source, destination, message, and one-shot feedback preference.
+ * @param signal - caller cancellation before inbox acceptance.
+ * @returns the accepted message identity, never an inferred reply.
+ */
+@Remote('sendMessage') sendMessage(request: SessionRelayRequest, signal: AbortSignal): Promise<SessionRelayValue>
+
+/**
+ * Attribute a model message to its exact live calling Agent.
+ * @param sender - Agent that owns the executing tool call.
+ * @param request - addressed content without a caller-supplied source identity.
+ * @param signal - tool-call cancellation before admission.
+ * @returns the accepted message receipt.
+ */
+sendMessageFromAgent(sender: Agent, request: Omit<SessionRelayRequest, 'sourceSessionId'>, signal: AbortSignal): Promise<SessionRelayValue>
+
+/**
  * Read one image proven reachable from the addressed Session log.
  * @param request - Session and attachment identities used for authorization.
  * @returns the durable attachment reference and base64-encoded bytes.
@@ -950,7 +971,7 @@ workspaceDesktop(): { name: string; available: boolean; fileManager: 'finder' | 
 @Remote({ mode: 'stream' }) control(signal: AbortSignal): AsyncIterable<SessionControlFrame>
 ```
 
-Types: [SessionId](core.zh.md) · [SessionInspection](persistence.zh.md) · [SessionSearchRequest](session-query.zh.md)
+Types: [Agent](core.zh.md) · [SessionId](core.zh.md) · [SessionInspection](persistence.zh.md) · [SessionSearchRequest](session-query.zh.md)
 
 Source: [`packages/api/session-controller/src/index.ts`](../../packages/api/session-controller/src/index.ts)
 

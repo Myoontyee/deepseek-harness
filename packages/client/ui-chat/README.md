@@ -44,6 +44,8 @@ Settings → General → Open chat links in selects the destination for ordinary
 
 Chat omits system-prompt, ordinary Context injection, and `permission` command rows in every work-details mode. Context containing tool additions or removals remains visible. The filter changes neither recorded Session events nor Trajectory inspection. Non-human Turn triggers remain independent, bordered notices with a contrasting neutral background; other command rows remain in Chat.
 
+Ordinary Session messages and automatic feedback appear as distinct expandable trigger notices. Their recorded sender and body remain available without presenting either as a human-authored prompt.
+
 When an Assistant attempt retires without a visible message, Chat hides its already-published Node instead of removing its key. A retry in the same Step reuses that key when visible content returns. This also applies when the loaded window lacks the Step start.
 
 <a id="command-and-failure-rows"></a>

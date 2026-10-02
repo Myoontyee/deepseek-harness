@@ -2000,6 +2000,18 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'acknowledgement that the Agent accepted the prompt.',
       },
       {
+        signature: '@Remote(\'sendMessage\') sendMessage(request: SessionRelayRequest, signal: AbortSignal): Promise<SessionRelayValue>',
+        description: 'Send attributed text to another existing ordinary Session.',
+        parameters: [{ name: 'request', description: 'source, destination, message, and one-shot feedback preference.' }, { name: 'signal', description: 'caller cancellation before inbox acceptance.' }],
+        returns: 'the accepted message identity, never an inferred reply.',
+      },
+      {
+        signature: 'sendMessageFromAgent(sender: Agent, request: Omit<SessionRelayRequest, \'sourceSessionId\'>, signal: AbortSignal): Promise<SessionRelayValue>',
+        description: 'Attribute a model message to its exact live calling Agent.',
+        parameters: [{ name: 'sender', description: 'Agent that owns the executing tool call.' }, { name: 'request', description: 'addressed content without a caller-supplied source identity.' }, { name: 'signal', description: 'tool-call cancellation before admission.' }],
+        returns: 'the accepted message receipt.',
+      },
+      {
         signature: '@Remote(\'attachment\') attachment(request: SessionAttachmentRequest): Promise<SessionAttachmentValue>',
         description: 'Read one image proven reachable from the addressed Session log.',
         parameters: [{ name: 'request', description: 'Session and attachment identities used for authorization.' }],
@@ -6792,6 +6804,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SessionReferenceMentionCandidate',
     declaration: 'export interface SessionReferenceMentionCandidate extends SessionReferenceCandidate {\n    mention: string;\n}',
+  },
+  {
+    name: 'SessionRelayRequest',
+    declaration: 'export interface SessionRelayRequest {\n    readonly requestId: string;\n    readonly sourceSessionId: SessionId;\n    readonly targetSessionId: SessionId;\n    readonly message: string;\n    readonly replyRequested: boolean;\n}',
+  },
+  {
+    name: 'SessionRelayValue',
+    declaration: 'export interface SessionRelayValue {\n    readonly accepted: true;\n    readonly messageId: MessageId;\n}',
   },
   {
     name: 'SessionRenameRequest',

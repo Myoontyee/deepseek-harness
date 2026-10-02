@@ -30,6 +30,7 @@ import { ForkSessionMenuItem } from '../src/client/session-actions/ForkSession.t
 import { PinSessionMenuItem, PinSessionRowButton } from '../src/client/session-actions/PinSession.tsx'
 import { RenameSessionMenuItem, SessionRenameDialog } from '../src/client/session-actions/RenameSession.tsx'
 import { RowActionToast } from '../src/client/session-actions/RowActionToast.tsx'
+import { SessionRelayDialog } from '../src/client/session-actions/SessionRelay.tsx'
 import { createWorkspaceViewStore } from '../src/client/stores.ts'
 import { en, zh } from '../src/client/locales.ts'
 import { ShortcutRegistry } from '../../shortcuts/src/client/registry.ts'
@@ -96,6 +97,27 @@ const actionRow: ActionRowProps = { ...ROW, t, ...standard }
 
 /** Standard and locale seats of a `shell.overlay` entry (no owner share). */
 const overlay: OverlayProps = { t, ...standard }
+
+describe('addressed Session message dialog', () => {
+  it('keeps a failed draft and reuses its delivery identity on retry', async () => {
+    const sendRelay = vi.fn().mockRejectedValueOnce(new Error('Delivery unavailable')).mockResolvedValueOnce(undefined)
+    const closeRelay = vi.fn()
+    render(<SessionRelayDialog {...overlay} useRelayRequest={hook({ sessionId: sid('two'), title: 'Target B' })}
+      sendRelay={sendRelay} closeRelay={closeRelay} />)
+    fireEvent.click(screen.getByRole('button', { name: '选择来源会话' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'one' }))
+    const message = screen.getByRole('textbox', { name: '消息内容' })
+    fireEvent.change(message, { target: { value: '请检查输入法修复' } })
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
+    await screen.findByRole('alert')
+    expect(closeRelay).not.toHaveBeenCalled()
+    expect((message as HTMLTextAreaElement).value).toBe('请检查输入法修复')
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
+    await waitFor(() => { expect(closeRelay).toHaveBeenCalledOnce() })
+    expect(sendRelay.mock.calls[0]).toEqual(sendRelay.mock.calls[1])
+    expect(sendRelay.mock.calls[0]?.slice(0, 4)).toEqual([sid('one'), sid('two'), '请检查输入法修复', true])
+  })
+})
 
 /** An open menu whose setter records the entries' dismissal. */
 function openMenu() {

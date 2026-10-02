@@ -295,6 +295,7 @@ export type RowToast =
   | { kind: 'archivedNotOpenable' }
   | { kind: 'defaultWorkspaceFailed' }
   | { kind: 'sessionLinkUnavailable' }
+  | { kind: 'relaySent' }
   | { kind: 'copied' }
   | { kind: 'copyFailed' }
   | { kind: 'exportFailed' }
@@ -308,6 +309,27 @@ export type RowToast =
 
 /** The notice on display; `seq` keys remounts so a repeated notice restarts its hold. */
 export type RowToastState = RowToast & { seq: number }
+
+/** A selected destination; the source is chosen explicitly in the dialog. */
+export interface SessionRelayTarget { sessionId: SessionId; title: string }
+
+/** Raise an addressed-message dialog from a Session row. */
+export interface SessionRelayMenuInjected {
+  requestRelay: (sessionId: SessionId, title: string) => void
+}
+
+/** Delivery dialog dependencies; rendering owns only the unfinished draft. */
+export interface SessionRelayDialogInjected {
+  hooks: { relayRequest: HostObservable<SessionRelayTarget | null> }
+  closeRelay: () => void
+  sendRelay: (
+    sourceSessionId: SessionId, targetSessionId: SessionId, message: string, replyRequested: boolean, requestId: string,
+  ) => Promise<void>
+}
+
+/** Props of the addressed-message overlay. */
+export type SessionRelayDialogProps = PropsRuntime<'shell.overlay'> & PropsLocale<'workspace'>
+  & Omit<SessionRelayDialogInjected, 'hooks'> & PropsHooks<SessionRelayDialogInjected['hooks']>
 
 /** Host and clipboard operations shared by the utility menu entries. */
 export interface SessionUtilityInjected {

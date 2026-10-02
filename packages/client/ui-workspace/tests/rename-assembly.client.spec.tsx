@@ -43,7 +43,7 @@ async function createRuntime(): Promise<SlotTestRuntime> {
   // The rename flow never picks a directory; the namespace only has to be there
   // for ui-workspace's inject to settle.
   const directoryPicker = {}
-  runtime.remote.provideNamespaces({ directoryPicker })
+  runtime.remote.provideNamespaces({ directoryPicker, session: {} })
   const locale = new LocaleRuntime(runtime.ctx)
   runtime.ctx.provide('locale', locale)
   runtime.slots.installLocale(locale)
@@ -123,9 +123,9 @@ describe('session rename through the assembled browser', () => {
     const trigger = within(row as HTMLElement).getByLabelText('会话“Persisted title”的操作')
     fireEvent.click(trigger)
     expect(view.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
-      '置顶会话', '重命名', '分叉会话', '归档会话', '复制深度链接', '复制为 Markdown', '复制工作目录', '打开工作目录', 'Export action', 'Last action',
+      '置顶会话', '重命名', '分叉会话', '归档会话', '发送会话消息…', '复制深度链接', '复制为 Markdown', '复制工作目录', '打开工作目录', 'Export action', 'Last action',
     ])
-    expect(view.getAllByRole('separator')).toHaveLength(3)
+    expect(view.getAllByRole('separator')).toHaveLength(4)
     const last = view.getByRole('menuitem', { name: 'Last action' })
     const exportRow = view.getByRole('menuitem', { name: 'Export action' })
     trigger.focus()

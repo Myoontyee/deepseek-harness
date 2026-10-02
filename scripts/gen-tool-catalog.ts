@@ -36,6 +36,7 @@ import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import type { SubagentProvider } from '@deepseek-ai/dsh-subagent'
 import * as ToolSubagentControl from '@deepseek-ai/dsh-tool-subagent-control'
 import * as ToolSubagentListAgents from '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+import * as SessionMessageTools from '../packages/api/session-controller/src/session-tools.ts'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
 import * as SkillFileSystem from '@deepseek-ai/dsh-skill-filesystem'
 import LocalJobRegistry from '@deepseek-ai/dsh-jobs-local'
@@ -203,6 +204,20 @@ export interface ToolPackage {
  * guard proves it is exhaustive against the on-disk glob.
  */
 const TOOL_PACKAGES: ToolPackage[] = [
+  {
+    pkg: '@deepseek-ai/dsh-api-session-controller',
+    dir: 'session-controller',
+    source: 'packages/api/session-controller/src/session-tools.ts',
+    requires: ['ctx.tools', 'ctx.sessionController', 'ctx.agents', 'ctx.workspaceRegistry'],
+    writes: ['tool/call', 'tool/result', 'agent/inbox/spliced', 'user/message'],
+    async mount(ctx) {
+      // Harvest only registers schemas; it cannot deliver messages or resume Sessions.
+      ctx.provide('sessionController', {} as never)
+      ctx.provide('workspaceRegistry', {} as never)
+      await ctx.plugin(AgentRegistry)
+      await ctx.plugin(SessionMessageTools)
+    },
+  },
   {
     pkg: '@deepseek-ai/dsh-plugin-manager',
     dir: 'plugin-manager',

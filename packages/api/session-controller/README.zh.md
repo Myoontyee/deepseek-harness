@@ -27,6 +27,12 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
+`session.sendMessage` 在同一个已鉴权 Host 上的两个现有普通 Session 之间排队投递带来源的文本，支持不同工作目录。它拒绝发给自身、空文本或超长文本、已归档会话、未知标识及由 subagent 管理的会话；冷会话按原有 preset 恢复。回执只表示收件队列已接受，不表示任务完成。同一来源、目标与请求标识的并发或后续重试不会重复投递。取消只影响接受之前的操作；已接受的消息遵循目标会话的普通队列控制。
+
+请求反馈时，目标轮次在未取消且已有提交文本回复的情况下，把最后回复及原请求作为一条排队消息返回来源会话。反馈记录 `replyRequested: false`，不会再次自动回传。两个方向均在普通消息和收件记录中保留 `session-relay` 来源。待处理消息遵循普通收件队列的持久化规则；自动反馈投递本身依赖当前进程，Host 终止后不会补发。没有文本、被取消或反馈被拒绝时不会伪造成功回答；反馈失败会报告 Session 错误，目标会话仍保留回复正文。
+
+标准 Web preset 挂载可选的 `./session-tools` 插件：`list_sessions` 按标题、标识和工作目录搜索未归档普通会话，并限制返回数量；`send_session_message` 从实际执行工具的 Agent 派生发送来源。模型说明要求用户授权联系目标，并明确收到反馈不等于获准再次发消息。可用会话属于同一 Host 账户；这些工具不会联系其他机器。`relayMaxMessageChars` 与 `relayMaxFeedbackChars` 限制投递和反馈文本长度，`maxResults` 属于工具插件。工具为请求增加固定 schema，并追加投递回执；反馈把选定回复加入来源上下文，不改写既有模型历史。
+
 历史页与 follow opening 快照为每个持久 Session 事件携带一条 `{ type: 'event', event: SessionWireEvent }` record。Client 把每条已接受 record 保留为一个持久 `SessionEventLikeEntry`；Assistant token 边界保留在 `assistant/message` 或 `assistant/attempt` 的紧凑流内。工具参数、结果内容、失败信息和 `tool/result.data.meta` 原样通过；控制器不解析工具定义、不运行展示转换器，也不附加 UI 数据。
 
 Client journal 在发布 follow 快照、live entry 或历史页之前验证当前 Session 事件 envelope。它复用浏览器安全的 Session validator，检查必需的 surface marker、精确的 replacement endpoint、更早且唯一的 source seq、内嵌 Assistant 提供方元数据、request header 可选字段的省略规则以及工具错误一致性。无效 record 直接失败，不删除字段或归一化；范围成员与来源存在性仍由 Host 的持久日志检查。

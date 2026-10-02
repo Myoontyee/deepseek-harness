@@ -20,7 +20,9 @@
     "src/media-references.ts",
     "src/model-selection-projection.ts",
     "src/archived-session-gate.ts",
-    "src/skill-catalog.ts"
+    "src/skill-catalog.ts",
+    "src/session-relay.ts",
+    "src/session-tools.ts"
   ],
   "references": [
     { "path": "../../../vendor/cordis" },
@@ -51,6 +53,7 @@
     { "path": "../../util/values" },
     { "path": "../../typert/protocol" },
     { "path": "../../typert/registry" },
-    { "path": "../../workspace/workspace" }
+    { "path": "../../workspace/workspace" },
+    { "path": "../../core/tools" }
   ]
 }

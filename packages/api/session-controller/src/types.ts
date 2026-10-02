@@ -345,6 +345,21 @@ export interface SessionPromptValue {
   readonly accepted: true
 }
 
+/** User-addressed communication between two existing ordinary Sessions. */
+export interface SessionRelayRequest {
+  readonly requestId: string
+  readonly sourceSessionId: SessionId
+  readonly targetSessionId: SessionId
+  readonly message: string
+  readonly replyRequested: boolean
+}
+
+/** Receipt proves inbox acceptance only, not completion. */
+export interface SessionRelayValue {
+  readonly accepted: true
+  readonly messageId: MessageId
+}
+
 /** Durable image read request. */
 export interface SessionAttachmentRequest {
   readonly sessionId: SessionId

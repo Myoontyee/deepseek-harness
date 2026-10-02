@@ -25,6 +25,16 @@ function trigger(source: unknown): ChatNode<'turn-trigger'> {
 
 describe('Turn trigger notices', () => {
   it.each([
+    [false, 'message.trigger.sessionMessage', '收到会话消息'],
+    [true, 'message.trigger.sessionFeedback', '收到会话反馈'],
+  ] as const)('labels ordinary session messages with feedback=%s', (feedback, title, label) => {
+    const node = trigger({ kind: 'session-relay', form: 'relay', feedback })
+    expect(turnTriggerDetails(node.data)).toEqual({ title, icon: 'agent' })
+    const view = render(<TurnTriggerNodeView node={node} t={makeTranslate(zh)} />)
+    expect(view.getByRole('button').textContent).toContain(label)
+  })
+
+  it.each([
     [{ kind: 'schedule' }, 'schedule', 'Automation task'],
     [{ kind: 'tool-jobs' }, 'job', 'Background task updated'],
     [{ kind: 'cordis-host-runner' }, 'plugin', 'Plugin status updated'],
