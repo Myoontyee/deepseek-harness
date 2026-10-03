@@ -9,6 +9,8 @@ English | [中文](README.zh.md)
 
 Desktop product events use the optional [product analytics service](../product-analytics/README.md); ordinary Web interactions are excluded.
 
+Selecting text within one Chat message offers **Add to conversation**. The composer stores quotations separately from request text and displays a collapsible annotation count; each quotation has an optional comment and can be removed. Ordinary sends include the annotations with their source Session address and message key in the persisted text, including annotation-only sends. Failed sends restore annotations without replacing newer request text. Slash commands retain annotations and require their removal before command submission. Unsent annotations remain browser-memory drafts for that Session.
+
 ## Summary
 
 `ui-conversation` owns target-neutral Conversation assembly and the shared browser shell. It consumes Session Controller `SessionEventLikeEntry` feeds, exposes React-free registries and per-Session bindings through `ctx.uiConversation`, and contributes the `useConversation`, `useInput`, and `inputActions` standard props through `ctx.uiSession`. It also owns the per-session durable image URL cache: `ctx.uiConversation.imageUrl(sessionId, attachment)` resolves one session-authorized browser URL per attachment and revokes it with the Session binding, so every Conversation target shares one `session.attachment` read. Concrete targets such as Chat are separate packages that register their own Definitions, snapshot builders, Views, and renderers.

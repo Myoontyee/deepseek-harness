@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { PendingSubmission } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { MessageImageSource } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { fileExtension, FileTypeIcon, fileSizeText, JsonBlock, projectUserText, StateDot, TextShimmer } from '@deepseek-ai/dsh-client-ui-primitives'
+import { parseResponseAnnotations } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatNodeOwnerProps, ChatNodeViewProps, ChatViewSlotProps } from '../contract/slots.ts'
 import type { ModelRetryNode, TurnErrorNode, UserMessageNode } from '../contract/snapshot.ts'
 import { CompactionItem } from './CompactionItem.tsx'
@@ -181,6 +182,7 @@ function UserStyleBubble({
   t: ChatViewSlotProps['t']
 }): ReactNode {
   const { text, attachments: contentAttachments, rest } = contentParts(content)
+  const annotated = parseResponseAnnotations(text)
   const attachments = previewAttachments ?? contentAttachments
   const compactImages = attachments.length > 1
   const truncated = (total: number): string => t('json.truncated', { total })
@@ -219,7 +221,19 @@ function UserStyleBubble({
           </div>
         )}
         {showBubble && <div className={css.bubble}>
-          {projectUserText(text, referenceLabels, skillNames, 'skill', references)}
+          {annotated !== null && (
+            <details className={css.annotations} data-message-annotations>
+              <summary>{t('message.annotations', { count: annotated.annotations.length })}</summary>
+              {annotated.annotations.map((annotation, index) => (
+                <div className={css.annotation} key={index}>
+                  <span className={css.annotationSource}>{annotation.sourceLabel}</span>
+                  <blockquote>{annotation.text}</blockquote>
+                  {annotation.comment !== '' && <p>{annotation.comment}</p>}
+                </div>
+              ))}
+            </details>
+          )}
+          {projectUserText(annotated?.text ?? text, referenceLabels, skillNames, 'skill', references)}
           {rest.map((block, i) => <JsonBlock key={i} label={t('message.extraBlock')} payload={block} truncatedLabel={truncated} />)}
         </div>}
         {referenceLabels.length > 0 && (

@@ -6,6 +6,7 @@ import type { GlobalStandardProps } from '@deepseek-ai/dsh-client-ui-slots'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useEffect } from 'react'
+import { serializeResponseAnnotations } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   AssistantMessageNode, ChatNode, ChatNodeHookContext, ChatNodeOwnerProps, ChatSnapshot,
   ChatViewSlotProps, CommandNode, CompactionSummaryNode, ContextMessageNode, ConversationNode,
@@ -428,6 +429,9 @@ function makeHarness(
     },
     useInput: (() => { throw new Error('unused') }),
     inputActions: {
+      addAnnotation: () => false,
+      updateAnnotation: () => {},
+      removeAnnotation: () => {},
       captureInsertion: () => ({ start: 0, end: 0, draftRev: 0 }),
       insertText: () => false,
       setDraft: () => {},
@@ -576,6 +580,20 @@ function formatRunDuration(ms: number, t: Parameters<typeof durationParts>[1]): 
 }
 
 describe('Chat node rendering', () => {
+  it('presents annotation quotations and comments separately from the request', () => {
+    const text = serializeResponseAnnotations('请解释', [{ text: '被选中的原文', comment: '这里不理解',
+      sourceUrl: 'dsh://session/source', sourceLabel: '原对话', sourceMessage: 'message-1' }])
+    const h = makeHarness({ nodes: [user(1, text)] })
+    const view = render(<h.ChatView {...h.props} />)
+    const annotation = view.container.querySelector('[data-message-annotations]')
+    expect(annotation).not.toBeNull()
+    expect(annotation?.textContent).toContain('被选中的原文')
+    expect(annotation?.textContent).toContain('这里不理解')
+    expect(view.getByText('请解释')).toBeTruthy()
+    expect(view.container.textContent).not.toContain('<dsh-response-annotations>')
+    expect(annotation?.textContent).toMatchInlineSnapshot('"1 条注释原对话被选中的原文这里不理解"')
+  })
+
 
   it('opens Markdown references to unmodified files with line navigation', () => {
     const h = makeHarness({

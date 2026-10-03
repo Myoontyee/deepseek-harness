@@ -9,6 +9,8 @@ kind: "package-reference"
 
 桌面端产品事件使用可选的[产品埋点服务](../product-analytics/README.zh.md)，不包含普通 Web 交互。
 
+在一条 Chat 消息中划词后，可选择**添加到对话**。输入框将引用与正文分开保存，并显示可展开的注释数量；每条引用可补充评论或移除。普通发送会将注释、来源会话地址和消息标识一并写入持久化文本，也支持只发送注释。发送失败会恢复注释，不覆盖后来输入的正文。斜杠命令保留注释，需要先移除注释再提交命令。未发送的注释是当前会话的浏览器内存草稿。
+
 ## 概述
 
 `ui-conversation` 拥有与 target 无关的 Conversation 组装和共享浏览器 shell。它消费 Session Controller 的 `SessionEventLikeEntry` feed，通过 `ctx.uiConversation` 暴露不依赖 React 的注册表与逐 Session binding，并通过 `ctx.uiSession` 提供 `useConversation`、`useInput` 和 `inputActions` 标准 props。它还拥有按会话的持久化图片 URL 缓存：`ctx.uiConversation.imageUrl(sessionId, attachment)` 为每个附件解析一个经会话授权的浏览器 URL，并随 Session binding 释放而撤销，因此所有 Conversation target 共享一次 `session.attachment` 读取。Chat 等具体 target 位于独立包，由各自包注册 Definition、快照 builder、View 和 renderer。

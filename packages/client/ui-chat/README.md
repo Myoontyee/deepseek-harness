@@ -8,6 +8,8 @@ English | [中文](README.zh.md)
 
 Desktop product events use the optional [product analytics service](../product-analytics/README.md); ordinary Web interactions are excluded.
 
+User messages carrying a valid response-annotation envelope display a collapsible quotation count, source labels, and optional comments before the ordinary request. Pending echoes and persisted messages use the same presentation; malformed envelopes remain visible as ordinary text.
+
 ## Summary
 
 Use this package to render a browser chat from recorded Session conversations, including historical images, localized actions, and restored scroll position. Work-details modes control reasoning previews and process visibility without hiding final answers; Verbose keeps completed-turn process rows visible. Local transcript and steering submissions appear immediately, remain in their original surface, and disappear atomically when authoritative Session records arrive, while queued submissions stay outside Chat. The package does not assemble or modify model requests.

@@ -7,6 +7,8 @@ kind: "package-library"
 
 [English](README.md) | 中文
 
+`serializeResponseAnnotations` 与 `parseResponseAnnotations` 共享输入框草稿和 Chat 消息使用的带版本文本封装。封装在模型可见且已记录的文本中保留引用、可选评论、来源会话地址和消息标识；解析不完整或无效封装时返回 null，不丢弃普通用户文本。
+
 ## 概述
 
 使用 `dsh-client-ui-primitives`，通过共享 React UI 构建 Web 客户端控件并渲染 agent 输出。它提供标准控件、图标、锚定浮层，以及用于带 TeX 公式的 Markdown、终端输出、文件读取、差异、搜索、网页检索和 JSON 的渲染器。这些渲染器会丢弃原始 HTML、限制链接并解析 ANSI 转义序列，以处理不受信任的模型输出。组件不 import Cordis 运行时；调用方提供本地化 label，主题相关颜色使用 `--dsw-*` 设计 token。

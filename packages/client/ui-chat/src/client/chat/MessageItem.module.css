@@ -362,3 +362,10 @@
   font-size: 12px;
   line-height: 15px;
 }
+
+.annotations { margin-bottom: 8px; }
+.annotations summary { cursor: pointer; font-weight: 500; }
+.annotation { margin-top: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.annotationSource { font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.annotation blockquote { margin: 8px 0; padding-left: 12px; border-left: 3px solid var(--dsw-alias-border-l2); }
+.annotation p { margin: 8px 0; }

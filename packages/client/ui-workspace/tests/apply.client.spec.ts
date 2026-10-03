@@ -218,7 +218,7 @@ describe('ui-workspace apply', () => {
     expect(notices.hooks.toast.getSnapshot()?.kind).toBe('copied')
     face.copySessionMarkdown(sid('other'), 'Conversation')
     await settled()
-    expect(fetcher).toHaveBeenCalledWith('api/session.export?sessionId=other&format=markdown&locale=zh', expect.objectContaining({ signal: expect.any(AbortSignal) }))
+    expect(fetcher).toHaveBeenCalledWith('api/session.export?sessionId=other&format=markdown&locale=zh', expect.objectContaining({ signal: expect.any(AbortSignal) as AbortSignal }))
     expect(writeText).toHaveBeenLastCalledWith('# Conversation\n\n## 用户\n\nOlder **message**\n')
     face.copySessionDirectory('D:\\Worktree')
     await settled()

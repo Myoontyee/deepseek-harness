@@ -96,6 +96,9 @@ function props(
     useChat: unused,
     useTrajectory: unused,
     inputActions: {
+      addAnnotation: () => false,
+      updateAnnotation: () => {},
+      removeAnnotation: () => {},
       captureInsertion: unused,
       insertText: unused,
       setDraft: unused,

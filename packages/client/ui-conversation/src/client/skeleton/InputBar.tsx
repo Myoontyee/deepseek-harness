@@ -36,6 +36,7 @@ import {
 } from '../input/editor/view-binding.ts'
 import { resolveSubmitMode } from '../input/submission-policy.ts'
 import { attachmentErrorText, imageSizeText } from '../image-labels.ts'
+import { AnnotationDrafts } from './annotations/AnnotationDrafts.tsx'
 import { ContextMeter } from './ContextMeter.tsx'
 import { observeControlRow } from './control-row-layout.ts'
 import css from './InputBar.module.css'
@@ -77,7 +78,7 @@ export const InputBar = memo(function InputBar({
     () => input === undefined || resolveDraftAttachments === undefined ? [] : resolveDraftAttachments(input.attachmentIds),
     [resolveDraftAttachments, input?.attachmentIds],
   )
-  const empty = draft.trim() === '' && attachments.length === 0
+  const empty = draft.trim() === '' && attachments.length === 0 && (input?.annotations.length ?? 0) === 0
   const uploads = useFileUploads(snapshot => snapshot)
   // Send waits for every picked file: uploading and failed drafts both hold
   // the gate (a failed upload is retried or removed, never silently dropped).
@@ -381,6 +382,9 @@ export const InputBar = memo(function InputBar({
       >
         {sessionId !== undefined && (
           <div className={css.overlayAnchor}>{renderSlot('conversation.input.overlay', {})}</div>
+        )}
+        {input !== undefined && inputActions !== undefined && (
+          <AnnotationDrafts annotations={input.annotations} actions={inputActions} disabled={locked || input.phase !== 'plain'} t={t} />
         )}
         {accessory !== undefined && <div className={css.accessory}>{accessory}</div>}
         {renderSlot('conversation.input.attachments', {

@@ -99,7 +99,7 @@ const trajectoryState: TrajectoryState = {
 }
 const inputState: InputState = {
   draft: '',
-  attachmentIds: [],
+  attachmentIds: [], annotations: [],
   draftRev: 0,
   phase: 'plain',
   occurrences: [],
@@ -127,6 +127,9 @@ const kitBase: Omit<QuestionComposerProps, 'matched' | 'useStore' | 'useQuestion
   useProjection: (() => undefined),
   useInput: selector => selector(inputState),
   inputActions: {
+    addAnnotation: () => false,
+    updateAnnotation: () => {},
+    removeAnnotation: () => {},
     captureInsertion: () => ({ start: 0, end: 0, draftRev: 0 }),
     insertText: () => false,
     setDraft: () => { throw new Error('unused') },

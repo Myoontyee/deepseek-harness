@@ -5,6 +5,7 @@ import { workspaceDisplayTitle } from '@deepseek-ai/dsh-api-workspace-controller
 import type { ConversationContentProps, ConversationViewsProps, InputZone } from '../contract/slots.ts'
 import { HeroShell, WorkspaceChip, workspaceLabel } from './EmptyHero.tsx'
 import css from './ConversationRoot.module.css'
+import { SelectionAnnotation } from './annotations/SelectionAnnotation.tsx'
 
 function ConversationSessionView({ renderSlot }: ConversationViewsProps) {
   return renderSlot('conversation.session', {})
@@ -198,6 +199,10 @@ export function ConversationContent(props: ConversationContentProps) {
         {sessionId === undefined ? null : <Views />}
         {composerSeat}
       </div>
+      {sessionId !== undefined && props.inputActions !== undefined && inputState?.phase === 'plain' && (
+        <SelectionAnnotation key={sessionId} container={body} sessionId={sessionId}
+          addAnnotation={annotation => props.inputActions?.addAnnotation(annotation) ?? false} t={t} />
+      )}
       <WidthControls container={body} phase={phase} />
     </div>
   )

@@ -9,6 +9,11 @@ const PLAN_NEXT_ACTION_EN = 'describe your task to generate plan'
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
+  'annotation.add': '添加到对话',
+  'annotation.count': '{count} 条注释',
+  'annotation.comment': '补充评论（可选）',
+  'annotation.remove': '移除注释',
+  'annotation.source': '来自当前对话',
   'shortcut.newline': '换行',
   'shortcut.complementary': '使用互补的 Queue／Steer 方式',
   'shortcut.slash': '打开命令菜单',
@@ -385,6 +390,11 @@ export type ConversationKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
+  'annotation.add': 'Add to conversation',
+  'annotation.count': '{count} annotations',
+  'annotation.comment': 'Add a comment (optional)',
+  'annotation.remove': 'Remove annotation',
+  'annotation.source': 'From this conversation',
   'shortcut.newline': 'New line',
   'shortcut.complementary': 'Use the complementary Queue / Steer action',
   'shortcut.slash': 'Open command menu',

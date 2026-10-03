@@ -327,6 +327,9 @@ describe('ImageGallery', () => {
       useTrajectory,
       useInput,
       inputActions: {
+        addAnnotation: () => false,
+        updateAnnotation: () => {},
+        removeAnnotation: () => {},
         captureInsertion: () => ({ start: 0, end: 0, draftRev: 0 }),
         insertText: () => false,
         setDraft: vi.fn(),

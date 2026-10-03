@@ -6,6 +6,7 @@
  * and its reference chips live in the shell's Lexical editor; the machine
  * here is the submit plane (phase, claim, attempt) alone.
  */
+import type { ResponseAnnotation } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Context } from '@deepseek-ai/cordis'
 import type { InboxState } from '@deepseek-ai/dsh-agent/types'
 import type { ObservableSnapshot, SnapshotStore } from '@deepseek-ai/dsh-client-store'
@@ -213,6 +214,14 @@ export interface SessionInputResolver {
   for(actx: Context): SessionInput
 }
 
+/** Composer-local identity for an unsent annotation. */
+export type DraftAnnotationId = Branded<'DraftAnnotationId'>
+
+/** An unsent quotation, scoped to one composer and independent of its text editor. */
+export interface DraftAnnotation extends ResponseAnnotation {
+  readonly id: DraftAnnotationId
+}
+
 /**
  * The public input action face provided to every session-scope slot
  * component: stable-identity void callbacks, mirroring the
@@ -220,6 +229,12 @@ export interface SessionInputResolver {
  * paste/…) stay InputBar-private and never ride this face.
  */
 export interface InputActions {
+  /** @param annotation - Quoted text and source. @returns whether the draft accepted it without changing the request. */
+  addAnnotation(annotation: ResponseAnnotation): boolean
+  /** @param id - Unsent quotation identity. @param comment - Replacement comment. */
+  updateAnnotation(id: DraftAnnotationId, comment: string): void
+  /** @param id - Unsent quotation to remove. */
+  removeAnnotation(id: DraftAnnotationId): void
   /** @returns a revision-guarded copy of the current editor selection. */
   captureInsertion(): TokenSpan
   /**
@@ -257,6 +272,8 @@ export interface InputState {
   readonly draft: string
   /** Ordered runtime-only attachment ids; browser objects stay in ConversationController. */
   readonly attachmentIds: readonly DraftAttachmentId[]
+  /** Runtime-only quotation drafts; captured separately from editor text. */
+  readonly annotations: readonly DraftAnnotation[]
   /** Monotonic editor revision (span CAS compares against this). */
   readonly draftRev: number
   readonly phase: 'plain' | 'adjudicating' | 'claimed' | 'submitting'

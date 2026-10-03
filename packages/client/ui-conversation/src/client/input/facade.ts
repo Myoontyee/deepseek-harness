@@ -8,6 +8,8 @@
  * Package-private; the hub alone constructs it and wires the scoped event
  * listeners onto it.
  */
+import { serializeResponseAnnotations } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { ResponseAnnotation } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Context } from '@deepseek-ai/cordis'
 import type { InboxState } from '@deepseek-ai/dsh-agent/types'
 import {
@@ -15,7 +17,7 @@ import {
 } from '@deepseek-ai/dsh-client-store'
 import type { LexicalEditor } from 'lexical'
 import type {
-  CommandClaim, ConsumeTokenRequest, DraftAttachmentId,
+  CommandClaim, ConsumeTokenRequest, DraftAttachmentId, DraftAnnotation, DraftAnnotationId,
   InputActions, InputEffect, InputNotice, InputState, InputTriggerController, PickOutcome,
   SessionInput, SubmitAttempt, SubmitAttachment, SubmitOutcome,
 } from '../contract/input.ts'
@@ -100,6 +102,7 @@ const EMPTY_LEXICON: ReadonlyMap<'/' | '@', readonly string[]> = new Map()
 
 /** Editor and attachment snapshot owned by one detached default send. */
 interface DetachedDraft {
+  readonly annotations: readonly DraftAnnotation[]
   readonly draft: string
   readonly occurrences: readonly Occurrence[]
   readonly attachmentIds: readonly DraftAttachmentId[]
@@ -121,6 +124,17 @@ export class SessionInputShell implements SessionInput {
   }
   /** The public provide-channel action face (one stable identity per session). */
   readonly actions: InputActions = {
+    addAnnotation: annotation => this.addAnnotation(annotation),
+    updateAnnotation: (id, comment) => {
+      if (this.disposed || this.snapshot.phase !== 'plain') return
+      this.annotations = this.annotations.map(item => item.id === id ? { ...item, comment } : item)
+      this.publish()
+    },
+    removeAnnotation: (id) => {
+      if (this.disposed || this.snapshot.phase !== 'plain') return
+      this.annotations = this.annotations.filter(item => item.id !== id)
+      this.publish()
+    },
     captureInsertion: () => ({ ...this.caretSpan(), draftRev: this.rev }),
     insertText: (text, span) => {
       if (this.snapshot.phase === 'adjudicating' || this.snapshot.phase === 'submitting' || this.disposed) return false
@@ -144,6 +158,8 @@ export class SessionInputShell implements SessionInput {
   private noticeSeq = 0
   private lastMirroredDraft = ''
   private attachmentIds: readonly DraftAttachmentId[] = []
+  private annotations: readonly DraftAnnotation[] = []
+  private annotationSequence = 0
   private disposed = false
   /** Draft persistence mirror (Conversation store write; receives the clipboard projection). */
   private mirrorFn: ((text: string) => void) | undefined
@@ -159,6 +175,7 @@ export class SessionInputShell implements SessionInput {
   private attachmentFlightSeq = 0
   /** Attachment-only sends retained until admission settles or scope disposal releases their attachments. */
   private readonly attachmentFlights = new Map<number, {
+    readonly annotations: readonly DraftAnnotation[]
     readonly controller: AbortController
     readonly attachmentIds: readonly DraftAttachmentId[]
   }>()
@@ -202,6 +219,23 @@ export class SessionInputShell implements SessionInput {
         this.projection.detectText, caret, { tier: guardOf(this.core.state.phase) }, this.rev,
       )
     }
+  }
+
+  private addAnnotation(annotation: ResponseAnnotation): boolean {
+    if (this.disposed || this.snapshot.phase !== 'plain' || annotation.text.trim() === '') return false
+    this.annotationSequence += 1
+    this.annotations = [...this.annotations, { ...annotation, id: String(this.annotationSequence) as DraftAnnotationId }]
+    this.publish()
+    this.focus()
+    return true
+  }
+
+  private restoreAnnotations(annotations: readonly DraftAnnotation[]): void {
+    if (annotations.length === 0) return
+    const current = new Set(this.annotations.map(item => item.id))
+    this.annotations = [...annotations.filter(item => !current.has(item.id)), ...this.annotations]
+      .sort((left, right) => Number(left.id) - Number(right.id))
+    this.publish()
   }
 
   // ---- SessionInput face ----
@@ -296,30 +330,38 @@ export class SessionInputShell implements SessionInput {
    */
   submit(mode: InputSubmitMode = 'queue', source?: 'click' | 'enter'): void {
     if (this.disposed) return
+    if (this.annotations.length > 0 && (this.snapshot.phase === 'claimed' || this.snapshot.draft.trimStart().startsWith('/'))) {
+      this.notify('error', this.deps.commandAttachments.unsupportedNotice(this.snapshot.draft))
+      return
+    }
     const timestamp = Date.now()
     let state: MessageSubmissionState | undefined
-    if (this.snapshot.phase === 'plain' && (this.snapshot.draft.trim() !== '' || this.attachmentIds.length > 0)) {
+    if (this.snapshot.phase === 'plain' && (this.snapshot.draft.trim() !== '' || this.attachmentIds.length > 0 || this.annotations.length > 0)) {
       try { state = this.deps.submissionState?.() } catch (_error) { /* Optional Session observations cannot interrupt submission. */ }
     }
     const submission: MessageSubmission = Object.freeze({
       timestamp, mode, ...source === undefined ? {} : { source }, ...state === undefined ? {} : { state },
     })
-    if (this.snapshot.draft.trim() === '' && this.attachmentIds.length > 0) {
+    if (this.snapshot.draft.trim() === '' && (this.attachmentIds.length > 0 || this.annotations.length > 0)) {
       if (this.snapshot.phase === 'plain') {
         const attachmentIds = [...this.attachmentIds]
+        const annotations = this.annotations
+        this.annotations = []
         const controller = new AbortController()
         this.attachmentFlightSeq += 1
         const flight = this.attachmentFlightSeq
-        this.attachmentFlights.set(flight, { controller, attachmentIds })
+        this.attachmentFlights.set(flight, { controller, attachmentIds, annotations })
         this.commitSend(attachmentIds)
         this.notifySubmission(submission)
-        void this.deps.defaultSink('', attachmentIds, mode, controller.signal).then((outcome) => {
+        void this.deps.defaultSink(serializeResponseAnnotations('', annotations), attachmentIds, mode, controller.signal).then((outcome) => {
           if (this.disposed || !this.attachmentFlights.delete(flight)) return
           if (outcome.kind === 'success') return
+          this.restoreAnnotations(annotations)
           this.restoreAttachments(attachmentIds)
           if (outcome.text !== undefined) this.notify('error', outcome.text)
         }, (error: unknown) => {
           if (this.disposed || !this.attachmentFlights.delete(flight)) return
+          this.restoreAnnotations(annotations)
           this.restoreAttachments(attachmentIds)
           this.notify('error', error instanceof Error ? error.message : String(error))
         })
@@ -652,14 +694,18 @@ export class SessionInputShell implements SessionInput {
     const attachmentIds = [...this.attachmentIds]
     this.attachmentIds = []
     const occurrences = this.projection.occurrences
-    const record = { draft, occurrences, attachmentIds }
+    const annotations = this.annotations
+    this.annotations = []
+    const record = { draft, occurrences, attachmentIds, annotations }
     this.detachedDrafts.set(attempt.seq, record)
     if (this.failedRestoreRev === this.rev) {
       this.failedDetached.clear()
       this.failedRestoreRev = undefined
     }
     if (occurrences.length === 0) {
-      this.settleSink(attempt, this.deps.defaultSink(draft.trim(), attachmentIds, mode, attempt.signal))
+      this.settleSink(attempt, this.deps.defaultSink(
+        serializeResponseAnnotations(draft.trim(), annotations), attachmentIds, mode, attempt.signal,
+      ))
       return
     }
     const inputTriggers = this.deps.inputTriggers?.()
@@ -683,7 +729,9 @@ export class SessionInputShell implements SessionInput {
           cursor = part.offset + part.length
         }
         out += draft.slice(cursor)
-        this.settleSink(attempt, this.deps.defaultSink(out.trim(), attachmentIds, mode, attempt.signal))
+        this.settleSink(attempt, this.deps.defaultSink(
+          serializeResponseAnnotations(out.trim(), annotations), attachmentIds, mode, attempt.signal,
+        ))
       },
       (error: unknown) => {
         if (this.dead(attempt)) return
@@ -725,6 +773,7 @@ export class SessionInputShell implements SessionInput {
     const record = this.detachedDrafts.get(attempt.seq)
     if (record === undefined) return
     this.detachedDrafts.delete(attempt.seq)
+    this.restoreAnnotations(record.annotations)
     this.restoreAttachments(record.attachmentIds)
     this.failedDetached.set(attempt.seq, record)
     if (this.projection.clipboardText === '' || this.failedRestoreRev === this.rev) {
@@ -841,6 +890,7 @@ export class SessionInputShell implements SessionInput {
     return {
       draft: this.projection.clipboardText,
       attachmentIds: this.attachmentIds,
+      annotations: this.annotations,
       draftRev: this.rev,
       phase: core.phase,
       ...(core.claim !== undefined ? { claim: core.claim } : {}),
