@@ -3934,6 +3934,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
       'client-ui-workspace ForkSessionMenuItem id \'fork\'',
       'client-ui-workspace ArchiveSessionMenuItem id \'archive\'',
       'client-ui-workspace SessionRelayMenuItem id \'relay\'',
+      'client-ui-workspace OpenSessionWindowMenuItem id \'open-window\'',
       'client-ui-workspace CopySessionLinkMenuItem id \'copy-link\'',
       'client-ui-workspace CopySessionMarkdownMenuItem id \'copy-markdown\'',
       'client-ui-workspace CopySessionDirectoryMenuItem id \'copy-directory\'',
