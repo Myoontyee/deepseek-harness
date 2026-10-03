@@ -24,7 +24,7 @@ import { ForkSessionMenuItem } from '../src/client/session-actions/ForkSession.t
 import { PinSessionMenuItem, PinSessionRowButton } from '../src/client/session-actions/PinSession.tsx'
 import { RenameSessionMenuItem, SessionRenameDialog } from '../src/client/session-actions/RenameSession.tsx'
 import { RowActionToast } from '../src/client/session-actions/RowActionToast.tsx'
-import { CopySessionDirectoryMenuItem, CopySessionLinkMenuItem, CopySessionMarkdownMenuItem, OpenSessionDirectoryMenuItem } from '../src/client/session-actions/SessionUtilities.tsx'
+import { OpenSessionWindowMenuItem, CopySessionDirectoryMenuItem, CopySessionLinkMenuItem, CopySessionMarkdownMenuItem, OpenSessionDirectoryMenuItem } from '../src/client/session-actions/SessionUtilities.tsx'
 import { WorkspacePicker } from '../src/client/WorkspacePicker.tsx'
 import { FLAT_SESSION_ORDER_KEY } from '../src/client/stores.ts'
 import { UNGROUPED_KEY } from '../src/client/tree.ts'
@@ -181,6 +181,25 @@ function viewInstance(slots: SlotRegistry) {
 const settled = (): Promise<void> => new Promise((resolve) => { setTimeout(resolve, 0) })
 
 describe('ui-workspace apply', () => {
+  it('opens the addressed row in Desktop and reports native opening failures', async () => {
+    const openWindow = vi.fn(async (_id: string) => {})
+    vi.stubGlobal('dshDesktop', { protocolVersion: 1, sessions: { openWindow, subscribe: () => () => {} } })
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const b = await bench()
+    onTestFinished(() => b.ctx.fiber.dispose())
+    declare(b.slots, 'sidebar.workspaces', 'shell.overlay')
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    const face = faceOf(entry(b.slots, MENU_ITEM, 'open-window')) as SessionUtilityInjected
+    face.openSessionWindow!(sid('other'))
+    await settled()
+    expect(openWindow).toHaveBeenCalledWith('other')
+    openWindow.mockRejectedValueOnce(new Error('window load failed'))
+    face.openSessionWindow!(sid('other'))
+    await settled()
+    const notices = faceOf(entry(b.slots, 'shell.overlay', 'workspace.row-toast')) as RowToastInjected
+    expect(notices.hooks.toast.getSnapshot()?.kind).toBe('openWindowFailed')
+  })
+
   it('copies a row-specific link, full Markdown response, and working directory with honest feedback', async () => {
     const b = await bench()
     onTestFinished(() => b.ctx.fiber.dispose())
@@ -275,7 +294,7 @@ describe('ui-workspace apply', () => {
     await Promise.resolve()
     expect(after.slots.entries('conversation.hero.workspace')[0]!.component).toBe(WorkspacePicker)
     // The row actions follow the browser's own declaration, whenever it lands.
-    expect(after.slots.entries(MENU_ITEM)).toHaveLength(9)
+    expect(after.slots.entries(MENU_ITEM)).toHaveLength(10)
     expect(after.slots.entries(ROW_ACTION)).toHaveLength(2)
     expect(after.slots.entries('shell.overlay')).toHaveLength(4)
   })
@@ -299,6 +318,7 @@ describe('ui-workspace apply', () => {
       ['fork', 300, ForkSessionMenuItem, 'workspace'],
       ['archive', 400, ArchiveSessionMenuItem, 'workspace'],
       ['relay', 450, SessionRelayMenuItem, 'workspace'],
+      ['open-window', 480, OpenSessionWindowMenuItem, 'workspace'],
       ['copy-link', 500, CopySessionLinkMenuItem, 'workspace'],
       ['copy-markdown', 600, CopySessionMarkdownMenuItem, 'workspace'],
       ['copy-directory', 700, CopySessionDirectoryMenuItem, 'workspace'],
@@ -659,7 +679,7 @@ describe('ui-workspace apply', () => {
     declare(b.slots, 'sidebar.workspaces', 'conversation.hero.workspace', 'conversation.empty.workspace', 'shell.overlay')
     const fiber = b.ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
-    expect(b.slots.entries(MENU_ITEM)).toHaveLength(9)
+    expect(b.slots.entries(MENU_ITEM)).toHaveLength(10)
     expect(b.slots.entries(ROW_ACTION)).toHaveLength(2)
     expect(b.slots.entries('shell.overlay')).toHaveLength(4)
     await fiber.dispose()

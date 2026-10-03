@@ -1,16 +1,16 @@
 /** Window-owned workspace directory dialogs for the local Desktop renderer. */
 
-import { dialog, ipcMain, type BrowserWindow } from 'electron'
+import { dialog, ipcMain, type BrowserWindow, type WebContents } from 'electron'
 import { DESKTOP_IPC, assertDesktopSender } from './ipc.ts'
 
 /**
  * Install the application-lifetime directory picker IPC handler.
  * @param getWindow - Current local application window; shell pages and subframes cannot open dialogs.
  */
-export function installDesktopDirectoryPicker(getWindow: () => BrowserWindow | undefined): void {
+export function installDesktopDirectoryPicker(getWindow: (contents?: WebContents) => BrowserWindow | undefined): void {
   const pending = new WeakMap<BrowserWindow, Promise<string | null>>()
   ipcMain.handle(DESKTOP_IPC.directoryPick, async (event) => {
-    const window = getWindow()
+    const window = getWindow(event.sender)
     if (window === undefined || window.isDestroyed() || event.sender !== window.webContents
       || event.senderFrame !== window.webContents.mainFrame) {
       throw new Error('dsh desktop: rejected directory picker from an unowned renderer')

@@ -21,6 +21,7 @@ export const DESKTOP_IPC = {
   browserRelease: 'dsh-desktop:browser-release',
   browserOpenRequested: 'dsh-desktop:browser-open-requested',
   directoryPick: 'dsh-desktop:directory-pick',
+  openSessionWindow: 'dsh-desktop:open-session-window',
   takeSessionLink: 'dsh-desktop:take-session-link',
   sessionLinkChanged: 'dsh-desktop:session-link-changed',
   deviceInfo: 'dsh-desktop:device-info',
@@ -78,6 +79,12 @@ export interface DshDesktopProductApi {
   readonly shortcuts: DesktopShortcutsApi
   /** External conversation links are delivered after the product document subscribes. */
   readonly sessions: {
+    /**
+     * Open a local conversation in an independent window sharing the running Host.
+     * @param sessionId - Identity resolved by the new window's local Session catalog.
+     * @returns Completion of the native window load, or a rejected opening request.
+     */
+    openWindow(sessionId: string): Promise<void>
     /**
      * Receive pending and subsequent local conversation identities.
      * @param listener - Product navigation callback; it resolves identities against its local Session catalog.

@@ -16,7 +16,7 @@ import { DESKTOP_IPC, assertDesktopSender } from './ipc.ts'
  * @returns menu construction, editor key delivery, window attachment, and teardown operations.
  */
 export function installDesktopShortcuts(
-  getWindow: () => BrowserWindow | undefined, userData: string, platform: ShortcutPlatform, updateMenu: () => void,
+  getWindow: (contents?: WebContents) => BrowserWindow | undefined, userData: string, platform: ShortcutPlatform, updateMenu: () => void,
   overlayInput: (window: BrowserWindow) => { readonly revision: number; readonly blocked: boolean },
 ): {
   fileMenu(labels: { fileMenu: string; closePage: string }): MenuItemConstructorOptions
@@ -39,11 +39,13 @@ export function installDesktopShortcuts(
 } {
   let definitions: readonly ShortcutDefinition[] = []
   let recording = false
+  let recordingWindow: BrowserWindow | undefined
   let revision: ShortcutRevision | undefined
   let closeBinding: NormalizedBinding | null = null
   let editingInput: BrowserWindow['webContents'] | undefined
   const scopedDesktop = platform === 'windows' || platform === 'macos'
   const disposers = new Set<() => void>()
+  const windows = new Set<BrowserWindow>()
   const guestInputs = new Map<WebContents, { window: BrowserWindow; reset(): void }>()
   const closeAccelerator = (): string | undefined => presentBinding(closeBinding, platform).aria
     ?.replace('Meta+', 'Command+').replace(/Arrow(Up|Down|Left|Right)$/u, '$1')
@@ -64,14 +66,15 @@ export function installDesktopShortcuts(
     const close = rows.find(row => row.id === 'page.close')
     closeBinding = close?.issue === null && close.conflicts.length === 0 ? close.binding : null
     if (wasEnabled !== (revision !== undefined) || previousAccelerator !== closeAccelerator()) updateMenu()
-    const window = getWindow()
-    if (window !== undefined && !window.isDestroyed() && window.webContents.mainFrame.url.startsWith('dsh-app://app/')) {
-      window.webContents.send(DESKTOP_IPC.shortcutsChanged, snapshot)
+    for (const window of windows) {
+      if (!window.isDestroyed() && window.webContents.mainFrame.url.startsWith('dsh-app://app/')) {
+        window.webContents.send(DESKTOP_IPC.shortcutsChanged, snapshot)
+      }
     }
   }
   const persistence = desktopKeybindings(userData, platform, publish)
   const assertSender = (event: IpcMainInvokeEvent): BrowserWindow => {
-    const window = getWindow()
+    const window = getWindow(event.sender)
     if (window === undefined || window.isDestroyed() || event.sender !== window.webContents
       || event.senderFrame !== window.webContents.mainFrame) throw new Error('desktop shortcuts: rejected sender')
     assertDesktopSender(event, ['app'])
@@ -92,6 +95,7 @@ export function installDesktopShortcuts(
     const window = assertSender(event)
     if (typeof active !== 'boolean') throw new Error('desktop shortcuts: invalid recording state')
     recording = active
+    recordingWindow = active ? window : undefined
     window.webContents.setIgnoreMenuShortcuts(active)
   })
   ipcMain.handle(DESKTOP_IPC.shortcutsCloseWindow, (event, expected: unknown) => {
@@ -118,7 +122,7 @@ export function installDesktopShortcuts(
     }
     const clear = (): void => {
       resetInput()
-      if (guestName !== undefined) return
+      if (guestName !== undefined || [...windows].some(other => other !== window && !other.isDestroyed())) return
       definitions = []; keys.clear(); recording = false
       persistence.setDefinitions(null)
     }
@@ -202,11 +206,12 @@ export function installDesktopShortcuts(
         repeat: input.isAutoRepeat, control: input.control, alt: input.alt, shift: input.shift, meta: input.meta })
     }
     const dispose = (): void => {
+      if (guestName === undefined && recordingWindow === window) { recording = false; recordingWindow = undefined }
       contents.off('did-start-navigation', navigation)
       contents.off('before-input-event', beforeInput)
       contents.off('blur', resetInput)
       contents.off('destroyed', dispose)
-      if (guestName === undefined) { window.off('blur', resetWindow); window.off('closed', closed) }
+      if (guestName === undefined) { windows.delete(window); window.off('blur', resetWindow); window.off('closed', closed) }
       disposers.delete(dispose)
       guestInputs.delete(contents)
       if (!contents.isDestroyed()) contents.setIgnoreMenuShortcuts(false)
@@ -247,7 +252,7 @@ export function installDesktopShortcuts(
         click: sendMenuClose,
       }] }
     },
-    attach(window) { attachInput(window, window.webContents) },
+    attach(window) { windows.add(window); attachInput(window, window.webContents) },
     attachGuest: attachInput,
     dispose() {
       for (const dispose of disposers) dispose()

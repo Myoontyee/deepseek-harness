@@ -84,6 +84,7 @@ function plainNoticeText(
     case 'sessionLinkUnavailable': return t('toast.sessionLinkUnavailable')
     case 'copyFailed': return t('toast.copyFailed')
     case 'exportFailed': return t('toast.exportFailed')
+    case 'openWindowFailed': return t('toast.openWindowFailed')
     case 'openDirectoryFailed': return t('toast.openDirectoryFailed')
     /* v8 ignore next 2 -- closed-union backstop; only reached if a notice kind is forged */
     default:

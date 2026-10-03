@@ -300,6 +300,7 @@ export type RowToast =
   | { kind: 'copyFailed' }
   | { kind: 'exportFailed' }
   | { kind: 'openDirectoryFailed' }
+  | { kind: 'openWindowFailed' }
   /**
    * An explicit New Session request that failed. `message` is untranslated:
    * a Host refusal as `code: message` — the stable code stays in the copy so
@@ -333,6 +334,8 @@ export type SessionRelayDialogProps = PropsRuntime<'shell.overlay'> & PropsLocal
 
 /** Host and clipboard operations shared by the utility menu entries. */
 export interface SessionUtilityInjected {
+  /** Desktop capability; absent in a browser-only client. */
+  openSessionWindow?: (sessionId: SessionId) => void
   /** Copy a Desktop conversation link. */
   copySessionLink: (sessionId: SessionId) => void
   /** Copy the complete committed conversation, including older history. */

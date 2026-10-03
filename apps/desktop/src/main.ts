@@ -19,6 +19,7 @@ import {
   protocol,
   session,
   shell,
+  type WebContents,
   type IpcMainInvokeEvent,
   type MenuItemConstructorOptions,
 } from 'electron'
@@ -354,6 +355,17 @@ async function main(): Promise<void> {
   let startup: Promise<void> | undefined
   let workspaceRecovery: Promise<void> | undefined
   let mainWindow: BrowserWindow | undefined
+  const sessionWindows = new Map<BrowserWindow, { pendingSessionId?: string }>()
+  const productWindow = (contents?: WebContents): BrowserWindow | undefined => {
+    const windows = [mainWindow, ...sessionWindows.keys()]
+      .filter((window): window is BrowserWindow => window !== undefined && !window.isDestroyed())
+    return contents === undefined ? windows.find(window => window.isFocused()) ?? mainWindow
+      : windows.find(window => window.webContents === contents)
+  }
+  const closeSessionWindows = (): void => {
+    for (const window of sessionWindows.keys()) if (!window.isDestroyed()) window.destroy()
+    sessionWindows.clear()
+  }
   let welcomeWindow: BrowserWindow | undefined
   let enteredWorkspace = false
   // NSIS passes --updated when it launches the application after installation.
@@ -429,19 +441,26 @@ async function main(): Promise<void> {
   let returnedAttempt: string | undefined
   let pendingWelcomeNotice: WelcomeNotice | undefined
   let previousAccountStatus: string | undefined
-  const assertProductSender = (event: IpcMainInvokeEvent): void => {
+  const assertProductSender = (event: IpcMainInvokeEvent): BrowserWindow => {
     assertDesktopSender(event, ['app'])
-    if (mainWindow === undefined || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents
-      || event.senderFrame === null || event.senderFrame !== mainWindow.webContents.mainFrame) {
+    const owner = productWindow(event.sender)
+    if (owner === undefined || event.senderFrame === null || event.senderFrame !== owner.webContents.mainFrame) {
       throw new Error('dsh desktop: rejected IPC from an unowned renderer')
     }
+    return owner
   }
   notifySessionLink = () => {
     if (quitting || mainWindow === undefined || mainWindow.isDestroyed()) return
     mainWindow.webContents.send(DESKTOP_IPC.sessionLinkChanged)
   }
   ipcMain.handle(DESKTOP_IPC.takeSessionLink, (event) => {
-    assertProductSender(event)
+    const owner = assertProductSender(event)
+    const entry = sessionWindows.get(owner)
+    if (entry !== undefined) {
+      const sessionId = entry.pendingSessionId
+      delete entry.pendingSessionId
+      return sessionId
+    }
     const sessionId = pendingSessionLink
     pendingSessionLink = undefined
     return sessionId
@@ -498,6 +517,7 @@ async function main(): Promise<void> {
             void readWelcomeState().then(async (value) => {
               if (needsWelcome(value) && !quitting) {
                 enteredWorkspace = false
+                closeSessionWindows()
                 await showWelcome()
                 if (welcomeWindow !== undefined && !welcomeWindow.isDestroyed()) welcomeWindow.webContents.send(WELCOME_IPC.state, state)
               }
@@ -512,6 +532,7 @@ async function main(): Promise<void> {
             if (!needsWelcome(value) || quitting) return
             pendingWelcomeNotice = 'session-expired'
             enteredWorkspace = false
+            closeSessionWindows()
             await showWelcome()
             const state = await accountBackend.state()
             if (welcomeWindow !== undefined && !welcomeWindow.isDestroyed()) welcomeWindow.webContents.send(WELCOME_IPC.state, state)
@@ -519,6 +540,7 @@ async function main(): Promise<void> {
         }, (enabled) => { analyticsEnabled = enabled })
       },
       stop: async () => {
+        closeSessionWindows()
         analyticsEnabled = false
         stopAccount?.()
         try { await host.stop(requireCleanStop) }
@@ -700,14 +722,14 @@ async function main(): Promise<void> {
     return Promise.resolve(new Response(null, { status: 404 }))
   })
 
-  installDesktopDirectoryPicker(() => mainWindow)
-  installMicrophonePermissions(session.defaultSession, () => mainWindow?.webContents)
-  const shortcuts = installDesktopShortcuts(() => mainWindow, app.getPath('userData'),
+  installDesktopDirectoryPicker(productWindow)
+  installMicrophonePermissions(session.defaultSession, contents => productWindow(contents)?.webContents)
+  const shortcuts = installDesktopShortcuts(productWindow, app.getPath('userData'),
     process.platform === 'darwin' ? 'macos' : process.platform === 'win32' ? 'windows' : 'linux', () => { refreshApplicationMenu() }, window => updateOverlays.input(window))
   app.on('will-quit', () => { shortcuts.dispose() })
 
   ipcMain.handle(DESKTOP_IPC.boot, async (event) => {
-    assertDesktopSender(event, ['app'])
+    assertProductSender(event)
     await startup
     if (backend.host === undefined || hostUrl === undefined) throw new Error('Desktop Host is unavailable')
     return { injections, streamBaseUrl: new URL(hostUrl).origin }
@@ -715,9 +737,8 @@ async function main(): Promise<void> {
 
   ipcMain.handle(DESKTOP_IPC.bootFailed, (event, message: unknown) => {
     assertDesktopSender(event, ['app'])
-    if (event.sender !== mainWindow?.webContents || event.senderFrame !== event.sender.mainFrame) {
-      throw new Error('dsh desktop: rejected startup failure from a non-primary frame')
-    }
+    const owner = assertProductSender(event)
+    if (owner !== mainWindow) { owner.destroy(); return }
     if (typeof message !== 'string') throw new Error('dsh desktop: startup failure must be text')
     reportFatal(new Error(message), 'web-boot')
   })
@@ -732,7 +753,9 @@ async function main(): Promise<void> {
   })
 
   session.defaultSession.webRequest.onBeforeSendHeaders({ urls: ['ws://127.0.0.1/*'] }, (details, callback) => {
-    if (hostUrl === undefined || hostCookie === undefined || details.webContentsId !== mainWindow?.webContents.id) {
+    const owned = [mainWindow, ...sessionWindows.keys()]
+      .some(window => window !== undefined && !window.isDestroyed() && window.webContents.id === details.webContentsId)
+    if (hostUrl === undefined || hostCookie === undefined || !owned) {
       callback({})
       return
     }
@@ -745,7 +768,7 @@ async function main(): Promise<void> {
   })
 
   const assertMainApplication = (event: IpcMainInvokeEvent): BrowserWindow => {
-    const owner = mainWindow
+    const owner = productWindow(event.sender)
     if (owner === undefined || event.sender !== owner.webContents || event.senderFrame !== owner.webContents.mainFrame
       || !event.senderFrame.url.startsWith('dsh-app://app/')) throw new Error('Rejected Platform command')
     return owner
@@ -770,15 +793,12 @@ async function main(): Promise<void> {
     if (source === 'light' || source === 'dark' || source === 'system') nativeTheme.themeSource = source
   })
   ipcMain.handle(DESKTOP_IPC.localeBootstrap, async (event) => {
-    if (event.sender !== mainWindow?.webContents || event.senderFrame !== mainWindow.webContents.mainFrame
-      || new URL(event.senderFrame.url).origin !== new URL(applicationUrl).origin) {
-      throw new Error('desktop welcome: rejected locale request from an unowned frame')
-    }
+    assertProductSender(event)
     if (welcomeBackend === undefined) throw new Error('desktop welcome: backend unavailable')
     return { languages: systemLanguages, preference: await welcomeBackend.readLocalePreference() }
   })
   ipcMain.on(DESKTOP_IPC.localeChanged, (event, next: unknown) => {
-    const window = mainWindow
+    const window = productWindow(event.sender)
     if (window === undefined || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame
       || typeof next !== 'string') return
     const current = resolveDesktopStartupLocale(next, systemLanguages)
@@ -801,7 +821,7 @@ async function main(): Promise<void> {
     return (await readWelcomeState()).hasApiKey
   })
   ipcMain.on(DESKTOP_IPC.onboardingActive, (event, active: unknown) => {
-    const window = mainWindow
+    const window = productWindow(event.sender)
     if (window === undefined || window.isDestroyed() || event.sender !== window.webContents
       || event.senderFrame !== window.webContents.mainFrame
       || !event.senderFrame.url.startsWith(`${SCHEME}://app/`) || typeof active !== 'boolean') return
@@ -1033,12 +1053,10 @@ async function main(): Promise<void> {
   if (process.platform === 'win32') {
     ipcMain.handle(DESKTOP_IPC.windowsMenu, (event, name: unknown, x: unknown, y: unknown) => {
       assertDesktopSender(event, ['app'])
-      if (mainWindow === undefined || event.sender !== mainWindow.webContents
-        || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error('desktop menu: rejected sender')
+      const window = assertProductSender(event)
       if ((name !== 'application' && name !== 'edit')
         || typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)
         || x < 0 || y < 0 || x > 100_000 || y > 100_000) throw new Error('desktop menu: invalid popup request')
-      const window = mainWindow
       // Editor-owned history listens to key events rather than Chromium's native undo stack.
       const editItem = (label: string, keyCode: string, modifiers: Array<'control'>, accelerator?: string): MenuItemConstructorOptions => ({
         label,
@@ -1058,14 +1076,14 @@ async function main(): Promise<void> {
         { type: 'separator' },
         editItem(currentDesktopLocale().messages.selectAll, 'A', ['control'], 'Ctrl+A'),
       ]
-      const zoom = mainWindow.webContents.getZoomFactor()
+      const zoom = window.webContents.getZoomFactor()
       return new Promise<void>((resolve) => {
         Menu.buildFromTemplate(items).popup({ window, x: Math.round(x * zoom), y: Math.round(y * zoom), callback: resolve })
       })
     })
     ipcMain.on(DESKTOP_IPC.windowsAppearance, (event, language: unknown, color: unknown, symbolColor: unknown) => {
-      if (mainWindow === undefined || event.sender !== mainWindow.webContents
-        || event.senderFrame !== mainWindow.webContents.mainFrame) return
+      const window = productWindow(event.sender)
+      if (window === undefined || event.senderFrame !== window.webContents.mainFrame) return
       if (!event.senderFrame.url.startsWith(`${SCHEME}://app/`)) return
       if (typeof language === 'string' && /^[a-zA-Z]+(?:-[a-zA-Z0-9]+)*$/u.test(language)) {
         windowsLanguage = language
@@ -1073,7 +1091,7 @@ async function main(): Promise<void> {
       // Empty colors precede client stylesheet installation; only CSS color values cross IPC.
       const validColor = (value: unknown): value is string => typeof value === 'string'
         && /^(?:#[\da-f]{3,8}|rgba?\([\d.,%\s]+\))$/iu.test(value)
-      if (validColor(color) && validColor(symbolColor)) mainWindow.setTitleBarOverlay({ color, symbolColor })
+      if (validColor(color) && validColor(symbolColor)) window.setTitleBarOverlay({ color, symbolColor })
     })
   }
 
@@ -1086,6 +1104,27 @@ async function main(): Promise<void> {
       window.hide()
     }
   }
+  ipcMain.handle(DESKTOP_IPC.openSessionWindow, async (event, sessionId: unknown) => {
+    assertProductSender(event)
+    if (typeof sessionId !== 'string' || sessionId.length === 0 || sessionId.length > 512 || /[\u0000-\u001f\u007f]/u.test(sessionId)) {
+      throw new Error('Invalid conversation identity')
+    }
+    if (quitting || !enteredWorkspace || backend.state.phase !== 'ready') throw new Error('Desktop Host is unavailable')
+    const window = createWindow(appPreload, false, true)
+    sessionWindows.set(window, { pendingSessionId: sessionId })
+    window.once('closed', () => { sessionWindows.delete(window) })
+    browserGuests.bind(window, (guest, name) => shortcuts.attachGuest(window, guest, name))
+    shortcuts.attach(window)
+    window.on('focus', automaticCheck)
+    try {
+      await window.loadURL(applicationUrl)
+      if (!window.isDestroyed()) { window.show(); window.focus() }
+    } catch (error) {
+      if (!window.isDestroyed()) window.destroy()
+      throw error
+    }
+  })
+
   const createMainWindow = (): BrowserWindow => {
     const window = createWindow(appPreload, false, true)
     mainWindow = window
@@ -1266,6 +1305,7 @@ async function main(): Promise<void> {
     backgroundNotice?.dispose()
     tray?.dispose()
     stopAccount?.()
+    closeSessionWindows()
     if (welcomeWindow !== undefined && !welcomeWindow.isDestroyed()) welcomeWindow.hide()
     if (mainWindow !== undefined && !mainWindow.isDestroyed()) mainWindow.hide()
     updateSchedule.dispose()

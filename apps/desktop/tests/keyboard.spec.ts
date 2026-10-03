@@ -118,6 +118,24 @@ function updateOverlayFixture(f: Awaited<ReturnType<typeof fixture>>) {
   }
 }
 
+it('keeps shortcuts active in the first window after an additional window closes', async () => {
+  const f = await fixture()
+  const frame = { url: 'dsh-app://app/', name: '', parent: null }
+  const contents = Object.assign(new EventEmitter(), { mainFrame: frame, focusedFrame: frame,
+    isDestroyed: () => false, isFocused: () => false, send: vi.fn(),
+    setIgnoreMenuShortcuts: vi.fn(), focus: vi.fn(), sendInputEvent: vi.fn() })
+  const second = Object.assign(new EventEmitter(), { webContents: contents,
+    isDestroyed: () => false, isFocused: () => false, isEnabled: () => true, close: vi.fn() })
+  f.keyboard.attach(second)
+  const snapshot = await f.call<ShortcutConfigSnapshot>(DESKTOP_IPC.shortcutsGet, [
+    ...f.definitions, { id: 'page.close' as ShortcutCommandId, defaults: desktopDefaults({ code: 'KeyW', modifiers: ['primary'] }) },
+  ])
+  expect(contents.send).toHaveBeenCalledWith(DESKTOP_IPC.shortcutsChanged, expect.objectContaining({ revision: snapshot.revision }))
+  second.emit('closed')
+  await f.call(DESKTOP_IPC.shortcutsCloseWindow, snapshot.revision)
+  expect(f.window.close).toHaveBeenCalledOnce()
+})
+
 it('mirrors only successful bindings, suppresses recording menus, and invalidates pre-navigation drafts', async () => {
   const f = await fixture()
   const initial = await f.call<ShortcutConfigSnapshot>(DESKTOP_IPC.shortcutsGet, f.definitions)

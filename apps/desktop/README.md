@@ -30,6 +30,10 @@ On macOS, installation creates `/usr/local/bin/dsh` and requests administrator a
 
 Command registration is optional after installing Desktop. Use **Manage dsh Command… → Remove** before uninstalling Desktop to remove its CLI registration; the application uninstaller does not remove it. Finish CLI commands before updating or uninstalling Desktop. The CLI runtime version follows the installed Desktop release. See [bundled command runtime](#bundled-command-runtime) for Desktop plugin commands and runtime limitations.
 
+## Independent conversation windows
+
+The Session row menu offers **Open in new window**. Each window has its own navigation and connects to the same Desktop Host and Session data; opening a window neither forks the Session nor starts another Host. Session links are delivered to the requesting window. Closing an additional window destroys its document without stopping running tasks. Sign-out, Host shutdown, and application quit close additional windows. The primary window retains its background behavior.
+
 ## Closing the window and quitting
 
 Closing the main window (macOS close button and ⌘W; Windows ×, Alt+F4, and the taskbar Close window command) hides it; Windows asks for acknowledgement before the first hide. The page and the Host keep running, tasks continue, and the next show presents the same document with its session, drafts, and scroll position; a fullscreen macOS window leaves fullscreen before hiding. The window returns through the Dock icon, a second launch, or `dsh://open` on macOS, and through the tray on Windows. Minimize is unchanged. Closing the welcome window before the workspace opens quits on Windows and, on macOS, keeps the application in the Dock without a window.

@@ -54,7 +54,7 @@ import { RenameSessionMenuItem, SessionRenameDialog } from './session-actions/Re
 import { SessionRelayMenuItem, SessionRelayDialog } from './session-actions/SessionRelay.tsx'
 import type { SessionRelayTarget, SessionRelayDialogInjected, SessionRelayMenuInjected } from './contract/slots.ts'
 import { RowActionToast } from './session-actions/RowActionToast.tsx'
-import { CopySessionDirectoryMenuItem, CopySessionLinkMenuItem, CopySessionMarkdownMenuItem, OpenSessionDirectoryMenuItem } from './session-actions/SessionUtilities.tsx'
+import { OpenSessionWindowMenuItem, CopySessionDirectoryMenuItem, CopySessionLinkMenuItem, CopySessionMarkdownMenuItem, OpenSessionDirectoryMenuItem } from './session-actions/SessionUtilities.tsx'
 import { WorkspacePicker } from './WorkspacePicker.tsx'
 import { en, zh, type WorkspaceKey } from './locales.ts'
 
@@ -249,7 +249,14 @@ export function apply(ctx: Context): void {
     const copied = await writeClipboard(text)
     if (intent === copyIntent) notify({ kind: copied ? 'copied' : 'copyFailed' })
   }
+  const desktopSessions = (globalThis as typeof globalThis & {
+    dshDesktop?: { protocolVersion: number; sessions?: { openWindow?: (sessionId: string) => Promise<void> } }
+  }).dshDesktop
+  const openWindow = desktopSessions?.protocolVersion === 1 ? desktopSessions.sessions?.openWindow : undefined
   const utilityInjected = (): SessionUtilityInjected => ({
+    ...(openWindow === undefined ? {} : { openSessionWindow: (sessionId: SessionId) => {
+      void openWindow(sessionId).catch(() => { notify({ kind: 'openWindowFailed' }) })
+    } }),
     copySessionLink: (sessionId) => { void copyText(`dsh://session/${encodeURIComponent(sessionId)}`, beginCopy()) },
     copySessionDirectory: (path) => { void copyText(path, beginCopy()) },
     copySessionMarkdown: (sessionId, displayTitle) => {
@@ -345,6 +352,7 @@ export function apply(ctx: Context): void {
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'fork', order: 300, locale: NS, inject: forkInjected }, ForkSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'archive', order: 400, locale: NS, inject: archiveInjected }, ArchiveSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'relay', order: 450, locale: NS, inject: relayMenuInjected }, SessionRelayMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'open-window', order: 480, locale: NS, inject: utilityInjected }, OpenSessionWindowMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'copy-link', order: 500, locale: NS, inject: utilityInjected }, CopySessionLinkMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'copy-markdown', order: 600, locale: NS, inject: utilityInjected }, CopySessionMarkdownMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'copy-directory', order: 700, locale: NS, inject: utilityInjected }, CopySessionDirectoryMenuItem)

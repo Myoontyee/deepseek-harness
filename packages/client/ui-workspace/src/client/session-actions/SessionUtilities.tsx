@@ -51,3 +51,16 @@ export function OpenSessionDirectoryMenuItem({
   const [, setMenuOpen] = useMenuOpenState()
   return <MenuItemButton disabled={path === undefined} icon={<IconFolderOpenOutlineRegular />} onSelect={() => { if (path === undefined) return; setMenuOpen(false); openSessionDirectory(path) }}>{t('menu.openDirectory')}</MenuItemButton>
 }
+
+/**
+ * Open the addressed Session in a Desktop window without navigating this window.
+ * @param props - Row identity, Desktop operation, menu state, and locale seat.
+ * @returns The Desktop-only window action.
+ */
+export function OpenSessionWindowMenuItem({
+  sessionId, useMenuOpenState, openSessionWindow, t,
+}: SessionMenuItemProps<SessionUtilityInjected>) {
+  const [, setMenuOpen] = useMenuOpenState()
+  if (openSessionWindow === undefined) return null
+  return <MenuItemButton separatorBefore icon={<IconCopyOutlineRegular />} onSelect={() => { setMenuOpen(false); openSessionWindow(sessionId) }}>{t('menu.openWindow')}</MenuItemButton>
+}
