@@ -500,3 +500,5 @@ Pre-launch CDN and capacity decisions are tracked in the [Desktop update proposa
 ## Completion badges
 
 Background completion adds one unread conversation to the Windows taskbar overlay. Viewing that conversation in any focused product window acknowledges it. Initial idle history and duplicate window reports do not increase the count. Counts last for the current application run. Unsigned builds have no official update feed; retaining custom features across releases requires merging source and rebuilding.
+
+The custom Phone control menu offers opt-in, locally approved Android device pairing over private-network HTTPS. Grants use encrypted storage and support immediate revocation; the DSH Host remains on loopback. See [Android companion](../android/README.md) for setup, permission scope and tested limitations.

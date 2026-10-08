@@ -45,7 +45,9 @@
     "semver": "^7.8.5",
     "ws": "^8.21.0",
     "@deepseek-ai/dsh-api-gateway": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@deepseek-ai/cordis": "workspace:~",
+    "@peculiar/x509": "2.1.0",
+    "reflect-metadata": "0.2.2"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-app-boot": "workspace:*",
