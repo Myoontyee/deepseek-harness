@@ -27,7 +27,7 @@ export async function apply(ctx) {
 
 ## 中文公式复制验证
 
-> 对缺陷像素集合 $D$ 与背景环 $B$，取灰度均值 $\mu_D$、$\mu_B$ 与背景标准差 $\sigma_B$，后文 111 保留。
+> 对缺陷像素集合 $D$ 与背景环 $B$，取灰度均值 $\mu_D$、$\mu_B$ 与背景标准差 $\sigma_B$。原始公式 \begin{equation} c=\frac{\mu_D-\mu_B}{\sigma_{B}} \end{equation}，后文 111 保留。
 
 $$
 c=\frac{\lvert \mu_D-\mu_B\rvert}{\mu_B},\quad \mathrm{CNR}=\frac{\lvert \mu_D-\mu_B\rvert}{\sigma_B}

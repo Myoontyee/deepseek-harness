@@ -10,10 +10,22 @@ function destination(element: Element): string | null {
   const href = element.getAttribute('href')
   return href !== null && /^(?:https?:|mailto:|dsh:)/iu.test(href) ? href : null
 }
-function escapeText(text: string): string {
+function escapePlainText(text: string): string {
   // A TeX command appearing as literal text (e.g. \begin{equation}) must not
   // acquire another backslash. Only escape Markdown-active backslashes.
   return text.replace(/\\(?=[\\`*_[\]<>])/gu, '\\\\').replace(/[`*_[\]<>]/gu, '\\$&')
+}
+function escapeText(text: string): string {
+  // Streaming and unsupported equation environments can still be visible as
+  // literal TeX. Preserve those spans before escaping surrounding prose.
+  const expressions = /\\begin\{([A-Za-z*]+)\}[\s\S]*?\\end\{\1\}|\$\$[\s\S]*?\$\$|\$(?:\\.|[^$\n])+\$/gu
+  let result = ''
+  let offset = 0
+  for (const match of text.matchAll(expressions)) {
+    result += escapePlainText(text.slice(offset, match.index)) + match[0]
+    offset = match.index + match[0].length
+  }
+  return result + escapePlainText(text.slice(offset))
 }
 function mathSource(element: Element): string | null {
   const source = element.getAttribute('data-copy-math')

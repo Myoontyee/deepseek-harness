@@ -94,7 +94,7 @@ try {
     const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range)
   })
   await page.keyboard.press('Control+C')
-  const expected=String.raw`> 对缺陷像素集合 $D$ 与背景环 $B$，取灰度均值 $\mu_D$、$\mu_B$ 与背景标准差 $\sigma_B$，后文 111 保留。`
+  const expected=String.raw`> 对缺陷像素集合 $D$ 与背景环 $B$，取灰度均值 $\mu_D$、$\mu_B$ 与背景标准差 $\sigma_B$。原始公式 \begin{equation} c=\frac{\mu_D-\mu_B}{\sigma_{B}} \end{equation}，后文 111 保留。`
   const copied=await electronApp.evaluate(async({clipboard})=>({text:await clipboard.readText(),types:(await clipboard.read()).flatMap(item=>item.types)}))
   assert.equal(copied.text,expected)
   assert.ok(!copied.types.includes('text/html'),'Rich HTML must not override Markdown when pasted')
@@ -124,6 +124,10 @@ try {
   await writeFile(join(repo,'.artifacts/markdown-copy-native-result.json'),JSON.stringify(result,null,2))
   console.log(JSON.stringify(result,null,2))
 } finally {
+  const ownedProcess = electronApp?.process()
   await electronApp?.evaluate(async ({clipboard,app})=>{try{if(globalThis.__clipboardBackup && /(?:缺陷像素集合|\\mu_D|HANDOFF_写作交接_20261008)/.test(await clipboard.readText()))await clipboard.write(globalThis.__clipboardBackup)}finally{app.exit(0)}}).catch(()=>{})
   await electronApp?.close().catch(()=>{})
+  if (ownedProcess?.exitCode === null && ownedProcess.pid !== undefined) {
+    try { execFileSync('taskkill.exe', ['/PID', String(ownedProcess.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }) } catch {}
+  }
 }

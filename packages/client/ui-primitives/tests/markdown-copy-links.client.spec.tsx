@@ -127,8 +127,18 @@ it('retains heading, emphasis, ordered lists, code fences and tables without nee
 })
 
 it('keeps a literal equation environment readable without doubling its TeX command backslashes', () => {
-  const source = String.raw`公式 \begin{equation} c=\frac{a}{b},\quad CNR=1 \end{equation}`
+  const source = String.raw`公式 \begin{equation} c=\frac{\lvert\mu_D-\mu_B\rvert}{\mu_B},\quad CNR=\frac{a}{\sigma_{B}} \end{equation}`
   const view = render(<MarkdownText text={source} />)
+  const root = view.container.firstElementChild!
+  const range = document.createRange()
+  range.selectNodeContents(root)
+  expect(copy(root, range).get('text/plain')).toBe(source)
+})
+
+
+it('preserves TeX delimiters and subscripts before a streamed formula is rendered', () => {
+  const source = String.raw`还在生成：$\mu_D$、$\mu_B$ 与 $\sigma_{B}$。`
+  const view = render(<MarkdownText text={source} streaming />)
   const root = view.container.firstElementChild!
   const range = document.createRange()
   range.selectNodeContents(root)
