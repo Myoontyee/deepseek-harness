@@ -7,6 +7,14 @@ A service can be a core spine service, a swappable capability seam, a bundle/com
 
 ```mermaid
 flowchart LR
+  pkg_api_git_controller["api-git-controller"]
+  svc_gitController["ctx.gitController<br/>Local Git and GitHub Remote operations"]
+  pkg_api_code_review_controller["api-code-review-controller"]
+  pkg_client_ui_settings_git["client-ui-settings-git"]
+  svc_codeReviewController["ctx.codeReviewController<br/>Read-only review Session preparation"]
+  pkg_api_connection_controller["api-connection-controller"]
+  svc_connectionController["ctx.connectionController<br/>Saved SSH targets and remote commands"]
+  pkg_client_ui_settings_connections["client-ui-settings-connections"]
   pkg_hmr["hmr"]
   svc_hmr["ctx.hmr<br/>Serialized module and configuration reloads"]
   pkg_app_boot["app-boot"]
@@ -279,7 +287,10 @@ flowchart LR
   pkg_agent_default_model --> svc_agentDefaultModel
   pkg_agent_loop --> svc_agentLoop
   pkg_agent_preset_registry --> svc_agentPresets
+  pkg_api_code_review_controller --> svc_codeReviewController
+  pkg_api_connection_controller --> svc_connectionController
   pkg_api_gateway --> svc_typertGateway
+  pkg_api_git_controller --> svc_gitController
   pkg_api_job_controller --> svc_jobController
   pkg_api_session_controller --> svc_sessionController
   pkg_api_session_controller --> svc_sessionFileReferences
@@ -444,6 +455,7 @@ flowchart LR
   svc_browserUse --> pkg_experimental_browser_use_playwright_mcp
   svc_browserUse --> pkg_experimental_browser_use_stagehand_native
   svc_clientModules --> pkg_client_hmr
+  svc_codeReviewController --> pkg_client_ui_settings_git
   svc_compaction --> pkg_compaction_basic
   svc_computerUse --> pkg_experimental_computer_use_cua_driver_mcp
   svc_computerUse --> pkg_experimental_computer_use_cua_driver_native
@@ -451,6 +463,7 @@ flowchart LR
   svc_configEditor --> pkg_settings
   svc_connection --> pkg_api_gateway
   svc_connection --> pkg_host_frontend_static
+  svc_connectionController --> pkg_client_ui_settings_connections
   svc_cordisInspect --> pkg_tool_cordis
   svc_credentials --> pkg_api_settings_controller
   svc_credentials --> pkg_llm_deepseek
@@ -463,6 +476,8 @@ flowchart LR
   svc_fileReferences --> pkg_api_session_controller
   svc_fileUploads --> pkg_api_session_controller
   svc_fs --> pkg_tool_fs
+  svc_gitController --> pkg_api_code_review_controller
+  svc_gitController --> pkg_client_ui_settings_git
   svc_hmr --> pkg_app_boot
   svc_jobs --> pkg_api_job_controller
   svc_jobs --> pkg_tool_bash
@@ -571,6 +586,9 @@ flowchart LR
 
 | ctx key | Role | Owner | Implementations | Direct consumers | Companion plugins | Note |
 | --- | --- | --- | --- | --- | --- | --- |
+| `ctx.gitController` | `core` | [`api-git-controller`](../packages/api/git-controller) | - | [`api-code-review-controller`](../packages/api/code-review-controller), [`client-ui-settings-git`](../packages/client/ui-settings-git) | - | Resolves registered workspaces, fences Git mutations and delegates credential handling to Git and GitHub CLI. |
+| `ctx.codeReviewController` | `core` | [`api-code-review-controller`](../packages/api/code-review-controller) | - | [`client-ui-settings-git`](../packages/client/ui-settings-git) | - | Persists bounded source context and admits dedicated review Sessions without changing ordinary model defaults. |
+| `ctx.connectionController` | `core` | [`api-connection-controller`](../packages/api/connection-controller) | - | [`client-ui-settings-connections`](../packages/client/ui-settings-connections) | - | Pins OpenSSH targets to local control Sessions and checks live grants before remote command execution. |
 | `ctx.hmr` | `core` | [`hmr`](../packages/boot/hmr) | - | [`app-boot`](../packages/boot/app-boot) | - | Owns module and exact configuration watchers; application mutations share its queue and automatic reloads await the application file lock. |
 | `ctx.pluginRegistryProbe` | `core` | [`client-ui-plugin-manager`](../packages/client/ui-plugin-manager) | - | [`client-ui-plugin-manager`](../packages/client/ui-plugin-manager) | - | Races public registry responses on the Host; the Client owns the initial registry recommendation. |
 | `ctx.pluginManager` | `core` | [`plugin-manager`](../packages/boot/plugin-manager) | - | [`plugin-manager`](../packages/boot/plugin-manager), `ui-settings-plugin-inventory` | - | Shares profile package operations with the CLI and reports persisted and running state to Web and agent callers. |

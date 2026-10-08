@@ -1,0 +1,40 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/preset/review-policy/README.md
+/:
+  en: 34b919739ff33ff3
+  zh: 665d5303f944badf
+/deepseek-ai-dsh-review-policy:
+  en: 0555b9ebadb40920
+  zh: c8c14f8674dcae21
+/deepseek-ai-dsh-review-policy/summary:
+  en: 99eabe282a5b03bf
+  zh: 030b7eb96ad138f0
+/deepseek-ai-dsh-review-policy/table-of-contents:
+  en: c289e801872ac956
+  zh: 3be0c13a1ff9d2ac
+/deepseek-ai-dsh-review-policy/configuration-and-lifecycle:
+  en: 2db4463e1b2531a2
+  zh: 9dc8122db90b4cad
+/deepseek-ai-dsh-review-policy/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-review-policy/model-experience/preset-tool-visibility:
+  en: f90fa88833fe7392
+  zh: fdac0d01d2d159f4
+/deepseek-ai-dsh-review-policy/model-experience/preset-tool-visibility/what-the-model-sees:
+  en: c5fe3ca27cd57e1f
+  zh: 038033aafa38cfae
+/deepseek-ai-dsh-review-policy/model-experience/preset-tool-visibility/token-effect:
+  en: ea4f743d77ce5569
+  zh: cc73cc396cc9212b
+/deepseek-ai-dsh-review-policy/model-experience/preset-tool-visibility/kv-cache-effect:
+  en: f9deca550f159b66
+  zh: c3e5ffded1e0d689
+/deepseek-ai-dsh-review-policy/known-limitations-and-deferred-work:
+  en: a8e6e8c941ff2660
+  zh: 9d4524a815201355
+/deepseek-ai-dsh-review-policy/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: b8e216619fe47cce

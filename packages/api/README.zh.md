@@ -57,3 +57,5 @@ Remote 调用沿 Client → Host 方向运行在应用共享的 Connection 之�
 无。
 
 </details>
+
+[开发工作流接口](../../docs/subsystems/developer-workflows.zh.md) 记录 Git、代码审查和 SSH 连接的公共类型。

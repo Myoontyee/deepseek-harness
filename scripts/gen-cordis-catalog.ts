@@ -50,6 +50,9 @@ export { REGION_BEGIN, REGION_END }
  * errors, so the partition can never silently drift from the service API.
  */
 export const SERVICE_PAGE: Record<string, string> = {
+  gitController: 'developer-workflows.md',
+  codeReviewController: 'developer-workflows.md',
+  connectionController: 'developer-workflows.md',
   speechToText: 'voice-input.md',
   speechController: 'voice-input.md',
   otel: 'otel.md',
@@ -276,6 +279,32 @@ export const EVENT_WALK_EXEMPTIONS: Record<string, string> = {
  * appear on more than one page.
  */
 export const LINK_MAP: Readonly<Record<string, string>> = {
+  GitWorkspace: 'developer-workflows.md',
+  GitChange: 'developer-workflows.md',
+  GitStatus: 'developer-workflows.md',
+  GitBranch: 'developer-workflows.md',
+  GitCommit: 'developer-workflows.md',
+  GitDiff: 'developer-workflows.md',
+  GitCommandResult: 'developer-workflows.md',
+  GitMutation: 'developer-workflows.md',
+  GitPreferences: 'developer-workflows.md',
+  GithubAccount: 'developer-workflows.md',
+  GitPullRequest: 'developer-workflows.md',
+  GithubLoginState: 'developer-workflows.md',
+  GitReviewTarget: 'developer-workflows.md',
+  GitReviewContext: 'developer-workflows.md',
+  ReviewRepositoryPreferences: 'developer-workflows.md',
+  ReviewPreferences: 'developer-workflows.md',
+  ReviewRequest: 'developer-workflows.md',
+  ReviewReceipt: 'developer-workflows.md',
+  SshConnectionId: 'developer-workflows.md',
+  SshProfile: 'developer-workflows.md',
+  SavedSshConnection: 'developer-workflows.md',
+  ConnectionPreferences: 'developer-workflows.md',
+  SshConnectionList: 'developer-workflows.md',
+  SshProbe: 'developer-workflows.md',
+  SshCommandResult: 'developer-workflows.md',
+  SshSessionReceipt: 'developer-workflows.md',
   EventLogOptions: 'otel.md',
   EventLogReporter: 'otel.md',
   SessionLogOptions: 'otel.md',

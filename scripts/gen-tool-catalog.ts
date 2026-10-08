@@ -36,6 +36,7 @@ import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import type { SubagentProvider } from '@deepseek-ai/dsh-subagent'
 import * as ToolSubagentControl from '@deepseek-ai/dsh-tool-subagent-control'
 import * as ToolSubagentListAgents from '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+import * as SshConnectionTools from '../packages/api/connection-controller/src/remote-tools.ts'
 import * as SessionMessageTools from '../packages/api/session-controller/src/session-tools.ts'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
 import * as SkillFileSystem from '@deepseek-ai/dsh-skill-filesystem'
@@ -185,6 +186,18 @@ export interface ToolPackage {
  * guard proves it is exhaustive against the on-disk glob.
  */
 const TOOL_PACKAGES: ToolPackage[] = [
+  {
+    pkg: '@deepseek-ai/dsh-api-connection-controller',
+    dir: 'connection-controller',
+    source: 'packages/api/connection-controller/src/remote-tools.ts',
+    requires: ['ctx.tools', 'ctx.connectionController'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      // Schema collection never connects to a server or executes a remote command.
+      ctx.provide('connectionController', {} as never)
+      await ctx.plugin(SshConnectionTools)
+    },
+  },
   {
     pkg: '@deepseek-ai/dsh-api-session-controller',
     dir: 'session-controller',

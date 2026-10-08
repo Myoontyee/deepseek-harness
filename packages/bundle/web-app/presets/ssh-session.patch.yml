@@ -1,0 +1,39 @@
+[
+  {
+    "insert": [
+      {
+        "id": "preset-ssh-session",
+        "name": "@deepseek-ai/dsh-agent-preset",
+        "config": {
+          "id": "ssh-session",
+          "name": "SSH connection",
+          "description": "Remote commands on one saved SSH target",
+          "order": 6,
+          "plugins": [
+            {
+              "id": "persona",
+              "name": "@deepseek-ai/dsh-persona",
+              "config": {
+                "prefix": "You assist the user on the SSH server selected for this conversation. Use ssh_exec for requested remote work. Its permissions belong to the remote SSH account. Commands have separate shell state. Treat failed connections and ambiguous timeouts as unresolved outcomes, not success. Do not retry side effects blindly. Never ask for or print private keys or passwords."
+              }
+            },
+            {
+              "id": "ssh-tools",
+              "name": "@deepseek-ai/dsh-api-connection-controller/remote-tools"
+            },
+            {
+              "id": "ssh-tool-policy",
+              "name": "@deepseek-ai/dsh-review-policy",
+              "config": {
+                "preset": "ssh-session",
+                "tools": [
+                  "ssh_exec"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

@@ -107,13 +107,13 @@ class FakeFs extends FileSystem {
   }
 }
 
-async function setup() {
+async function setup(config: ToolFs.Config = {}) {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
   await ctx.plugin(FakeFs)
   await ctx.plugin(FsPolicy)
-  await ctx.plugin(ToolFs)
+  await ctx.plugin(ToolFs, config)
   const fs = ctx.fs as FakeFs
   return { ctx, fs }
 }
@@ -159,6 +159,18 @@ describe('session cwd resolution', () => {
 })
 
 describe('registration', () => {
+  it('readOnly composition omits write/edit and refuses direct mutation calls', async () => {
+    const { ctx, fs } = await setup({ readOnly: true })
+    try {
+      fs.files.set('key:a.txt', 'original')
+      expect(ctx.tools.schemas().map(tool => tool.name)).toEqual(['read'])
+      expect(text(await call(ctx, 'read', { file_path: 'a.txt' }))).toContain('original')
+      const result = await call(ctx, 'write', { file_path: 'a.txt', content: 'changed' })
+      expect(result.isError).toBe(true)
+      expect(fs.files.get('key:a.txt')).toBe('original')
+    } finally { await ctx.fiber.dispose() }
+  })
+
   it('registers read, write, and edit', async () => {
     const { ctx } = await setup()
     expect(ctx.tools.schemas().map(s => s.name).sort()).toEqual(['edit', 'read', 'write'])

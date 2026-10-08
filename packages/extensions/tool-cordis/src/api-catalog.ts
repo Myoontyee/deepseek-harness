@@ -637,6 +637,25 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'codeReviewController',
+    summary: 'Start ordinary, inspectable review Sessions without publishing GitHub reviews.',
+    description: 'Start ordinary, inspectable review Sessions without publishing GitHub reviews.',
+    methods: [
+      {
+        signature: '@Remote preferences(): ReviewPreferences',
+        description: 'Read the dedicated review model preferences without changing ordinary chat defaults.',
+        parameters: [],
+        returns: 'stored strings; empty provider/model follow the current default selection.',
+      },
+      {
+        signature: '@Remote start(request: ReviewRequest, signal: AbortSignal): Promise<ReviewReceipt>',
+        description: 'Prepare and admit one review; repeated in-flight requests share the same attempt.',
+        parameters: [{ name: 'request', description: 'user-selected comparison, optional focus and stable request identity.' }, { name: 'signal', description: 'cancellation before prompt admission.' }],
+        returns: 'the review Session and captured comparison commits.',
+      },
+    ],
+  },
+  {
     key: 'commands',
     summary: 'Human-command registry.',
     description: 'Human-command registry. Plain-context definitions are global; definitions registered through a command-injected child of an agent context shadow globals for that agent.',
@@ -787,6 +806,43 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Add the fresh process token to an ordinary Web application URL.',
         parameters: [{ name: 'baseUrl', description: 'clean application URL whose authority and mount are preserved.' }],
         returns: 'tokenized URL for initial login; a mount proxy strips its prefix before {@link authorizeIndex}.',
+      },
+    ],
+  },
+  {
+    key: 'connectionController',
+    summary: 'Connection control; every command uses a resolved OpenSSH target and never falls back locally.',
+    description: 'Connection control; every command uses a resolved OpenSSH target and never falls back locally.',
+    methods: [
+      {
+        signature: '@Remote async list(): Promise<SshConnectionList>',
+        description: 'Discover concrete Host aliases and overlay saved user preferences.',
+        parameters: [],
+        returns: 'connection rows without private keys, passwords or raw SSH configuration.',
+      },
+      {
+        signature: '@Remote preferences(): ConnectionPreferences',
+        description: 'Read bookmark preferences for the settings page.',
+        parameters: [],
+        returns: 'detached aliases, labels and explicit remote-command grants.',
+      },
+      {
+        signature: '@Remote async test(id: SshConnectionId, signal: AbortSignal): Promise<SshProbe>',
+        description: 'Check authentication using a fixed read-only command and existing known-host trust.',
+        parameters: [{ name: 'id', description: 'discovered or saved connection identity.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'authentication outcome and the resolved endpoint, never a private key.',
+      },
+      {
+        signature: '@Remote start(id: SshConnectionId, requestId: string, terminal: boolean, signal: AbortSignal): Promise<SshSessionReceipt>',
+        description: 'Create a dedicated local control conversation and optionally open its remote terminal.',
+        parameters: [{ name: 'id', description: 'connection selected by the user.' }, { name: 'requestId', description: 'stable identity for retrying the same connection action.' }, { name: 'terminal', description: 'open an interactive SSH terminal after Session creation.' }, { name: 'signal', description: 'preparation cancellation.' }],
+        returns: 'Session and optional terminal identities.',
+      },
+      {
+        signature: 'async execute(agent: Agent, command: string, signal: AbortSignal): Promise<SshCommandResult>',
+        description: 'Run a command only for the initiating SSH Session and its explicitly enabled target.',
+        parameters: [{ name: 'agent', description: 'exact live Agent supplied by tool execution.' }, { name: 'command', description: 'POSIX command deliberately requested for this server.' }, { name: 'signal', description: 'tool cancellation.' }],
+        returns: 'bounded output; remote process state is unknown after timeout/disconnect.',
       },
     ],
   },
@@ -1166,6 +1222,121 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Atomically edit literal text. When supplied, the version guard is checked before matching so stale content reports `FS_STALE_VERSION`; omission edits the current content without a freshness precondition.',
         parameters: [{ name: 'target', description: 'the resolved target to edit.' }, { name: 'edit', description: 'the literal search/replace request.' }, { name: 'expected', description: 'the version guard; omit for an unconditional edit.' }, { name: 'signal', description: 'aborts before atomic publication takes effect.' }, { name: 'sandboxPolicy', description: 'the per-call mode and workspace root this edit runs under; a sandboxing backend fences the edit by it, the bare backend ignores it. Omit to leave the backend its own default.' }],
         returns: 'the outcome, including the version the edit produced.',
+      },
+    ],
+  },
+  {
+    key: 'gitController',
+    summary: 'Serialized repository mutations with optimistic state checks.',
+    description: 'Serialized repository mutations with optimistic state checks.',
+    methods: [
+      {
+        signature: '@Remote workspaces(): GitWorkspace[]',
+        description: 'List registered local project choices without probing every repository.',
+        parameters: [],
+        returns: 'stable identities and user-visible workspace labels.',
+      },
+      {
+        signature: '@Remote preferences(): GitPreferences',
+        description: 'Read the current preferences applied by branch and PR operations.',
+        parameters: [],
+        returns: 'a detached settings projection.',
+      },
+      {
+        signature: '@Remote async status(id: WorkspaceId): Promise<GitStatus>',
+        description: 'Inspect a selected workspace repository, including staged and unstaged changes.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }],
+        returns: 'complete status with a mutation revision.',
+      },
+      {
+        signature: '@Remote async history(id: WorkspaceId): Promise<GitCommit[]>',
+        description: 'List recent commits from the current branch, including an unborn repository.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }],
+        returns: 'newest commits first, bounded to 100 entries.',
+      },
+      {
+        signature: '@Remote async branches(id: WorkspaceId): Promise<GitBranch[]>',
+        description: 'List local branches for an explicit branch switch.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }],
+        returns: 'branch names, commit identities and the current marker.',
+      },
+      {
+        signature: '@Remote async diff(id: WorkspaceId, path: string, staged: boolean): Promise<GitDiff>',
+        description: 'Read a single changed file diff without invoking external diff commands.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'path', description: 'repository-relative file selected in status.' }, { name: 'staged', description: 'whether to inspect the index instead of the working tree.' }],
+        returns: 'text and an explicit truncation flag.',
+      },
+      {
+        signature: '@Remote async stage(id: WorkspaceId, paths: string[], revision: string): Promise<GitMutation>',
+        description: 'Stage selected paths together; no implicit stage-all occurs before commit.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'paths', description: 'explicitly selected relative file paths.' }, { name: 'revision', description: 'status revision seen by the user.' }],
+        returns: 'command outcome and refreshed status.',
+      },
+      {
+        signature: '@Remote async unstage(id: WorkspaceId, paths: string[], revision: string): Promise<GitMutation>',
+        description: 'Remove selected changes from the index without changing working files.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'paths', description: 'explicitly selected relative file paths.' }, { name: 'revision', description: 'status revision seen by the user.' }],
+        returns: 'command outcome and refreshed status.',
+      },
+      {
+        signature: '@Remote async commit(id: WorkspaceId, message: string, revision: string): Promise<GitMutation>',
+        description: 'Commit the exact index reviewed by the user; never stages or amends implicitly.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'message', description: 'commit message supplied by the user.' }, { name: 'revision', description: 'expected index and HEAD revision.' }],
+        returns: 'command outcome and refreshed status.',
+      },
+      {
+        signature: '@Remote async switchBranch(id: WorkspaceId, name: string, create: boolean, revision: string): Promise<GitMutation>',
+        description: 'Switch branches without discarding changes, optionally using the saved creation prefix.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'name', description: 'existing branch name or new branch suffix.' }, { name: 'create', description: 'create the prefixed branch before switching.' }, { name: 'revision', description: 'expected repository revision.' }],
+        returns: 'command outcome and refreshed status.',
+      },
+      {
+        signature: '@Remote async network(id: WorkspaceId, action: \'fetch\' | \'pull\' | \'push\', revision: string): Promise<GitMutation>',
+        description: 'Fetch, fast-forward pull, or push the current branch to its configured upstream.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'action', description: 'explicit user action; no force push or automatic merge.' }, { name: 'revision', description: 'expected repository revision.' }],
+        returns: 'command outcome and refreshed status.',
+      },
+      {
+        signature: '@Remote async githubAccount(id: WorkspaceId): Promise<GithubAccount>',
+        description: 'Read GitHub authentication status without requesting or returning access tokens.',
+        parameters: [{ name: 'id', description: 'registered workspace identity used for command execution.' }],
+        returns: 'active GitHub account when available.',
+      },
+      {
+        signature: '@Remote({ mode: \'stream\' }) async *loginGithub(id: WorkspaceId, signal: AbortSignal): AsyncIterable<GithubLoginState>',
+        description: 'Authorize GitHub through the browser without sending tokens to the renderer.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'signal', description: 'sign-in dialog lifetime; cancellation terminates the login command.' }],
+        returns: 'safe device-code progress.',
+      },
+      {
+        signature: '@Remote async pullRequests(id: WorkspaceId): Promise<GitPullRequest[]>',
+        description: 'List open pull requests associated with the selected repository.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }],
+        returns: 'bounded PR metadata without fetching or changing branches.',
+      },
+      {
+        signature: '@Remote async createPullRequest(id: WorkspaceId, title: string, body: string, base: string, revision: string): Promise<GitMutation>',
+        description: 'Create a PR for an already published branch using the saved draft preference.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'title', description: 'reviewed pull-request title.' }, { name: 'body', description: 'reviewed pull-request description.' }, { name: 'base', description: 'destination branch explicitly selected by the user.' }, { name: 'revision', description: 'repository state reviewed before publication.' }],
+        returns: 'command outcome containing the created PR URL and refreshed status.',
+      },
+      {
+        signature: '@Remote async mergePullRequest(id: WorkspaceId, number: number, head: string): Promise<string>',
+        description: 'Merge the reviewed PR commit immediately, without enabling automatic merge or bypassing rules.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'number', description: 'selected pull-request number.' }, { name: 'head', description: 'exact PR head commit reviewed by the user.' }],
+        returns: 'GitHub\'s merge result; a refusal is an error, never a deferred auto-merge.',
+      },
+      {
+        signature: '@Remote async checkoutPullRequest(id: WorkspaceId, number: number, revision: string): Promise<GitMutation>',
+        description: 'Check out a selected PR without forcing away local changes.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'number', description: 'selected PR number.' }, { name: 'revision', description: 'repository state seen before switching.' }],
+        returns: 'command outcome and the actual resulting HEAD/status.',
+      },
+      {
+        signature: '@Remote async reviewContext(id: WorkspaceId, target: GitReviewTarget, signal: AbortSignal): Promise<GitReviewContext>',
+        description: 'Capture a bounded diff and exact comparison identities for the reviewer.',
+        parameters: [{ name: 'id', description: 'registered workspace identity.' }, { name: 'target', description: 'local changes, a base branch, or a checked-out PR.' }, { name: 'signal', description: 'caller cancellation while preparing the comparison.' }],
+        returns: 'captured diff, paths and revision; HEAD/index/status transitions are checked again before return.',
       },
     ],
   },
@@ -3114,6 +3285,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the existing or newly committed terminal.',
       },
       {
+        signature: 'createWithShell(agent: Agent, request: TerminalCreateRequest, shell: TerminalShell, signal: AbortSignal): Promise<WebTerminalInfo>',
+        description: 'Open a shell profile resolved by a trusted Host capability provider.',
+        parameters: [{ name: 'agent', description: 'Session whose existing terminal lifecycle owns the process.' }, { name: 'request', description: 'terminal dimensions and idempotency identity.' }, { name: 'shell', description: 'verified executable and provider-owned argument array.' }, { name: 'signal', description: 'allocation cancellation.' }],
+        returns: 'existing or newly allocated terminal; this method is not a Remote endpoint.',
+      },
+      {
         signature: '@Remote({ mode: \'stream\' }) retain(sessionId: SessionId, id: WebTerminalId, signal: AbortSignal): AsyncIterable<TerminalRetentionFrame>',
         description: 'Retain an existing terminal for a window without activating its Agent or taking input control.',
         parameters: [{ name: 'sessionId', description: 'owning Session identity, including an inactive saved layout.' }, { name: 'id', description: 'retained Host terminal identity.' }, { name: 'signal', description: 'physical Remote stream cancellation.' }],
@@ -4891,6 +5068,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ConnectionIndexResponse {\n    writeHead(status: number, headers?: Readonly<Record<string, string>>): unknown;\n    end(body?: string): unknown;\n}',
   },
   {
+    name: 'ConnectionPreferences',
+    declaration: 'export interface ConnectionPreferences {\n    profiles: Record<string, SshProfile>;\n}',
+  },
+  {
     name: 'ConnectionRequestBodyMode',
     declaration: 'export type ConnectionRequestBodyMode = \'buffered\' | \'streaming\';',
   },
@@ -5345,6 +5526,58 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'GenericResultView',
     declaration: 'export interface GenericResultView {\n    card: \'generic\';\n    title?: string;\n    content?: ContentBlock[];\n}',
+  },
+  {
+    name: 'GitBranch',
+    declaration: 'export interface GitBranch {\n    name: string;\n    current: boolean;\n    head: string;\n}',
+  },
+  {
+    name: 'GitChange',
+    declaration: 'export interface GitChange {\n    path: string;\n    originalPath?: string;\n    index: string;\n    worktree: string;\n    conflict: boolean;\n}',
+  },
+  {
+    name: 'GitCommandResult',
+    declaration: 'export interface GitCommandResult {\n    stdout: string;\n    stderr: string;\n    exitCode: number | null;\n    timedOut: boolean;\n    truncated: boolean;\n}',
+  },
+  {
+    name: 'GitCommit',
+    declaration: 'export interface GitCommit {\n    hash: string;\n    subject: string;\n    author: string;\n    timestamp: number;\n}',
+  },
+  {
+    name: 'GitDiff',
+    declaration: 'export interface GitDiff {\n    text: string;\n    truncated: boolean;\n    untracked: boolean;\n}',
+  },
+  {
+    name: 'GithubAccount',
+    declaration: 'export interface GithubAccount {\n    available: boolean;\n    login: string | null;\n    authenticated: boolean;\n}',
+  },
+  {
+    name: 'GithubLoginState',
+    declaration: 'export type GithubLoginState = {\n    status: \'starting\';\n} | {\n    status: \'waiting\';\n    code: string;\n    url: string;\n} | {\n    status: \'complete\';\n} | {\n    status: \'failed\';\n    reason: \'timeout\' | \'login-failed\';\n};',
+  },
+  {
+    name: 'GitMutation',
+    declaration: 'export interface GitMutation {\n    result: GitCommandResult;\n    status: GitStatus;\n}',
+  },
+  {
+    name: 'GitPreferences',
+    declaration: 'export interface GitPreferences {\n    branchPrefix: string;\n    draftPullRequests: boolean;\n    mergeMethod: \'merge\' | \'squash\';\n}',
+  },
+  {
+    name: 'GitPullRequest',
+    declaration: 'export interface GitPullRequest {\n    number: number;\n    title: string;\n    url: string;\n    headRefName: string;\n    baseRefName: string;\n    isDraft: boolean;\n    state: string;\n    headRefOid: string;\n}',
+  },
+  {
+    name: 'GitReviewContext',
+    declaration: 'export interface GitReviewContext {\n    root: string;\n    head: string | null;\n    base: string | null;\n    revision: string;\n    files: string[];\n    diff: string;\n    truncated: boolean;\n    target: GitReviewTarget;\n}',
+  },
+  {
+    name: 'GitReviewTarget',
+    declaration: 'export type GitReviewTarget = {\n    kind: \'working\';\n} | {\n    kind: \'branch\';\n    base: string;\n} | {\n    kind: \'pull-request\';\n    number: number;\n};',
+  },
+  {
+    name: 'GitStatus',
+    declaration: 'export interface GitStatus {\n    root: string;\n    branch: string | null;\n    head: string | null;\n    upstream: string | null;\n    ahead: number;\n    behind: number;\n    merging: boolean;\n    revision: string;\n    changes: GitChange[];\n}',
   },
   {
     name: 'GoalActivation',
@@ -6415,6 +6648,22 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ResumeAgentOptions {\n    readonly resumeSessionId: SessionId;\n    readonly parentAgent?: Agent;\n    readonly agentOptions?: AgentOptions;\n    readonly signal?: AbortSignal;\n    readonly setup?: AgentSetup;\n}',
   },
   {
+    name: 'ReviewPreferences',
+    declaration: 'export interface ReviewPreferences {\n    provider: string;\n    model: string;\n    instructions: string;\n    repositories: Record<string, ReviewRepositoryPreferences>;\n}',
+  },
+  {
+    name: 'ReviewReceipt',
+    declaration: 'export type ReviewReceipt = {\n    sessionId: SessionId;\n    reused: true;\n} | {\n    sessionId: SessionId;\n    reused: false;\n    head: string | null;\n    base: string | null;\n    truncated: boolean;\n};',
+  },
+  {
+    name: 'ReviewRepositoryPreferences',
+    declaration: 'export interface ReviewRepositoryPreferences {\n    provider: string;\n    model: string;\n    instructions: string;\n    base: string;\n    focus: string;\n}',
+  },
+  {
+    name: 'ReviewRequest',
+    declaration: 'export interface ReviewRequest {\n    requestId: string;\n    workspaceId: WorkspaceId;\n    target: GitReviewTarget;\n    focus: string;\n    language?: \'zh\' | \'en\';\n    preferences?: {\n        provider: string;\n        model: string;\n        instructions: string;\n    };\n}',
+  },
+  {
     name: 'RpcId',
     declaration: 'export type RpcId = Branded<\'rpc-id\'>;',
   },
@@ -6441,6 +6690,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SandboxPolicyRequest',
     declaration: 'export interface SandboxPolicyRequest {\n    session?: Session;\n    mode?: SandboxMode;\n}',
+  },
+  {
+    name: 'SavedSshConnection',
+    declaration: 'export interface SavedSshConnection extends SshProfile {\n    id: SshConnectionId;\n    saved: boolean;\n}',
   },
   {
     name: 'SaveFileAttachment',
@@ -7028,7 +7281,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionSelectModelRequest',
-    declaration: 'export interface SessionSelectModelRequest extends ModelSelection {\n    readonly sessionId: SessionId;\n}',
+    declaration: 'export interface SessionSelectModelRequest extends ModelSelection {\n    readonly rememberAsDefault?: boolean;\n    readonly sessionId: SessionId;\n}',
   },
   {
     name: 'SessionSelectModelValue',
@@ -7393,6 +7646,30 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SpillSource',
     declaration: 'export type SpillSource = {\n    kind: \'tool\';\n    toolName: string;\n    callId: ToolCallId;\n    label: string;\n} | {\n    kind: \'session-reference\';\n    sessionId: SessionId;\n    label: string;\n};',
+  },
+  {
+    name: 'SshCommandResult',
+    declaration: 'export interface SshCommandResult {\n    stdout: string;\n    stderr: string;\n    exitCode: number | null;\n    timedOut: boolean;\n    truncated: boolean;\n}',
+  },
+  {
+    name: 'SshConnectionId',
+    declaration: 'export type SshConnectionId = Branded<\'SshConnectionId\'>;',
+  },
+  {
+    name: 'SshConnectionList',
+    declaration: 'export interface SshConnectionList {\n    connections: SavedSshConnection[];\n    warnings: string[];\n}',
+  },
+  {
+    name: 'SshProbe',
+    declaration: 'export interface SshProbe {\n    connected: boolean;\n    host: string;\n    user: string;\n    port: number;\n    message: string;\n}',
+  },
+  {
+    name: 'SshProfile',
+    declaration: 'export interface SshProfile {\n    alias: string;\n    label: string;\n    directory: string;\n    allowAgentCommands: boolean;\n}',
+  },
+  {
+    name: 'SshSessionReceipt',
+    declaration: 'export interface SshSessionReceipt {\n    sessionId: SessionId;\n    terminalId?: WebTerminalId;\n}',
   },
   {
     name: 'SshStreamEndpoint',

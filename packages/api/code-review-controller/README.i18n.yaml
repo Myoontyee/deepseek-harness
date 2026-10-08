@@ -1,0 +1,43 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/api/code-review-controller/README.md
+/:
+  en: 20c1ee42ac9700c3
+  zh: 96de6d0ef640f555
+/deepseek-ai-dsh-api-code-review-controller:
+  en: 27d314f69d4bf27b
+  zh: 0822b3c222a12aef
+/deepseek-ai-dsh-api-code-review-controller/summary:
+  en: 8cf1865414261387
+  zh: d171445cd65771ae
+/deepseek-ai-dsh-api-code-review-controller/table-of-contents:
+  en: 121f0c961c7ccde6
+  zh: ca37350a7ffff481
+/deepseek-ai-dsh-api-code-review-controller/preparation-and-persistence:
+  en: cb6aa2c971967301
+  zh: d5b813cfa592bfdf
+/deepseek-ai-dsh-api-code-review-controller/configuration:
+  en: 8cacbf3bd8923c76
+  zh: 79256f4a396b45e0
+/deepseek-ai-dsh-api-code-review-controller/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-api-code-review-controller/model-experience/review-input:
+  en: 4ec2c16b029ad52e
+  zh: 8ad3619ad5321b10
+/deepseek-ai-dsh-api-code-review-controller/model-experience/review-input/what-the-model-sees:
+  en: c1252d031786d348
+  zh: dd370ddcd1996516
+/deepseek-ai-dsh-api-code-review-controller/model-experience/review-input/token-effect:
+  en: cc23d9e7faf6ca35
+  zh: f07ac8721f3d012d
+/deepseek-ai-dsh-api-code-review-controller/model-experience/review-input/kv-cache-effect:
+  en: 56fe2868b94367bb
+  zh: ff809b3a50b3a93b
+/deepseek-ai-dsh-api-code-review-controller/known-limitations-and-deferred-work:
+  en: 9877cb530308c2f7
+  zh: 194209575297f75c
+/deepseek-ai-dsh-api-code-review-controller/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: b8e216619fe47cce

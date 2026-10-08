@@ -56,6 +56,7 @@ All keys are optional; the defaults are the shipped read caps.
 
 | Key | Default | Meaning |
 |---|---|---|
+| `readOnly` | `false` | Register read operations without write/edit tools or their mutation controller |
 | `readLimit` | `2000` | Default and maximum lines returned by one `read` call |
 | `readMaxLineLength` | `2000` | Characters kept per line before truncation |
 | `readMaxBytes` | `51200` | Byte cap on one `read` call's selected lines; overflow ends the window with a capped footer |

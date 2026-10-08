@@ -156,6 +156,24 @@ export class TerminalController extends TypertRemoteService {
    */
   @Remote
   async create(agent: Agent, request: TerminalCreateRequest, signal: AbortSignal): Promise<WebTerminalInfo> {
+    return this.allocate(agent, request, signal)
+  }
+
+  /**
+   * Open a shell profile resolved by a trusted Host capability provider.
+   * @param agent - Session whose existing terminal lifecycle owns the process.
+   * @param request - terminal dimensions and idempotency identity.
+   * @param shell - verified executable and provider-owned argument array.
+   * @param signal - allocation cancellation.
+   * @returns existing or newly allocated terminal; this method is not a Remote endpoint.
+   */
+  createWithShell(agent: Agent, request: TerminalCreateRequest, shell: TerminalShell, signal: AbortSignal): Promise<WebTerminalInfo> {
+    return this.allocate(agent, request, signal, shell)
+  }
+
+  private async allocate(
+    agent: Agent, request: TerminalCreateRequest, signal: AbortSignal, profile?: TerminalShell,
+  ): Promise<WebTerminalInfo> {
     this.lifetime.signal.throwIfAborted()
     if (!/^[\w-]{1,128}$/u.test(request.id)) throw new Error('Invalid terminal identity')
     this.dimensions(request.cols, request.rows)
@@ -171,7 +189,7 @@ export class TerminalController extends TypertRemoteService {
       return terminal.info
     }
     if (new Set([...owner.terminals.keys(), ...owner.pending.keys(), ...owner.allocations.keys()]).size >= this.config.maxTerminals) throw new RemoteError('terminal/limit-reached', 'Session terminal limit reached', { limit: this.config.maxTerminals })
-    const allocation = this.spawn(agent, owner, request, AbortSignal.any([signal, this.lifetime.signal, owner.lifetime.signal]))
+    const allocation = this.spawn(agent, owner, request, AbortSignal.any([signal, this.lifetime.signal, owner.lifetime.signal]), profile)
     owner.pending.set(request.id, allocation)
     try {
       const terminal = await allocation
@@ -336,12 +354,14 @@ export class TerminalController extends TypertRemoteService {
     return { subprocess, sandboxPolicy }
   }
 
-  private async spawn(agent: Agent, owner: OwnedSession, request: TerminalCreateRequest, signal: AbortSignal): Promise<BrowserTerminal> {
+  private async spawn(
+    agent: Agent, owner: OwnedSession, request: TerminalCreateRequest, signal: AbortSignal, profile?: TerminalShell,
+  ): Promise<BrowserTerminal> {
     const environment = this.environment(agent, signal)
     const { subprocess } = this.execution(agent)
-    const shell = request.shellPath === undefined
+    const shell = profile ?? (request.shellPath === undefined
       ? await resolveShell(subprocess, this.config.shell, signal)
-      : (await this.shells(agent, signal)).find(candidate => candidate.path === request.shellPath)
+      : (await this.shells(agent, signal)).find(candidate => candidate.path === request.shellPath))
     if (shell === undefined) throw new Error('Selected shell is not available in this execution environment')
     const handle = await subprocess.spawnTerminal({
       argv: [shell.path, ...shell.args], cwd: environment.cwd, cols: request.cols, rows: request.rows,

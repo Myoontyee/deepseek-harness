@@ -127,6 +127,15 @@
       name: '@deepseek-ai/dsh-api-job-controller'
     # Workspace file service: bounded read, directory listing, and the
     # agent-write change feed inside the session workspace root.
+    - id: code-review-controller
+      name: '@deepseek-ai/dsh-api-code-review-controller'
+
+    - id: connection-controller
+      name: '@deepseek-ai/dsh-api-connection-controller'
+
+    - id: git-controller
+      name: '@deepseek-ai/dsh-api-git-controller'
+
     - id: terminal-controller
       name: '@deepseek-ai/dsh-api-terminal-controller'
     - id: workspace-files
@@ -428,6 +437,12 @@
 
     - id: ui-settings-agent-loop
       name: '@deepseek-ai/dsh-client-ui-settings-agent-loop'
+
+    - id: ui-settings-connections
+      name: '@deepseek-ai/dsh-client-ui-settings-connections'
+
+    - id: ui-settings-git
+      name: '@deepseek-ai/dsh-client-ui-settings-git'
 
     - id: ui-settings-subagent
       name: '@deepseek-ai/dsh-client-ui-settings-subagent'

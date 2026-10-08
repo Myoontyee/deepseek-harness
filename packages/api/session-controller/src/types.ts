@@ -297,6 +297,8 @@ export interface SessionCreateValue {
 
 /** Session model-selection request. */
 export interface SessionSelectModelRequest extends ModelSelection {
+  /** Omission remembers the selection globally; false changes only this Session. */
+  readonly rememberAsDefault?: boolean
   readonly sessionId: SessionId
 }
 

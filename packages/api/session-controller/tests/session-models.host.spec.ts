@@ -157,6 +157,17 @@ function currentSelection(ctx: Context, sessionId: SessionId) {
 }
 
 describe('Web session model selection', () => {
+  it('can select a reviewer model without saving it as the default chat model', async () => {
+    const { ctx, sessionId } = await harness()
+    onTestFinished(() => ctx.fiber.dispose())
+    const remote = createSessionTestRemote(ctx, { defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }), cwd: '/tmp' })
+    const save = vi.spyOn(ctx.agentDefaultModel, 'saveSelection')
+    const selected = expectValue(await remote.selectModel({ sessionId, provider: 'deepseek-official', model: 'deepseek-reasoner', rememberAsDefault: false }))
+    expect(selected.selected.model).toBe('deepseek-reasoner')
+    expect(save).not.toHaveBeenCalled()
+    expect(currentSelection(ctx, sessionId)?.model).toBe('deepseek-reasoner')
+  })
+
   it('validates an ordered image batch before persisting any member', async () => {
     const { ctx, agent, sessionId } = await harness()
     const validateImage = vi.fn((_input: { data: Uint8Array }) => Promise.resolve())

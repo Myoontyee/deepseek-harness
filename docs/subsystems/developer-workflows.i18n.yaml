@@ -1,0 +1,88 @@
+# Bilingual-pair consistency record for developer-workflows.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/subsystems/developer-workflows.md
+/developer-workflow-apis:
+  en: 717acd4896822609
+  zh: 6965311d2a512ad2
+/developer-workflow-apis/gitworkspace:
+  en: bdd2c942f45cd165
+  zh: bdd2c942f45cd165
+/developer-workflow-apis/gitchange:
+  en: 05331e1638ea2fbc
+  zh: 05331e1638ea2fbc
+/developer-workflow-apis/gitstatus:
+  en: cc45702660882be2
+  zh: cc45702660882be2
+/developer-workflow-apis/gitbranch:
+  en: d3a27a7d43a75a42
+  zh: d3a27a7d43a75a42
+/developer-workflow-apis/gitcommit:
+  en: 6572fba934becd4b
+  zh: 6572fba934becd4b
+/developer-workflow-apis/gitdiff:
+  en: f365f3712e358760
+  zh: f365f3712e358760
+/developer-workflow-apis/gitcommandresult:
+  en: 6f0d82f0dd83d23f
+  zh: 6f0d82f0dd83d23f
+/developer-workflow-apis/gitmutation:
+  en: df1bd4fd79890893
+  zh: df1bd4fd79890893
+/developer-workflow-apis/gitpreferences:
+  en: 48e37ac14441e63d
+  zh: 48e37ac14441e63d
+/developer-workflow-apis/githubaccount:
+  en: adbfb8a0912a92a0
+  zh: adbfb8a0912a92a0
+/developer-workflow-apis/gitpullrequest:
+  en: 82da33a010b3086a
+  zh: 82da33a010b3086a
+/developer-workflow-apis/githubloginstate:
+  en: 23ff0ea75b06037f
+  zh: 23ff0ea75b06037f
+/developer-workflow-apis/gitreviewtarget:
+  en: cde2c9877fd327dd
+  zh: cde2c9877fd327dd
+/developer-workflow-apis/gitreviewcontext:
+  en: f30f9d2d86a81a89
+  zh: f30f9d2d86a81a89
+/developer-workflow-apis/reviewrepositorypreferences:
+  en: bd781eb621a78163
+  zh: bd781eb621a78163
+/developer-workflow-apis/reviewpreferences:
+  en: c49f8d0c4620ffc1
+  zh: c49f8d0c4620ffc1
+/developer-workflow-apis/reviewrequest:
+  en: a46351a43c7840e3
+  zh: a46351a43c7840e3
+/developer-workflow-apis/reviewreceipt:
+  en: a486c340f15692b6
+  zh: a486c340f15692b6
+/developer-workflow-apis/sshconnectionid:
+  en: 358bf0242d93a6d6
+  zh: 358bf0242d93a6d6
+/developer-workflow-apis/sshprofile:
+  en: 8eb272ba1424afef
+  zh: 8eb272ba1424afef
+/developer-workflow-apis/savedsshconnection:
+  en: bd53f5deb1f7ca93
+  zh: bd53f5deb1f7ca93
+/developer-workflow-apis/connectionpreferences:
+  en: c4a64c449597b628
+  zh: c4a64c449597b628
+/developer-workflow-apis/sshconnectionlist:
+  en: 62c07e3e2bfae388
+  zh: 62c07e3e2bfae388
+/developer-workflow-apis/sshprobe:
+  en: d585922df0ceb7b9
+  zh: d585922df0ceb7b9
+/developer-workflow-apis/sshcommandresult:
+  en: 7efd19c359570521
+  zh: 7efd19c359570521
+/developer-workflow-apis/sshsessionreceipt:
+  en: 4c484ced0c24b291
+  zh: 4c484ced0c24b291
+/developer-workflow-apis/related-packages:
+  en: d2a2a263cd35d0fe
+  zh: 03b9d209aae46f21

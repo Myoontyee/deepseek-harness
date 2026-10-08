@@ -45,6 +45,18 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
  * blocks. A package moves on or off this list with its context behavior.
  */
 const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
+  'packages/api/git-controller': {
+    kind: 'none',
+    reason: 'this controller exposes authenticated Git operations and the review consumer owns model context.',
+  },
+  'packages/client/ui-settings-git': {
+    kind: 'none',
+    reason: 'the settings pages delegate review context and execution to Host controllers.',
+  },
+  'packages/client/ui-settings-connections': {
+    kind: 'none',
+    reason: 'the connection controller and SSH preset own model context and command execution.',
+  },
   'packages/client/product-analytics': { kind: 'none', reason: 'Desktop analytics observes selected interactions without contributing model context or Session events.' },
   'packages/experimental/speech-to-text': { kind: 'none', reason: 'Routes transient recognition without adding model requests or Session events.' },
   'packages/experimental/api-speech-to-text': { kind: 'none', reason: 'Transports audio and preparation state; ordinary user submission owns model-visible text.' },

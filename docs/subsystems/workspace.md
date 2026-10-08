@@ -264,6 +264,16 @@ Typed Remote control of transient Session-owned terminal processes.
 @Remote async create(agent: Agent, request: TerminalCreateRequest, signal: AbortSignal): Promise<WebTerminalInfo>
 
 /**
+ * Open a shell profile resolved by a trusted Host capability provider.
+ * @param agent - Session whose existing terminal lifecycle owns the process.
+ * @param request - terminal dimensions and idempotency identity.
+ * @param shell - verified executable and provider-owned argument array.
+ * @param signal - allocation cancellation.
+ * @returns existing or newly allocated terminal; this method is not a Remote endpoint.
+ */
+createWithShell(agent: Agent, request: TerminalCreateRequest, shell: TerminalShell, signal: AbortSignal): Promise<WebTerminalInfo>
+
+/**
  * Retain an existing terminal for a window without activating its Agent or taking input control.
  * @param sessionId - owning Session identity, including an inactive saved layout.
  * @param id - retained Host terminal identity.

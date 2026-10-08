@@ -92,6 +92,8 @@ Welcome loads the shared Toast palette and shadow tokens, with system typography
 
 ## Bundled command runtime
 
+Custom Windows builds also include the SHA-256-verified official GitHub CLI 2.102.0 in runtime `bin`, with its MIT license and source metadata. Git settings use it for browser authorization and PR operations; repository commands still require Git installed on the Host.
+
 The installed `resources/runtime/cli/bin/dsh` shell script (`dsh.cmd` on Windows) runs the ordinary CLI dispatcher using Desktop's Electron executable and bundled pnpm. It works while Desktop is closed and retains the Electron runtime limitations. Ordinary profile, configuration, and plugin commands use the same implementation as npm dsh; the command does not open Desktop.
 
 To manage Desktop's plugins, launch Desktop once to initialize its profile, fully quit the application, then run `dsh plugin --profile desktop add <package>`, `list`, or `remove <package>`. Reopen Desktop to use the changes. Package operations retain the shared profile write lock and compatibility checks. The installed command refuses an uninitialized Desktop profile instead of creating an ordinary CLI profile in its place.

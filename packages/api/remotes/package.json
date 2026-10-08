@@ -94,6 +94,9 @@
     "@deepseek-ai/dsh-office-to-pdf": "workspace:*",
     "@deepseek-ai/dsh-api-account-controller": "workspace:*",
     "@deepseek-ai/dsh-deepseek-account": "workspace:*",
-    "@deepseek-ai/dsh-client-product-analytics": "workspace:*"
+    "@deepseek-ai/dsh-client-product-analytics": "workspace:*",
+    "@deepseek-ai/dsh-api-git-controller": "workspace:*",
+    "@deepseek-ai/dsh-api-code-review-controller": "workspace:*",
+    "@deepseek-ai/dsh-api-connection-controller": "workspace:*"
   }
 }

@@ -57,3 +57,5 @@ Start with the API Gateway reference to see the Remote model end to end, then th
 None.
 
 </details>
+
+[Developer workflow APIs](../../docs/subsystems/developer-workflows.md) records the public Git, review and SSH connection types.

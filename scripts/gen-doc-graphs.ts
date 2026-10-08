@@ -108,6 +108,30 @@ const GROUP_ORDER = [
 
 const SERVICE_ROLES: ServiceRole[] = [
   {
+    key: 'gitController',
+    pkg: 'api-git-controller',
+    title: 'Local Git and GitHub Remote operations',
+    mode: 'core',
+    consumers: ['api-code-review-controller', 'client-ui-settings-git'],
+    note: 'Resolves registered workspaces, fences Git mutations and delegates credential handling to Git and GitHub CLI.',
+  },
+  {
+    key: 'codeReviewController',
+    pkg: 'api-code-review-controller',
+    title: 'Read-only review Session preparation',
+    mode: 'core',
+    consumers: ['client-ui-settings-git'],
+    note: 'Persists bounded source context and admits dedicated review Sessions without changing ordinary model defaults.',
+  },
+  {
+    key: 'connectionController',
+    pkg: 'api-connection-controller',
+    title: 'Saved SSH targets and remote commands',
+    mode: 'core',
+    consumers: ['client-ui-settings-connections'],
+    note: 'Pins OpenSSH targets to local control Sessions and checks live grants before remote command execution.',
+  },
+  {
     key: 'hmr',
     pkg: 'hmr',
     title: 'Serialized module and configuration reloads',

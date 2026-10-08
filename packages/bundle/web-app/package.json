@@ -36,7 +36,9 @@
     "presets/minimal.patch.yml",
     "presets/cordis.patch.yml",
     "lib/public-url-*.js",
-    "lib/types/**/*.d.ts"
+    "lib/types/**/*.d.ts",
+    "presets/code-review.patch.yml",
+    "presets/ssh-session.patch.yml"
   ],
   "license": "MIT",
   "dsh": {
@@ -46,7 +48,9 @@
         "./presets/standard.patch.yml",
         "./presets/ptc.patch.yml",
         "./presets/minimal.patch.yml",
-        "./presets/cordis.patch.yml"
+        "./presets/cordis.patch.yml",
+        "./presets/code-review.patch.yml",
+        "./presets/ssh-session.patch.yml"
       ]
     }
   },
@@ -181,7 +185,13 @@
     "@deepseek-ai/dsh-client-ui-shortcuts": "workspace:*",
     "@deepseek-ai/dsh-client-product-analytics": "workspace:*",
     "@deepseek-ai/dsh-host-product-telemetry-otel": "workspace:*",
-    "@deepseek-ai/dsh-client-ui-settings-session-log": "workspace:*"
+    "@deepseek-ai/dsh-client-ui-settings-session-log": "workspace:*",
+    "@deepseek-ai/dsh-api-git-controller": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-settings-git": "workspace:*",
+    "@deepseek-ai/dsh-review-policy": "workspace:*",
+    "@deepseek-ai/dsh-api-code-review-controller": "workspace:*",
+    "@deepseek-ai/dsh-api-connection-controller": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-settings-connections": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~",

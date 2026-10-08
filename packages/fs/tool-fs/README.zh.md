@@ -56,6 +56,7 @@ kind: "package-reference"
 
 | 键 | 默认值 | 含义 |
 |---|---|---|
+| `readOnly` | `false` | 只注册读取操作，不注册写入、编辑工具及修改控制器 |
 | `readLimit` | `2000` | 一次 `read` 调用返回的默认和最大行数 |
 | `readMaxLineLength` | `2000` | 每行截断前保留的字符数 |
 | `readMaxBytes` | `51200` | 一次 `read` 调用所选行的字节上限；溢出时以「已达上限」footer 结束窗口 |

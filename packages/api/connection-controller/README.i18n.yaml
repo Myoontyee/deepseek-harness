@@ -1,0 +1,46 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/api/connection-controller/README.md
+/:
+  en: afc3041738eae52d
+  zh: 623e02f79c3cddd1
+/deepseek-ai-dsh-api-connection-controller:
+  en: 00f9504038702dcd
+  zh: 04ce917da59e0459
+/deepseek-ai-dsh-api-connection-controller/summary:
+  en: 6e2f8a9c25e25343
+  zh: 7cdea370dbf76d20
+/deepseek-ai-dsh-api-connection-controller/table-of-contents:
+  en: b9fb16af90a4c99c
+  zh: 6768f5f193d7e250
+/deepseek-ai-dsh-api-connection-controller/configuration:
+  en: 1b97bf7dbfaa49d9
+  zh: 78204cf04867ca63
+/deepseek-ai-dsh-api-connection-controller/operations:
+  en: efd99c85066ea09b
+  zh: 3f6314d5425599cd
+/deepseek-ai-dsh-api-connection-controller/source-reuse:
+  en: f9e164cc1087ed18
+  zh: 7d376b7a64658dc4
+/deepseek-ai-dsh-api-connection-controller/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-api-connection-controller/model-experience/remote-target-and-commands:
+  en: 920eddb947b498b8
+  zh: 31bfd472bd73df05
+/deepseek-ai-dsh-api-connection-controller/model-experience/remote-target-and-commands/what-the-model-sees:
+  en: 46395715208c5811
+  zh: 7be855cd52c080a4
+/deepseek-ai-dsh-api-connection-controller/model-experience/remote-target-and-commands/token-effect:
+  en: f15ce372a62ae811
+  zh: 160f690e41756e95
+/deepseek-ai-dsh-api-connection-controller/model-experience/remote-target-and-commands/kv-cache-effect:
+  en: b5c38c5f1c5f07e6
+  zh: a38d03d2358e7bad
+/deepseek-ai-dsh-api-connection-controller/known-limitations-and-deferred-work:
+  en: 5edc98726e22e8f6
+  zh: f6f61804179d79ab
+/deepseek-ai-dsh-api-connection-controller/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: b8e216619fe47cce

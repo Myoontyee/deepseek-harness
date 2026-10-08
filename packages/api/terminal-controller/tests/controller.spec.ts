@@ -76,6 +76,19 @@ describe('TerminalController', () => {
     expect(subprocess.spawnTerminal).toHaveBeenCalledOnce()
   })
 
+  it('uses a trusted SSH profile once and keeps ordinary terminal defaults separate', async () => {
+    const { controller, agent, subprocess } = fixture()
+    const ssh = { path: '/usr/bin/ssh', name: 'Saved server', args: ['-tt', 'saved-alias', "cd -- '/work/with spaces' && exec bash -l"] }
+    const created = await controller.createWithShell(agent, request, ssh, signal())
+    expect(created.shell).toEqual(ssh)
+    expect(subprocess.spawnTerminal).toHaveBeenCalledWith(expect.objectContaining({ argv: [ssh.path, ...ssh.args] }))
+    expect(await controller.createWithShell(agent, request, { ...ssh, args: ['different'] }, signal())).toBe(created)
+    expect(subprocess.spawnTerminal).toHaveBeenCalledOnce()
+    const ordinary = await controller.create(agent, { ...request, id: 'ordinary' as WebTerminalId }, signal())
+    expect(ordinary.shell.path).toBe('/bin/bash')
+    expect(subprocess.spawnTerminal).toHaveBeenLastCalledWith(expect.objectContaining({ argv: ['/bin/bash', '--noprofile', '--norc', '-i'] }))
+  })
+
   it('restores a running terminal after its default executable becomes unavailable', async () => {
     const { controller, agent, subprocess } = fixture({ shell: undefined })
     await controller.create(agent, request, signal())

@@ -244,6 +244,10 @@
     { "path": "./packages/document/office-to-pdf" },
 
     { "path": "./packages/api/account-controller" },
+    { "path": "./packages/api/git-controller" },
+    { "path": "./packages/api/connection-controller" },
+    { "path": "./packages/api/code-review-controller" },
+    { "path": "./packages/preset/review-policy" },
     { "path": "./packages/credentials/deepseek-account-platform" },
     { "path": "./packages/credentials/deepseek-account" },
     { "path": "./packages/client/ui-deliverables/tsconfig.host.json" },

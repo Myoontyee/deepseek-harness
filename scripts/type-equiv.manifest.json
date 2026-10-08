@@ -2351,6 +2351,136 @@
       "doc": "docs/subsystems/product-telemetry.md",
       "symbol": "ProductTelemetryRecord",
       "source": "packages/host/product-telemetry-otel/src/index.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitWorkspace",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitChange",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitStatus",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitBranch",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitCommit",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitDiff",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitCommandResult",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitMutation",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitPreferences",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GithubAccount",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitPullRequest",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GithubLoginState",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitReviewTarget",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "GitReviewContext",
+      "source": "packages/api/git-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "ReviewRepositoryPreferences",
+      "source": "packages/api/code-review-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "ReviewPreferences",
+      "source": "packages/api/code-review-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "ReviewRequest",
+      "source": "packages/api/code-review-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "ReviewReceipt",
+      "source": "packages/api/code-review-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "SshConnectionId",
+      "source": "packages/api/connection-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "SshProfile",
+      "source": "packages/api/connection-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "SavedSshConnection",
+      "source": "packages/api/connection-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "ConnectionPreferences",
+      "source": "packages/api/connection-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "SshConnectionList",
+      "source": "packages/api/connection-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "SshProbe",
+      "source": "packages/api/connection-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "SshCommandResult",
+      "source": "packages/api/connection-controller/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/developer-workflows.md",
+      "symbol": "SshSessionReceipt",
+      "source": "packages/api/connection-controller/src/types.ts"
     }
   ]
 }

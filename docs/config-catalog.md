@@ -178,6 +178,98 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-agent-tool-presentation -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-api-code-review-controller -->
+<a id="deepseek-aidsh-api-code-review-controller"></a>
+
+## `@deepseek-ai/dsh-api-code-review-controller`
+
+- `inject`: `typert` · `sessionController` · `gitController` · `agentDefaultModel` · `agents` · `sessions` · `workspaceRegistry` · `permissionPresets` · `storageDomain` · `systemPrompt`
+- `refs`: `Volatile` (`@deepseek-ai/cordis`)
+- `source`: [`packages/api/code-review-controller/src/index.ts:22`](../packages/api/code-review-controller/src/index.ts)
+
+```ts config-catalog
+/** Review context limits and persistent model preferences. */
+export interface Config {
+  /** Reviewer provider; empty follows the ordinary default selection. */
+  provider: Volatile<string>
+  /** Reviewer model; set with provider or leave both empty. */
+  model: Volatile<string>
+  /** Additional review criteria when no repository override applies. */
+  instructions: Volatile<string>
+  /** Saved reviewer preferences keyed by registered workspace identity. */
+  repositories: Volatile<Record<string, ReviewRepositoryPreferences>>
+  /** Ordering position of the logged review context. */
+  contextOrder: number
+  /** Maximum patch characters inserted into the review context. */
+  maxDiffChars: number
+  /** Maximum changed paths listed in the review context. */
+  maxFiles: number
+}
+
+/** Persistent reviewer model selection and additional review instructions. */
+export interface ReviewRepositoryPreferences {
+  /** Reviewer provider; empty follows the ordinary chat model. */
+  provider: string
+  /** Reviewer model paired with provider. */
+  model: string
+  /** Additional review criteria supplied by the user. */
+  instructions: string
+  /** Saved base branch or revision for branch comparisons. */
+  base: string
+  /** Saved review focus for this workspace. */
+  focus: string
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-api-code-review-controller -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-api-connection-controller -->
+<a id="deepseek-aidsh-api-connection-controller"></a>
+
+## `@deepseek-ai/dsh-api-connection-controller`
+
+- `inject`: `typert` · `subprocess` · `storageDomain` · `systemPrompt` · `sessionController` · `terminalController` · `agents` · `workspaceRegistry` · `permissionPresets` · `sandboxPolicy`
+- `refs`: `Volatile` (`@deepseek-ai/cordis`)
+- `source`: [`packages/api/connection-controller/src/index.ts:36`](../packages/api/connection-controller/src/index.ts)
+
+```ts config-catalog
+/** Saved bookmarks, executable selection and resource limits. */
+export interface Config {
+  /** Saved OpenSSH aliases, display preferences and explicit command grants. */
+  profiles: Volatile<Record<string, SshProfile>>
+  /** OpenSSH executable path or PATH name. */
+  sshExecutable: string
+  /** Optional explicit OpenSSH configuration file; empty uses normal discovery. */
+  sshConfigPath: string
+  /** Local control-workspace directory; empty resolves under the running Host DSH home. */
+  controlRoot: string
+  /** Maximum duration of configuration resolution and connection probes. */
+  probeTimeoutMs: number
+  /** Maximum duration of one local SSH transport command. */
+  commandTimeoutMs: number
+  /** Maximum retained bytes per stdout or stderr stream. */
+  maxStreamBytes: number
+  /** Maximum configuration files visited during alias discovery. */
+  maxConfigFiles: number
+  /** Maximum bytes read from each discovered configuration file. */
+  maxConfigBytes: number
+  /** Managed local process termination grace period in milliseconds. */
+  graceMs: number
+}
+
+/** User-owned bookmark; credential material stays in OpenSSH/its agent. */
+export interface SshProfile {
+  /** Concrete OpenSSH Host alias used to resolve the server. */
+  alias: string
+  /** User-visible connection name. */
+  label: string
+  /** Saved remote POSIX directory; empty selects the account home. */
+  directory: string
+  /** Explicit permission to execute AI commands with this SSH account. */
+  allowAgentCommands: boolean
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-api-connection-controller -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-api-gateway -->
 <a id="deepseek-aidsh-api-gateway"></a>
 
@@ -196,6 +288,44 @@ export interface Config {
 }
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-api-gateway -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-api-git-controller -->
+<a id="deepseek-aidsh-api-git-controller"></a>
+
+## `@deepseek-ai/dsh-api-git-controller`
+
+- `inject`: `typert` · `workspaceRegistry` · `subprocess`
+- `refs`: `Volatile` (`@deepseek-ai/cordis`)
+- `source`: [`packages/api/git-controller/src/index.ts:31`](../packages/api/git-controller/src/index.ts)
+
+```ts config-catalog
+/** Executable limits and persistent workflow preferences. */
+export interface Config extends CommandConfig {
+  /** Maximum duration of a user-authorized browser login. */
+  loginTimeoutMs: number
+  /** Prefix used when creating a branch from the Git page. */
+  branchPrefix: Volatile<string>
+  /** Whether new pull requests are drafts by default. */
+  draftPullRequests: Volatile<boolean>
+  /** User-selected immediate pull request merge method. */
+  mergeMethod: Volatile<'merge' | 'squash'>
+}
+
+/** Host-configured executable and resource limits. */
+export interface CommandConfig {
+  /** Git executable path or PATH name. */
+  gitExecutable: string
+  /** GitHub CLI executable path or PATH name. */
+  githubExecutable: string
+  /** Maximum duration of one Git or GitHub CLI operation. */
+  timeoutMs: number
+  /** Maximum retained bytes for each output stream. */
+  maxOutputBytes: number
+  /** Managed process termination grace period in milliseconds. */
+  graceMs: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-api-git-controller -->
 
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-api-job-controller -->
 <a id="deepseek-aidsh-api-job-controller"></a>
@@ -2436,6 +2566,25 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-repeat-tool-reminder -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-review-policy -->
+<a id="deepseek-aidsh-review-policy"></a>
+
+## `@deepseek-ai/dsh-review-policy`
+
+- `inject`: `tools` · `agents` · `agentPresets`
+- `source`: [`packages/preset/review-policy/src/index.ts:8`](../packages/preset/review-policy/src/index.ts)
+
+```ts config-catalog
+/** Preset identity and its inherited tool allowlist. */
+export interface Config {
+  /** Preset identity whose Agents receive this tool restriction. */
+  preset: string
+  /** Permitted inherited tool names for the selected preset. */
+  tools: string[]
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-review-policy -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-sandbox-local -->
 <a id="deepseek-aidsh-sandbox-local"></a>
 
@@ -3552,6 +3701,8 @@ export interface Config {
 ```ts config-catalog
 /** Plugin config (all optional — `Config` supplies the defaults). */
 export interface Config {
+  /** Register only file-reading tools; omit write/edit capabilities from this composition. */
+  readOnly?: boolean
   /** Default and maximum number of lines returned by one `read` call. */
   readLimit?: number
   /** Maximum characters returned for a single line before truncation. */
@@ -4385,7 +4536,9 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-client-ui-session` | — | [`packages/client/ui-session/src/index.ts`](../packages/client/ui-session/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings` | — | [`packages/client/ui-settings/src/index.ts`](../packages/client/ui-settings/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-agent-loop` | — | [`packages/client/ui-settings-agent-loop/src/index.ts`](../packages/client/ui-settings-agent-loop/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-settings-connections` | — | [`packages/client/ui-settings-connections/src/index.ts`](../packages/client/ui-settings-connections/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-general` | — | [`packages/client/ui-settings-general/src/index.ts`](../packages/client/ui-settings-general/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-settings-git` | — | [`packages/client/ui-settings-git/src/index.ts`](../packages/client/ui-settings-git/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-plugin-inventory` | — | [`packages/client/ui-settings-plugin-inventory/src/index.ts`](../packages/client/ui-settings-plugin-inventory/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-plugins` | — | [`packages/client/ui-settings-plugins/src/index.ts`](../packages/client/ui-settings-plugins/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-session-log` | — | [`packages/client/ui-settings-session-log/src/index.ts`](../packages/client/ui-settings-session-log/src/index.ts) |

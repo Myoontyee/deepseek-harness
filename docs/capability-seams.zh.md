@@ -9,6 +9,14 @@
 
 ```mermaid
 flowchart LR
+  pkg_api_git_controller["api-git-controller"]
+  svc_gitController["ctx.gitController<br/>Local Git and GitHub Remote operations"]
+  pkg_api_code_review_controller["api-code-review-controller"]
+  pkg_client_ui_settings_git["client-ui-settings-git"]
+  svc_codeReviewController["ctx.codeReviewController<br/>Read-only review Session preparation"]
+  pkg_api_connection_controller["api-connection-controller"]
+  svc_connectionController["ctx.connectionController<br/>Saved SSH targets and remote commands"]
+  pkg_client_ui_settings_connections["client-ui-settings-connections"]
   pkg_hmr["hmr"]
   svc_hmr["ctx.hmr<br/>Serialized module and configuration reloads"]
   pkg_app_boot["app-boot"]
@@ -281,7 +289,10 @@ flowchart LR
   pkg_agent_default_model --> svc_agentDefaultModel
   pkg_agent_loop --> svc_agentLoop
   pkg_agent_preset_registry --> svc_agentPresets
+  pkg_api_code_review_controller --> svc_codeReviewController
+  pkg_api_connection_controller --> svc_connectionController
   pkg_api_gateway --> svc_typertGateway
+  pkg_api_git_controller --> svc_gitController
   pkg_api_job_controller --> svc_jobController
   pkg_api_session_controller --> svc_sessionController
   pkg_api_session_controller --> svc_sessionFileReferences
@@ -446,6 +457,7 @@ flowchart LR
   svc_browserUse --> pkg_experimental_browser_use_playwright_mcp
   svc_browserUse --> pkg_experimental_browser_use_stagehand_native
   svc_clientModules --> pkg_client_hmr
+  svc_codeReviewController --> pkg_client_ui_settings_git
   svc_compaction --> pkg_compaction_basic
   svc_computerUse --> pkg_experimental_computer_use_cua_driver_mcp
   svc_computerUse --> pkg_experimental_computer_use_cua_driver_native
@@ -453,6 +465,7 @@ flowchart LR
   svc_configEditor --> pkg_settings
   svc_connection --> pkg_api_gateway
   svc_connection --> pkg_host_frontend_static
+  svc_connectionController --> pkg_client_ui_settings_connections
   svc_cordisInspect --> pkg_tool_cordis
   svc_credentials --> pkg_api_settings_controller
   svc_credentials --> pkg_llm_deepseek
@@ -465,6 +478,8 @@ flowchart LR
   svc_fileReferences --> pkg_api_session_controller
   svc_fileUploads --> pkg_api_session_controller
   svc_fs --> pkg_tool_fs
+  svc_gitController --> pkg_api_code_review_controller
+  svc_gitController --> pkg_client_ui_settings_git
   svc_hmr --> pkg_app_boot
   svc_jobs --> pkg_api_job_controller
   svc_jobs --> pkg_tool_bash
@@ -573,6 +588,9 @@ flowchart LR
 
 | ctx 键 | 角色 | 所属包 | 实现 | 直接消费方 | 配套插件 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- |
+| `ctx.gitController` | `core` | [`api-git-controller`](../packages/api/git-controller) | - | [`api-code-review-controller`](../packages/api/code-review-controller), [`client-ui-settings-git`](../packages/client/ui-settings-git) | - | 解析已注册工作区，约束 Git 修改操作，并将凭据管理交给 Git 和 GitHub CLI。 |
+| `ctx.codeReviewController` | `core` | [`api-code-review-controller`](../packages/api/code-review-controller) | - | [`client-ui-settings-git`](../packages/client/ui-settings-git) | - | 持久化有大小限制的源代码上下文，启动独立审查会话，不改变普通会话的默认模型。 |
+| `ctx.connectionController` | `core` | [`api-connection-controller`](../packages/api/connection-controller) | - | [`client-ui-settings-connections`](../packages/client/ui-settings-connections) | - | 将 OpenSSH 目标固定到本地控制会话，并在每次远程执行前核对当前授权。 |
 | `ctx.hmr` | `core` | [`hmr`](../packages/boot/hmr) | - | [`app-boot`](../packages/boot/app-boot) | - | 负责模块和精确配置监听；应用修改共用其队列，自动重载等待应用文件锁。 |
 | `ctx.pluginRegistryProbe` | `core` | [`client-ui-plugin-manager`](../packages/client/ui-plugin-manager) | - | [`client-ui-plugin-manager`](../packages/client/ui-plugin-manager) | - | 在 Host 上并发比较公共安装源响应；初始安装源推荐由 Client 负责。 |
 | `ctx.pluginManager` | `core` | [`plugin-manager`](../packages/boot/plugin-manager) | - | [`plugin-manager`](../packages/boot/plugin-manager), `ui-settings-plugin-inventory` | - | 与 CLI 共享 profile 包操作，并向 Web 和 Agent 调用方分别报告持久状态与运行状态。 |

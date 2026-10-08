@@ -19,6 +19,7 @@
 
 | 工具包 | 模型可见名称 | 依赖 | 写入／影响 | 随产品发布的别名 | 部署说明 |
 | --- | --- | --- | --- | --- | --- |
+| `@deepseek-ai/dsh-api-connection-controller` | `ssh_exec` | `ctx.tools`, `ctx.connectionController` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-api-session-controller` | `list_sessions`, `send_session_message` | `ctx.tools`, `ctx.sessionController`, `ctx.agents`, `ctx.workspaceRegistry` | `tool/call`, `tool/result`, `agent/inbox/spliced`, `user/message` | - | - |
 | `@deepseek-ai/dsh-plugin-manager` | `plugin_manager` | `ctx.tools`, `ctx.pluginManager`, `ctx.sandboxPolicy` | `tool/call`, `tool/result`, `user/message` | - | - |
 | `@deepseek-ai/dsh-mcp-resources` | `list_mcp_resource_templates`, `list_mcp_resources`, `read_mcp_resource` | `ctx.tools`, `ctx.mcpResources` | `tool/call`, `tool/result` | - | - |
@@ -50,6 +51,31 @@
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-workspace-dependencies` | `load_workspace_dependencies` | `ctx.tools` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
+
+<a id="deepseek-aidsh-api-connection-controller"></a>
+
+## `@deepseek-ai/dsh-api-connection-controller`
+
+### `ssh_exec`
+
+仅针对用户要求的工作，在当前会话固定的 SSH 服务器上执行 POSIX 命令。每次调用在保存的远程目录中启动独立非交互 shell，使用 SSH 账号权限，不回退到本地执行。取消、断线或超时后远端任务可能仍在运行，请先核查结果再重试。使用明确路径并如实报告失败。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "command": {
+      "type": "string",
+      "description": "The remote shell command. Keep the task bounded; use a remote job manager for long-running work."
+    }
+  },
+  "required": [
+    "command"
+  ]
+}
+```
+
+源码： [`packages/api/connection-controller/src/remote-tools.ts`](../packages/api/connection-controller/src/remote-tools.ts)
 
 <a id="deepseek-aidsh-api-session-controller"></a>
 
