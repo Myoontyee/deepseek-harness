@@ -8,6 +8,7 @@
  */
 import type { ResponseAnnotation } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Context } from '@deepseek-ai/cordis'
+import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { InboxState } from '@deepseek-ai/dsh-agent/types'
 import type { ObservableSnapshot, SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { Branded } from '@deepseek-ai/dsh-brand'
@@ -175,7 +176,7 @@ export interface InputTarget {
 
 /** Per-session input facade owned by the conversation wiring layer. */
 export interface SessionInput extends InputTarget {
-  /** Replace the whole draft (persisted-draft seed and programmatic writes). */
+  /** Replace the whole draft with plain text, removing inline reference chips. */
   setDraft(text: string): void
   /** Append ordered browser-owned attachment ids; busy admission phases refuse. */
   addAttachments(ids: readonly DraftAttachmentId[]): boolean
@@ -212,6 +213,14 @@ export interface SessionInput extends InputTarget {
 export interface SessionInputResolver {
   /** Resolve the facade for one session-scope ctx. */
   for(actx: Context): SessionInput
+  /**
+   * Prepare the exact retained Session before navigation publishes it.
+   * @param binding - target Session generation, already retained by the caller.
+   * @param options - content to adopt and explicit permission to replace existing text.
+   * @returns applied, preserved, or blocked by a pending submission or disposal.
+   * @throws when binding is not the currently retained Session generation.
+   */
+  requestDraftInitialization(binding: SessionBinding, options: DraftInitializationOptions): DraftInitializationResult
 }
 
 /** Composer-local identity for an unsent annotation. */
@@ -221,6 +230,15 @@ export type DraftAnnotationId = Branded<'DraftAnnotationId'>
 export interface DraftAnnotation extends ResponseAnnotation {
   readonly id: DraftAnnotationId
 }
+
+/** Initial text for a target Session; attachments remain under their existing owner. */
+export interface DraftInitializationOptions {
+  readonly prompt?: string
+  readonly clearPreviousDraft?: boolean
+}
+
+/** An initialization request never waits for a React mount or a remote catalog. */
+export type DraftInitializationResult = 'applied' | 'preserved' | 'blocked'
 
 /**
  * The public input action face provided to every session-scope slot
@@ -244,8 +262,10 @@ export interface InputActions {
    * @returns false when the draft changed or submission locked the editor.
    */
   insertText(text: string, span: TokenSpan): boolean
-  /** Replace the whole draft (persisted-draft seed and programmatic writes). */
+  /** Replace the whole draft with plain text, removing inline reference chips. */
   setDraft(text: string): void
+  /** Write the current semantic document through the mounted persistence callback. */
+  persistDraft(): void
   /** Append ordered browser-owned attachment ids; busy admission phases refuse. */
   addAttachments(ids: readonly DraftAttachmentId[]): boolean
   /** Remove one browser-owned attachment id; busy admission phases refuse. */

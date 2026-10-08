@@ -49,5 +49,3 @@ The optional Desktop bridge reports existing Session status, selection and catal
 None.
 
 </details>
-
-**Runtime invariant:** No companion is published. The adapter materialization path enforces Session binding consistency.

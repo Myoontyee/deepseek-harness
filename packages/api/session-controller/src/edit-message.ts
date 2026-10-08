@@ -14,7 +14,8 @@ import type { SessionEditMessageRequest } from './types.ts'
  * @returns Completion after the revised prompt has been queued and flushed.
  */
 export async function editLatestMessage(
-  agent: Agent,
+  agent: Pick<Agent, 'session' | 'status' | 'runMaintenance' | 'followup'>
+    & { readonly inbox: Pick<Agent['inbox'], 'nextTurn' | 'nextStep'> },
   request: SessionEditMessageRequest,
   read: () => Promise<SessionObservation>,
   flush: () => Promise<unknown>,
@@ -34,6 +35,10 @@ export async function editLatestMessage(
     if (original?.type !== 'user/message' || original.seq !== request.seq) {
       throw new RemoteError('gateway/bad-request', 'MESSAGE_EDIT_NOT_LATEST', {})
     }
+    const position = observed.events.findLast(event => event.type === 'step/start')
+    if (position?.type !== 'step/start') {
+      throw new RemoteError('gateway/bad-request', 'MESSAGE_EDIT_NOT_LATEST', {})
+    }
     const nodes = session.surface.nodes
     const end = nodes.at(-1)
     if (end === undefined || !nodes.includes(original.seq)) {
@@ -48,7 +53,7 @@ export async function editLatestMessage(
       source: { ...original.data.source, rpcId: request.requestId },
     })
     session.append('developer/message', {
-      turn: 0, step: 0,
+      turn: position.data.turn, step: position.data.step,
       message: createDeveloperMessage({ content: [], source: {
         kind: 'message-edit', startSeq: original.seq, endSeq: session.seq - 1, requestId: request.requestId,
       } }),

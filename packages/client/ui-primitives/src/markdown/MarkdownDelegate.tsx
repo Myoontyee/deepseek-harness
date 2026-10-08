@@ -11,6 +11,8 @@ export type MarkdownExternalLinkHandler = (href: string) => void
 
 /** Navigation capabilities supplied by the nearest Markdown owner. */
 export interface MarkdownDelegate {
+  /** Resolve local clipboard links against the owning workspace. */
+  readonly resolveFileLink?: ((path: string) => string) | undefined
   /** Image previews for decoded local paths in this owner's workspace. */
   readonly fileImages?: {
     resolve: (path: string) => string | undefined
@@ -44,8 +46,10 @@ export function MarkdownDelegateProvider({
   openExternalLink,
   openFile,
   fileImages,
+  resolveFileLink,
 }: MarkdownDelegateProviderProps): ReactNode {
-  const delegate = useMemo(() => ({ openExternalLink, openFile, fileImages }), [openExternalLink, openFile, fileImages])
+  const delegate = useMemo(() => ({ openExternalLink, openFile, fileImages, resolveFileLink }),
+    [openExternalLink, openFile, fileImages, resolveFileLink])
   return (
     <MarkdownDelegateContext.Provider value={delegate}>
       {children}

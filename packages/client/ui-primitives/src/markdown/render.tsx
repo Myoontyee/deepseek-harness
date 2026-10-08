@@ -583,7 +583,10 @@ function MarkdownFileLink({ file, glyph, children }: {
   readonly glyph: boolean
   readonly children: ReactNode[]
 }): ReactNode {
-  const { openFile, fileImages } = useMarkdownDelegate()
+  const { openFile, fileImages, resolveFileLink } = useMarkdownDelegate()
+  const path = (resolveFileLink?.(file.path) ?? file.path).replaceAll('\\', '/')
+  const encodedPath = encodeURI(path).replaceAll('#', '%23').replaceAll('?', '%3F')
+  const destination = `${encodedPath}${file.line === undefined ? '' : `#L${file.line}`}`
   if (openFile === undefined) return <>{children}</>
   // Pure-image anchors already contain their preview and keep one navigation target.
   const preview = glyph && classifyLinkPath(file.path) === 'image' ? fileImages : undefined
@@ -592,6 +595,7 @@ function MarkdownFileLink({ file, glyph, children }: {
     <button
       type="button"
       className={clsx(css.fileMention, css.fileLink)}
+      data-copy-file-link={destination}
       title={src === undefined ? file.path : undefined}
       onClick={() => { openFile(file.path, file.line === undefined ? undefined : { line: file.line }) }}
     >

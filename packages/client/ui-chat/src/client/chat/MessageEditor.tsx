@@ -29,6 +29,7 @@ export function MessageEditor({ text, allowEmpty, disabled, annotationCount, onS
       await onSave(draft)
       if (live.current) onCancel()
     } catch (error) {
+      console.warn('[ui-chat] message edit failed', error)
       if (!live.current) return
       const reason = error instanceof Error ? error.message : ''
       setFailure(t(reason === 'MESSAGE_EDIT_BUSY' ? 'message.editBusy'
