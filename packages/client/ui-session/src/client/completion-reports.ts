@@ -6,7 +6,12 @@ interface CompletionBridge {
   report(value: { selected: string | null; ready: boolean; sessions: { id: string; running: boolean }[] }): Promise<void>
 }
 
-/** @param ui - Session UI observations. @param sessions - Local catalog. @returns Observer teardown. */
+/**
+ * Forward selection and running-state changes to the optional native badge owner.
+ * @param ui - Session UI observations.
+ * @param sessions - Local catalog.
+ * @returns Observer teardown.
+ */
 export function installCompletionReports(ui: UiSession, sessions: ISessions): () => void {
   const desktop = (globalThis as typeof globalThis & {
     dshDesktop?: { protocolVersion: number; completion?: CompletionBridge }

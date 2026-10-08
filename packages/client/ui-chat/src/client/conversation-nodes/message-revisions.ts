@@ -9,10 +9,10 @@ function revision(node: ChatConversationViewNode): RevisionRange | undefined {
   const source = value.data.source
   if (typeof source !== 'object' || source === null || !('kind' in source) || source.kind !== 'message-edit') return undefined
   if (!('startSeq' in source) || typeof source.startSeq !== 'number'
-    || !('endSeq' in source) || typeof source.endSeq !== 'number') throw new Error('Invalid message revision range')
+    || !('endSeq' in source) || typeof source.endSeq !== 'number') return undefined
   const { startSeq: start, endSeq: end } = source
   if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || end >= node.anchorSeq) {
-    throw new Error('Invalid message revision range')
+    return undefined
   }
   return { start, end }
 }
@@ -24,7 +24,11 @@ export class MessageRevisionProjector {
   private lastHumanSeq = -1
   /** Last visible ordinary human message eligible for the editing action. */
   get editableMessageSeq(): number | undefined { return this.editable }
-  /** @param nodes - Complete loaded Chat nodes. @returns Nodes with superseded ranges hidden. */
+  /**
+   * Replay presentation revisions over the loaded transcript.
+   * @param nodes - Complete loaded Chat nodes.
+   * @returns Nodes with superseded ranges hidden.
+   */
   replace(nodes: readonly ChatConversationViewNode[]): readonly ChatConversationViewNode[] {
     this.ranges.clear()
     this.editable = undefined
@@ -35,7 +39,12 @@ export class MessageRevisionProjector {
     }
     return nodes.map(node => this.project(node))
   }
-  /** @param nodes - Changed nodes. @param store - Current keyed nodes. @returns Visibility changes plus ordinary updates. */
+  /**
+   * Apply new revisions without rescanning unrelated nodes on ordinary streaming updates.
+   * @param nodes - Changed nodes.
+   * @param store - Current keyed nodes.
+   * @returns Visibility changes plus ordinary updates.
+   */
   apply(nodes: readonly ChatConversationViewNode[], store: ChatNodeStore): readonly ChatConversationViewNode[] {
     let changed = false
     for (const node of nodes) {

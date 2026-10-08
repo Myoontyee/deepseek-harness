@@ -32,10 +32,12 @@ describe('same-session message revisions', () => {
     expect(replay.nodes.get(old.key)).toBeDefined()
   })
 
-  it('does not offer an earlier prompt after a steering message and rejects malformed revision ranges', () => {
+  it('does not offer an earlier prompt after a steering message and ignores malformed presentation metadata', () => {
     const builder = new ChatSnapshotBuilder()
     const snapshot = builder.replace({ nodes: [user(1), user(4, 'steering')], timeline })
     expect(snapshot.editableMessageSeq).toBeUndefined()
-    expect(() => builder.apply({ upserts: [revision(9, 5, 10)], timeline })).toThrow('Invalid message revision range')
+    const malformed = builder.apply({ upserts: [revision(9, 5, 10)], timeline })
+    expect(malformed.nodes.get('user:1')?.visibility).toBe('visible')
+    expect(malformed.order).toEqual(snapshot.order)
   })
 })

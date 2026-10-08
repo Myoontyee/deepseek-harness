@@ -154,6 +154,10 @@ Active-Turn highlighting is approximate: `readVisibleTurn` binary-searches the c
 
 -----
 
+## Edit the latest message
+
+An idle conversation exposes Edit on its latest ordinary user message. Save and regenerate keeps the Session identity, attachments and response annotations, replaces the old model-visible tail, and hides superseded transcript rows using a durable revision marker. Cancel leaves history unchanged; errors retain the draft. Running or queued conversations and compacted targets cannot be edited. Editing does not undo completed tool actions.
+
 <a id="model-experience"></a>
 ## Model Experience
 
@@ -176,10 +180,6 @@ None; Chat presentation does not assemble or mutate provider requests.
 - **The transcript reflects the loaded Session window** — older transcript nodes become available only after Session Controller loads the preceding event page. Turn navigation is wider than the window: the rail merges the loaded Turns with the host `turnOutline` projection, so every started Turn gets a fixed-pitch mark (10px apart; a ladder taller than the frame scrolls inside it with gradient fades), and activating an unloaded mark pages history through the Turn's `turn/start` seq before landing on its row. Without the projection (assemblies not mounting `dsh-session-turn-outline`) the rail falls back to loaded Turns only.
 - **Rail previews are card-sized** — one prompt line (50 characters) and up to three response lines (120), on loaded and unloaded Turns alike; an unloaded Turn's response arrives from the outline only once the Turn settled, so an open Turn previews its prompt (or just the Turn number) until then.
 
-
-## Edit the latest message
-
-An idle conversation exposes Edit on its latest ordinary user message. Save and regenerate keeps the Session identity, attachments and response annotations, replaces the old model-visible tail, and hides superseded transcript rows using a durable revision marker. Cancel leaves history unchanged; errors retain the draft. Running or queued conversations and compacted targets cannot be edited. Editing does not undo completed tool actions.
 
 <a id="dev-note"></a>
 ### Dev Note
