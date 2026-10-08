@@ -77,6 +77,8 @@ export function renderTexToReact(value: string, displayMode: boolean): ReactNode
       return (
         <span
           className="katex-error"
+          data-copy-math={value}
+          data-copy-math-display={String(displayMode)}
           style={{ color: '#cc0000' }}
           title={String(error)}
         >
@@ -86,5 +88,9 @@ export function renderTexToReact(value: string, displayMode: boolean): ReactNode
     }
   }
   const parsed = new DOMParser().parseFromString(html, 'text/html')
+  for (const element of parsed.body.children) {
+    element.setAttribute('data-copy-math', value)
+    element.setAttribute('data-copy-math-display', String(displayMode))
+  }
   return [...parsed.body.childNodes].map(domToReact)
 }

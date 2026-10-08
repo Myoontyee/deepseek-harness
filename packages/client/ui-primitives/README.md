@@ -207,7 +207,7 @@ These limits define how the atoms behave at the edges; they are current package 
 - **User-facing copy is required at the render site** — the atoms are zero-Cordis and cannot reach `ctx.locale`; each feature must supply complete localized labels through the primitive's typed props ([decision](../../../.agents/notes/implemented/architecture/2026-08-23-locale-owned-client-ui-copy.md)).
 - **`TerminalBlock` is not a terminal emulator** — it renders settled or still-running command output, not an interactive session: SGR colors, carriage return, backspace, erase-in-line, tab stops, and character width are honored; absolute cursor positioning, screen clearing, and alternate-screen sequences are stripped.
 
-Selecting and copying a Markdown passage that contains links writes Markdown text and rich HTML to the clipboard. Local file addresses and line numbers survive copying; the owning view can resolve relative paths against its workspace. Copying ordinary text keeps native browser behavior.
+Selecting and copying a rendered Markdown passage writes Markdown source to both text clipboard formats, without a competing rich-HTML payload. Headings, emphasis, quotes, lists, tables, code fences and link addresses are retained. Math copies its original TeX inside `$...$` or `$$...$$`; selecting within a formula copies that formula once as an atomic expression. Local file paths and line numbers remain intact. Selections extending outside one Markdown owner retain native browser behavior.
 
 <a id="dev-note"></a>
 ### Dev Note

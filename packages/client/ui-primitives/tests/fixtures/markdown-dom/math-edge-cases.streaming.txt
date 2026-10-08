@@ -17,7 +17,7 @@
             #text "$\\theta$"
           <td>
             #text "(\\frac{1}{5})"
-  <div class="_block_9aea57 md-code-block">
+  <div class="_block_9aea57 md-code-block" data-copy-code-language="math">
     <div class="_bannerWrap_9aea57">
       <div class="_banner_9aea57" data-code-block-banner="true">
         <div class="_infostring_9aea57">

@@ -1,7 +1,7 @@
 <div class="_markdown_404681">
   <p>
     #text "Trusted commands stay off: "
-    <span class="katex">
+    <span class="katex" data-copy-math-display="false" data-copy-math="\\href{javascript:alert(1)}{unsafe}">
       <span class="katex-mathml">
         <math xmlns="http://www.w3.org/1998/Math/MathML">
           <semantics>
@@ -20,7 +20,7 @@
     #text "."
   <p>
     #text "Unbalanced errors render the error arm: "
-    <span class="katex-error" style="color: rgb(204, 0, 0);" title="ParseError: KaTeX parse error: Unexpected end of input in a macro argument, expected '}' at end of input: \\frac{">
+    <span class="katex-error" data-copy-math-display="false" data-copy-math="\\frac{" style="color: rgb(204, 0, 0);" title="ParseError: KaTeX parse error: Unexpected end of input in a macro argument, expected '}' at end of input: \\frac{">
       #text "\\frac{"
   <div class="_tableScroll_404681 _tableFill_404681">
     <table>
@@ -33,7 +33,7 @@
       <tbody>
         <tr>
           <td>
-            <span class="katex">
+            <span class="katex" data-copy-math-display="false" data-copy-math="\\theta">
               <span class="katex-mathml">
                 <math xmlns="http://www.w3.org/1998/Math/MathML">
                   <semantics>
@@ -48,7 +48,7 @@
                   <span class="mord mathnormal" style="margin-right: 0.0278em;">
                     #text "θ"
           <td>
-            <span class="katex">
+            <span class="katex" data-copy-math-display="false" data-copy-math="\\frac{1}{5}">
               <span class="katex-mathml">
                 <math xmlns="http://www.w3.org/1998/Math/MathML">
                   <semantics>
@@ -90,7 +90,7 @@
                           <span class="vlist" style="height: 0.345em;">
                             <span>
                     <span class="mclose nulldelimiter">
-  <span class="katex-display">
+  <span class="katex-display" data-copy-math-display="true" data-copy-math="\\sqrt{2}\n">
     <span class="katex">
       <span class="katex-mathml">
         <math display="block" xmlns="http://www.w3.org/1998/Math/MathML">

@@ -1,7 +1,7 @@
 <div class="_markdown_404681">
   <p>
     #text "Einstein wrote "
-    <span class="katex">
+    <span class="katex" data-copy-math-display="false" data-copy-math="E = mc^2">
       <span class="katex-mathml">
         <math xmlns="http://www.w3.org/1998/Math/MathML">
           <semantics>
@@ -45,7 +45,7 @@
                         <span class="mord mtight">
                           #text "2"
     #text " inline."
-  <span class="katex-display">
+  <span class="katex-display" data-copy-math-display="true" data-copy-math="\\frac{\\partial \\mathbf{u}}{\\partial t} + (\\mathbf{u} \\cdot \\nabla)\\mathbf{u} = -\\frac{1}{\\rho}\\nabla p">
     <span class="katex">
       <span class="katex-mathml">
         <math display="block" xmlns="http://www.w3.org/1998/Math/MathML">
@@ -184,7 +184,7 @@
             #text "p"
   <p>
     #text "Backslash inline "
-    <span class="katex">
+    <span class="katex" data-copy-math-display="false" data-copy-math="\\frac{1}{5}">
       <span class="katex-mathml">
         <math xmlns="http://www.w3.org/1998/Math/MathML">
           <semantics>
@@ -227,7 +227,7 @@
                     <span>
             <span class="mclose nulldelimiter">
     #text " and display:"
-  <span class="katex-display">
+  <span class="katex-display" data-copy-math-display="true" data-copy-math="\\frac{\\pi}{4} < \\theta < \\frac{\\pi}{2}">
     <span class="katex">
       <span class="katex-mathml">
         <math display="block" xmlns="http://www.w3.org/1998/Math/MathML">
