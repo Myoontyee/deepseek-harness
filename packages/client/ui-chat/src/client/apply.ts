@@ -1,3 +1,4 @@
+import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
 /** Register the Chat Conversation target, renderers, stats, and details surface. */
 import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
 import type { Context } from '@deepseek-ai/cordis'
@@ -188,6 +189,7 @@ export function apply(ctx: Context): void {
       },
       store: chatStore,
       inject: (sessionId: SessionId): ChatViewInjected => {
+        let editAttempt: { seq: number; text: string; id: import('@deepseek-ai/dsh-api-session-controller/types').SessionRequestId } | undefined
         const binding = ctx.sessions.binding(sessionId)
         if (binding === undefined) throw new Error(`ui-chat: unknown session "${sessionId}"`)
         const session = binding.session
@@ -244,6 +246,12 @@ export function apply(ctx: Context): void {
               else chatScrollPositions.set(sessionId, position)
             },
             read: () => chatScrollPositions.get(sessionId) ?? null,
+          },
+          editMessage: async (seq, text) => {
+            if (editAttempt?.seq !== seq || editAttempt.text !== text) editAttempt = { seq, text,
+              id: randomUUID() as import('@deepseek-ai/dsh-api-session-controller/types').SessionRequestId }
+            const result = await ctx.remote.session.editMessage({ sessionId, seq, text, requestId: editAttempt.id })
+            if (!result.ok) throw new Error(result.error.message)
           },
           forkAt: (seq) => {
             const turn = [...chat.getSnapshot().timeline.turns.values()].find(turn => turn.end?.seq === seq)

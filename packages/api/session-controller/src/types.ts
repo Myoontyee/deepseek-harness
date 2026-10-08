@@ -317,6 +317,14 @@ export interface SessionRenameValue {
   readonly seq: number
 }
 
+/** Replace the latest human message and regenerate in the same Session. */
+export interface SessionEditMessageRequest {
+  readonly sessionId: SessionId
+  readonly seq: number
+  readonly text: string
+  readonly requestId: SessionRequestId
+}
+
 /** Session fork request. */
 export interface SessionForkRequest {
   readonly sessionId: SessionId
@@ -414,6 +422,18 @@ export type SessionRequestId = Branded<'session-request-id'>
 
 declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
+    /**
+     * Optional Chat attribution for a user-authorized message revision.
+     * The ordinary surface replacement owns model replay independently of this source;
+     * readers without this producer preserve its metadata and may display the old audit rows.
+     * @persistenceAttribution
+     */
+    'message-edit': {
+      kind: 'message-edit'
+      startSeq: number
+      endSeq: number
+      requestId: SessionRequestId
+    }
     /** Browser prompt correlation and optional Host-validated time zone. */
     'user-rpc': { kind: 'user'; rpcId: SessionRequestId; clientTimeZone?: string }
   }

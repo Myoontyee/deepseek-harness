@@ -31,6 +31,7 @@ import { installDesktopDirectoryPicker } from './directory-picker.ts'
 import { installMicrophonePermissions } from './microphone-permissions.ts'
 import { DesktopBackendController } from './backend-controller.ts'
 import { DESKTOP_IPC, SCHEME, assertDesktopSender, type DesktopUpdateState } from './ipc.ts'
+import { CompletionBadge, completionBadgeBitmap, parseCompletionReport } from './completion-badge.ts'
 import { readDeviceInfo } from './device-info.ts'
 import { desktopUpdateReadyConfirmation, formatDesktopMessage, resolveDesktopLocale, resolveDesktopStartupLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
@@ -361,6 +362,23 @@ async function main(): Promise<void> {
       .filter((window): window is BrowserWindow => window !== undefined && !window.isDestroyed())
     return contents === undefined ? windows.find(window => window.isFocused()) ?? mainWindow
       : windows.find(window => window.webContents === contents)
+  }
+  const paintCompletionBadge = (count: number): void => {
+    if (process.platform !== 'win32') { app.setBadgeCount(count); return }
+    const icon = count === 0 ? null : nativeImage.createFromBitmap(completionBadgeBitmap(count), { width: 32, height: 32 })
+    const label = formatDesktopMessage(currentDesktopLocale().messages.unreadCompletions, { count: String(count) })
+    for (const window of [mainWindow, ...sessionWindows.keys()]) {
+      if (window !== undefined && !window.isDestroyed()) window.setOverlayIcon(icon, count === 0 ? '' : label)
+    }
+  }
+  const completionBadge = new CompletionBadge(paintCompletionBadge)
+  const bindCompletionBadge = (window: BrowserWindow): void => {
+    window.on('focus', () => { completionBadge.focus(window.id) })
+    window.on('blur', () => { completionBadge.blur(window.id) })
+    window.on('hide', () => { completionBadge.blur(window.id) })
+    window.once('closed', () => { completionBadge.remove(window.id) })
+    if (window.isFocused()) completionBadge.focus(window.id)
+    paintCompletionBadge(completionBadge.count)
   }
   const closeSessionWindows = (): void => {
     for (const window of sessionWindows.keys()) if (!window.isDestroyed()) window.destroy()
@@ -1104,6 +1122,12 @@ async function main(): Promise<void> {
       window.hide()
     }
   }
+  ipcMain.handle(DESKTOP_IPC.completionReport, (event, value: unknown) => {
+    const owner = assertProductSender(event)
+    const report = parseCompletionReport(value)
+    if (report === null) throw new Error('Invalid completion report')
+    completionBadge.report(owner.id, report, owner === mainWindow)
+  })
   ipcMain.handle(DESKTOP_IPC.openSessionWindow, async (event, sessionId: unknown) => {
     assertProductSender(event)
     if (typeof sessionId !== 'string' || sessionId.length === 0 || sessionId.length > 512 || /[\u0000-\u001f\u007f]/u.test(sessionId)) {
@@ -1112,6 +1136,7 @@ async function main(): Promise<void> {
     if (quitting || !enteredWorkspace || backend.state.phase !== 'ready') throw new Error('Desktop Host is unavailable')
     const window = createWindow(appPreload, false, true)
     sessionWindows.set(window, { pendingSessionId: sessionId })
+    bindCompletionBadge(window)
     window.once('closed', () => { sessionWindows.delete(window) })
     browserGuests.bind(window, (guest, name) => shortcuts.attachGuest(window, guest, name))
     shortcuts.attach(window)
@@ -1128,6 +1153,7 @@ async function main(): Promise<void> {
   const createMainWindow = (): BrowserWindow => {
     const window = createWindow(appPreload, false, true)
     mainWindow = window
+    bindCompletionBadge(window)
     browserGuests.bind(window, (guest, name) => shortcuts.attachGuest(window, guest, name))
     shortcuts.attach(window)
     window.on('focus', automaticCheck)

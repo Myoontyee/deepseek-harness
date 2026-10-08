@@ -33,8 +33,11 @@
   en: 22fc0c9dbedd3bb6
   zh: fad040ca55fd0e0a
 /session-controller/known-limitations-and-deferred-work:
-  en: e896bfcaf38b4f6c
-  zh: 55a4eba838f166de
-/session-controller/known-limitations-and-deferred-work/dev-note:
+  en: e6ff5d5df1dd2545
+  zh: c12f03dc66aedadd
+/session-controller/same-session-message-revisions:
+  en: 90861349b5087e73
+  zh: f31939a282408092
+/session-controller/same-session-message-revisions/dev-note:
   en: 68e0dfe4588c5b88
   zh: db51b435611bded1

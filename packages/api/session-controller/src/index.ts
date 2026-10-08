@@ -42,6 +42,7 @@ import type {
   SessionCreateValue,
   SessionFollowFrame,
   SessionFollowRequest,
+  SessionEditMessageRequest,
   SessionForkRequest,
   SessionForkValue,
   SessionListRequest,
@@ -416,6 +417,16 @@ export class SessionController extends TypertRemoteService {
   @Remote('rename')
   rename(request: SessionRenameRequest): Promise<SessionRenameValue> {
     return this.commands.rename(request)
+  }
+
+  /**
+   * Edit and regenerate the latest human message in its existing Session.
+   * @param request - Expected message identity and replacement text.
+   * @returns Admission result; rejects stale, busy, or compacted targets.
+   */
+  @Remote('editMessage')
+  editMessage(request: SessionEditMessageRequest): Promise<SessionPromptValue> {
+    return this.commands.editMessage(request)
   }
 
   /**

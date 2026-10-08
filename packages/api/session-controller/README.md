@@ -124,6 +124,10 @@ No direct effect; model requests remain owned by the Agent and LLM packages.
 - That memory is not shared between tabs: one tab can show a converted row while another still shows `New Session` for the same Session.
 
 
+## Same-Session message revisions
+
+`editMessage` validates the latest ordinary human message and an idle, empty inbox inside Agent maintenance. It appends an empty developer message with the existing surface replacement operation and additive `message-edit` source metadata, then queues the revised prompt with original attachments and a retry identity. Physical logs remain append-only. Compacted targets, stale sequences, empty ordinary prompts and busy sessions are rejected before mutation. New model input excludes the superseded tail; completed tool effects are not rolled back.
+
 <a id="dev-note"></a>
 ### Dev Note
 

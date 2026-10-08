@@ -166,6 +166,10 @@ export interface ChatNodeOwnerProps {
   openFile: (path: string, options?: OpenFileOptions) => void
   inspectCall: ((callId: ToolCallId) => void) | undefined
   forkAt: (seq: number) => void
+  /** Revise the latest human prompt in this same Session. */
+  editMessage?: ((seq: number, text: string) => Promise<void>) | undefined
+  /** Exact last message sequence admitted for editing. */
+  editableMessageSeq?: number | undefined
   /**
    * Session-authorized image loader, down-threaded from the Chat view so a
    * chat-node renderer can render the attachment presentation slot directly
@@ -256,6 +260,10 @@ export interface ChatViewInjected {
     read: () => ChatScrollPosition | null
   }
   forkAt: (seq: number) => void
+  /** Revise the latest human prompt in this same Session. */
+  editMessage?: ((seq: number, text: string) => Promise<void>) | undefined
+  /** Exact last message sequence admitted for editing. */
+  editableMessageSeq?: number | undefined
   fileMentions: (owner: TurnTailOwnerProps) => MarkdownFileMentions | undefined
 }
 

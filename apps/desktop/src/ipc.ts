@@ -4,6 +4,13 @@ import type { DesktopKeyboardApi, DesktopShortcutsApi } from '@deepseek-ai/dsh-c
 import type { IpcMainInvokeEvent } from 'electron'
 import type { DesktopBrowserBridge } from '@deepseek-ai/dsh-client-ui-sidebar-browser/types'
 
+/** One product document's selection and observed running states. */
+export interface CompletionReport {
+  readonly selected: string | null
+  readonly ready: boolean
+  readonly sessions: readonly { readonly id: string; readonly running: boolean }[]
+}
+
 /** IPC channel names kept private to the desktop application bundle. */
 export const DESKTOP_IPC = {
   shortcutsInput: 'dsh-desktop:shortcuts-input',
@@ -21,6 +28,7 @@ export const DESKTOP_IPC = {
   browserRelease: 'dsh-desktop:browser-release',
   browserOpenRequested: 'dsh-desktop:browser-open-requested',
   directoryPick: 'dsh-desktop:directory-pick',
+  completionReport: 'dsh-desktop:completion-report',
   openSessionWindow: 'dsh-desktop:open-session-window',
   takeSessionLink: 'dsh-desktop:take-session-link',
   sessionLinkChanged: 'dsh-desktop:session-link-changed',
@@ -74,6 +82,8 @@ export interface DesktopUpdatePresentation {
 /** Product documents cannot supply update versions, package URLs, or installation authorization. */
 export interface DshDesktopProductApi {
   readonly protocolVersion: 1
+  /** Report observed conversation state to the native unread badge. */
+  readonly completion: { report(value: CompletionReport): Promise<void> }
   readonly browser: DesktopBrowserBridge
   readonly keyboard: DesktopKeyboardApi
   readonly shortcuts: DesktopShortcutsApi

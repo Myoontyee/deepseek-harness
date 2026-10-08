@@ -493,3 +493,6 @@ node apps/desktop/node_modules/pnpm/bin/pnpm.mjs --dir apps/desktop run test:upd
 ## 开发备注
 
 上线前 CDN 与容量决策见[桌面更新提案](../../.agents/notes/proposed/feature/2026-09-08-desktop-update-policy-and-installation.zh.md#cdn-and-capacity-qualification)。
+## 完成角标
+
+后台会话完成后，Windows 任务栏角标增加一个未读会话；在任意聚焦的产品窗口查看该会话后清除对应计数。启动时已有的空闲历史不计数，多窗口报告不重复累加。计数仅保留在本次应用运行期间。未签名构建没有官方更新源，跨版本保留定制功能需要合并源码并重新打包。

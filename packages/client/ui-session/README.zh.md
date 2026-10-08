@@ -36,6 +36,10 @@ kind: "package-reference"
 - **Pending interaction 是进程本地投影**——浏览器重连后，所属 Remote waterfall（瀑布式事件）必须重放仍未完成的请求。
 
 
+## 原生完成状态报告
+
+可选的 Desktop 桥接报告现有会话状态、选中项和目录变化。原生外壳负责未读计数、去重和已读确认。纯浏览器客户端不安装报告器。
+
 <a id="dev-note"></a>
 ### 开发备注
 

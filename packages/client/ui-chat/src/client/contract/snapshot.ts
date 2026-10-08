@@ -103,6 +103,8 @@ export interface LegacyConversationSlice {
 
 /** Incremental Chat publication with immutable order and stable live keyed readers. */
 export interface ChatSnapshot {
+  /** Latest visible ordinary user message; absent before a prompt or during revision. */
+  readonly editableMessageSeq?: number
   readonly order: readonly string[]
   readonly nodes: ChatNodeStore
   readonly locations: ChatLocationNodeIndex

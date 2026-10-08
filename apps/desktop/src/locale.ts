@@ -1,6 +1,7 @@
 /** Typed English and Chinese copy owned by the Electron shell. */
 
 export const en = {
+  unreadCompletions: '{count} completed conversations unread',
   cliCommandMenu: 'Manage dsh Command…',
   cliCommandTitle: 'Manage dsh Command',
   cliCommandLocation: 'Desktop command: {path}',
@@ -172,6 +173,7 @@ export const en = {
 export type DesktopMessages = { readonly [Key in keyof typeof en]: string }
 
 export const zh = {
+  unreadCompletions: '{count} 个会话已完成，尚未查看',
   cliCommandMenu: '管理 dsh 命令…',
   cliCommandTitle: '管理 dsh 命令',
   cliCommandLocation: 'Desktop 命令：{path}',

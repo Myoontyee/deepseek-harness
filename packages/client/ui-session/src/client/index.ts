@@ -27,6 +27,7 @@ import type {
 } from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only service merge for ctx.slots.
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import { installCompletionReports } from './completion-reports.ts'
 import { renderSessionArea } from './session-provider.tsx'
 
 /** Selector hook over the Session Controller list and current selection. */
@@ -669,6 +670,7 @@ export const inject = ['sessions', 'slots', 'remote']
  */
 export function apply(ctx: Context): void {
   const service = new UiSession(ctx, ctx.sessions)
+  ctx.effect(() => installCompletionReports(service, ctx.sessions), 'ui-session: native completion badge')
   ctx.slots.provideRoot({
     hooks: {
       sessions: ctx.sessions.list,

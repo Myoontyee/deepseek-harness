@@ -1,0 +1,16 @@
+.editor { width: min(480px, 60vw); max-width: 100%; white-space: normal; }
+.input {
+  box-sizing: border-box; width: 100%; min-height: 112px; max-height: 50vh; resize: vertical;
+  border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md);
+  padding: 10px; font: inherit; line-height: inherit;
+  background: var(--dsw-specific-input-major); color: var(--dsw-alias-label-primary);
+}
+.hint { margin: 8px 0; color: var(--dsw-alias-label-secondary); font-size: var(--dsh-content-font-size-secondary, 13px); }
+.failure { color: var(--dsw-alias-label-primary); margin: 8px 0; }
+.actions { display: flex; gap: 8px; justify-content: flex-end; }
+.actions button {
+  padding: 6px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md);
+  background: var(--dsw-specific-input-major); color: var(--dsw-alias-label-primary); font: inherit; cursor: pointer;
+}
+.actions button:disabled { opacity: 0.5; cursor: default; }
+.actions .save { border-color: var(--dsw-alias-state-business-primary); }

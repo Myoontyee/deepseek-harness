@@ -175,6 +175,10 @@ None; Chat presentation does not assemble or mutate provider requests.
 - **Rail previews are card-sized** — one prompt line (50 characters) and up to three response lines (120), on loaded and unloaded Turns alike; an unloaded Turn's response arrives from the outline only once the Turn settled, so an open Turn previews its prompt (or just the Turn number) until then.
 
 
+## Edit the latest message
+
+An idle conversation exposes Edit on its latest ordinary user message. Save and regenerate keeps the Session identity, attachments and response annotations, replaces the old model-visible tail, and hides superseded transcript rows using a durable revision marker. Cancel leaves history unchanged; errors retain the draft. Running or queued conversations and compacted targets cannot be edited. Editing does not undo completed tool actions.
+
 <a id="dev-note"></a>
 ### Dev Note
 

@@ -8,6 +8,8 @@ import type { ChatNodeOwnerProps, ChatNodeViewProps, ChatViewSlotProps } from '.
 import type { ModelRetryNode, TurnErrorNode, UserMessageNode } from '../contract/snapshot.ts'
 import { CompactionItem } from './CompactionItem.tsx'
 import { ContextInjectionRow } from './ContextInjectionRow.tsx'
+import { MessageEditor } from './MessageEditor.tsx'
+import { serializeResponseAnnotations } from '@deepseek-ai/dsh-client-ui-primitives'
 import { MessageIconActions } from './MessageIconActions.tsx'
 import css from './MessageItem.module.css'
 
@@ -162,9 +164,10 @@ function TurnMaxTokensItem({ t }: {
 /** Right-aligned bubble shared by user and steering rows. */
 function UserStyleBubble({
   content, renderMessageImages, actions, pending = false, echo = false, referenceLabels = [], skillNames = [],
-  previewAttachments, references, t,
+  previewAttachments, references, editor, t,
 }: {
   content: readonly unknown[]
+  editor?: ReactNode
   renderMessageImages: ChatNodeOwnerProps['renderMessageImages']
   /** Optional IconActions (or similar) below the bubble; receives the joined text. */
   actions?: (text: string) => ReactNode
@@ -186,7 +189,7 @@ function UserStyleBubble({
   const attachments = previewAttachments ?? contentAttachments
   const compactImages = attachments.length > 1
   const truncated = (total: number): string => t('json.truncated', { total })
-  const showBubble = text !== '' || rest.length > 0
+  const showBubble = editor !== undefined || text !== '' || rest.length > 0
   return (
     <div
       className={css.userRow}
@@ -221,20 +224,22 @@ function UserStyleBubble({
           </div>
         )}
         {showBubble && <div className={css.bubble}>
-          {annotated !== null && (
-            <details className={css.annotations} data-message-annotations>
-              <summary>{t('message.annotations', { count: annotated.annotations.length })}</summary>
-              {annotated.annotations.map((annotation, index) => (
-                <div className={css.annotation} key={index}>
-                  <span className={css.annotationSource}>{annotation.sourceLabel}</span>
-                  <blockquote>{annotation.text}</blockquote>
-                  {annotation.comment !== '' && <p>{annotation.comment}</p>}
-                </div>
-              ))}
-            </details>
-          )}
-          {projectUserText(annotated?.text ?? text, referenceLabels, skillNames, 'skill', references)}
-          {rest.map((block, i) => <JsonBlock key={i} label={t('message.extraBlock')} payload={block} truncatedLabel={truncated} />)}
+          {editor ?? <>
+            {annotated !== null && (
+              <details className={css.annotations} data-message-annotations>
+                <summary>{t('message.annotations', { count: annotated.annotations.length })}</summary>
+                {annotated.annotations.map((annotation, index) => (
+                  <div className={css.annotation} key={index}>
+                    <span className={css.annotationSource}>{annotation.sourceLabel}</span>
+                    <blockquote>{annotation.text}</blockquote>
+                    {annotation.comment !== '' && <p>{annotation.comment}</p>}
+                  </div>
+                ))}
+              </details>
+            )}
+            {projectUserText(annotated?.text ?? text, referenceLabels, skillNames, 'skill', references)}
+            {rest.map((block, i) => <JsonBlock key={i} label={t('message.extraBlock')} payload={block} truncatedLabel={truncated} />)}
+          </>}
         </div>}
         {referenceLabels.length > 0 && (
           <div className={css.referenceSummary}>
@@ -332,11 +337,22 @@ export function PendingSubmissionBubble({ submission, renderMessageImages, t }: 
 
 /** User and admitted-steering keyed Chat renderer. */
 export const UserMessageNodeView = memo(function UserMessageNodeView({
-  node, renderMessageImages, openFile, openSkill, t,
+  node, renderMessageImages, openFile, openSkill, editMessage, editableMessageSeq, t,
 }: ChatNodeViewProps<'user' | 'steering'>) {
   const data = node.data
+  const [editing, setEditing] = useState(false)
+  const original = contentParts(data.content)
+  const annotated = parseResponseAnnotations(original.text)
+  const canEdit = node.kind === 'user' && data.seq === editableMessageSeq && editMessage !== undefined
   return (
     <UserStyleBubble
+      editor={editing ? <MessageEditor text={annotated?.text ?? original.text} t={t}
+        allowEmpty={original.attachments.length > 0 || (annotated?.annotations.length ?? 0) > 0}
+        disabled={!canEdit} annotationCount={annotated?.annotations.length ?? 0}
+        onCancel={() =>{  setEditing(false) }} onSave={async (text) => {
+          if (editMessage === undefined) return
+          await editMessage(data.seq, serializeResponseAnnotations(text, annotated?.annotations ?? []))
+        }} /> : undefined}
       content={data.content}
       references={{ openFile, openSkill }}
       renderMessageImages={renderMessageImages}
@@ -348,6 +364,7 @@ export const UserMessageNodeView = memo(function UserMessageNodeView({
           text={text}
           time={data.time}
           clock="start"
+          onEdit={canEdit && !editing ? () =>{  setEditing(true) } : undefined}
           className={css.actions}
           t={t}
         />

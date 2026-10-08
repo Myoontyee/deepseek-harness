@@ -36,6 +36,10 @@ None; Session selectors and Slot scopes do not assemble model requests.
 - **Pending interactions are process-local projections** — the owning Remote waterfall must replay an outstanding request after a browser reconnect.
 
 
+## Native completion reports
+
+The optional Desktop bridge reports existing Session status, selection and catalog observations. The native shell owns unread counts, deduplication and acknowledgement. Browser-only clients do not install a reporter.
+
 <a id="dev-note"></a>
 ### Dev Note
 

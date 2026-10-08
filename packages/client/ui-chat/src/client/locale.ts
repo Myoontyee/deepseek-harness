@@ -5,6 +5,15 @@ export const NS = 'chat'
 
 /** Simplified Chinese dictionary and key-set source of truth. */
 export const zh = {
+  'message.edit': '编辑消息',
+  'message.editSave': '保存并重新生成',
+  'message.editSaving': '正在提交…',
+  'message.editHint': '原回复将重新生成；已经执行的文件修改不会撤销',
+  'message.editBusy': '请等待当前任务和排队消息处理完成后再编辑',
+  'message.editStale': '此消息已不是最新消息，请刷新后重试',
+  'message.editCompacted': '此消息已被上下文压缩，暂时无法编辑',
+  'message.editFailed': '编辑失败，修改内容已保留，请重试',
+
   'message.annotations': '{count} 条注释',
   'message.stepProcess.thinking': '正在分析请求',
   'message.stepProcess.read': '正在读取文件',
@@ -201,6 +210,15 @@ export type ChatKey = keyof typeof zh
 
 /** English dictionary, checked against the Chinese key set. */
 export const en = {
+  'message.edit': 'Edit message',
+  'message.editSave': 'Save and regenerate',
+  'message.editSaving': 'Submitting…',
+  'message.editHint': 'The answer will be regenerated. Existing file changes are not undone.',
+  'message.editBusy': 'Wait for active and queued work to finish before editing.',
+  'message.editStale': 'This is no longer the latest message. Refresh and try again.',
+  'message.editCompacted': 'This message has been compacted and cannot be edited.',
+  'message.editFailed': 'Could not edit the message. Your draft is retained; try again.',
+
   'message.annotations': '{count} annotations',
   'message.stepProcess.thinking': 'Analyzing the request',
   'message.stepProcess.read': 'Reading files',

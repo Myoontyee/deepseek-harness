@@ -1,4 +1,5 @@
 import type { Context } from '@deepseek-ai/cordis'
+import { MessageRevisionProjector } from './message-revisions.ts'
 import { notifySubscribers, type ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type {
   ConversationLocation, ConversationNode, ConversationTimelineSnapshot, ConversationViewBuilder,
@@ -1060,6 +1061,7 @@ export class ChatSnapshotBuilder implements ConversationViewBuilder<ChatConversa
   private readonly legacy = new LegacySliceBuilder()
   private readonly referenceLabels = new ReferenceLabelProjector()
   private readonly skillNames = new SkillNameProjector()
+  private readonly revisions = new MessageRevisionProjector()
   private order: readonly string[] = EMPTY_KEYS
   private latestGroupInput: ConversationGroupInput<ChatConversationViewNode>
   private readonly readGroupNode = (key: NodeKey): ChatConversationViewNode | undefined => this.store.get(key)
@@ -1085,7 +1087,7 @@ export class ChatSnapshotBuilder implements ConversationViewBuilder<ChatConversa
     readonly nodes: readonly ChatConversationViewNode[]
     readonly timeline: ConversationTimelineSnapshot
   }): ChatSnapshot {
-    const nodes = this.skillNames.replace(this.referenceLabels.replace(input.nodes))
+    const nodes = this.skillNames.replace(this.referenceLabels.replace(this.revisions.replace(input.nodes)))
     this.store.replace(nodes)
     this.order = orderedVisibleChatNodes(nodes).map(node => node.key)
     this.locations.rebuild(this.order, this.store)
@@ -1109,7 +1111,8 @@ export class ChatSnapshotBuilder implements ConversationViewBuilder<ChatConversa
     readonly timeline: ConversationTimelineSnapshot
     readonly changedTurns?: readonly number[]
   }): ChatSnapshot {
-    const upserts = this.skillNames.apply(this.referenceLabels.apply(input.upserts, this.store), this.store)
+    const revised = this.revisions.apply(input.upserts, this.store)
+    const upserts = this.skillNames.apply(this.referenceLabels.apply(revised, this.store), this.store)
     const processTurns = new Set<number>()
     let structural = false
     const contentOnly: ChatConversationViewNode[] = []
@@ -1175,6 +1178,7 @@ export class ChatSnapshotBuilder implements ConversationViewBuilder<ChatConversa
   ): ChatSnapshot {
     return {
       order: this.order,
+      ...this.revisions.editableMessageSeq === undefined ? {} : { editableMessageSeq: this.revisions.editableMessageSeq },
       nodes: this.store,
       locations: this.locations,
       navigation: this.navigation,

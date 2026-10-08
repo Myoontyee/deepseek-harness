@@ -21,8 +21,11 @@
   en: 209b4471032b0f9d
   zh: 6c2e39ac1dedf71c
 /deepseek-ai-dsh-client-ui-session/known-limitations-and-deferred-work:
-  en: 61ef65087e3d4ac8
-  zh: 01b38db2957f9096
-/deepseek-ai-dsh-client-ui-session/known-limitations-and-deferred-work/dev-note:
+  en: 873e27e912eba20b
+  zh: 0f45828f5db6b9eb
+/deepseek-ai-dsh-client-ui-session/native-completion-reports:
+  en: 6e7e72978766bdb9
+  zh: 6eb801e604462da7
+/deepseek-ai-dsh-client-ui-session/native-completion-reports/dev-note:
   en: 48d675ab370a4967
   zh: 0e22dedcf99801ad

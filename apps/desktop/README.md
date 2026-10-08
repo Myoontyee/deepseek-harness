@@ -491,3 +491,6 @@ The account provider’s `embeddedPageDist` configuration adds a `dist` query pa
 ## Dev Note
 
 Pre-launch CDN and capacity decisions are tracked in the [Desktop update proposal](../../.agents/notes/proposed/feature/2026-09-08-desktop-update-policy-and-installation.md#cdn-and-capacity-qualification).
+## Completion badges
+
+Background completion adds one unread conversation to the Windows taskbar overlay. Viewing that conversation in any focused product window acknowledges it. Initial idle history and duplicate window reports do not increase the count. Counts last for the current application run. Unsigned builds have no official update feed; retaining custom features across releases requires merging source and rebuilding.
