@@ -1,110 +1,57 @@
-/** Serialize selected Markdown passages, preserving TeX and link destinations. */
+/** Serialize selected content as plain text, retaining TeX and Markdown tables. */
+import { clipboardMath, clipboardTable } from './clipboard-text.ts'
 
-const BLOCKS = new Set(['P', 'DIV', 'SECTION'])
+const BLOCKS = new Set(['P', 'DIV', 'SECTION', 'BLOCKQUOTE'])
 const MATH = '[data-copy-math]'
 const CHROME = 'svg,[aria-hidden="true"],button:not([data-copy-file-link]),[data-code-block-banner]'
-
-function destination(element: Element): string | null {
-  const file = element.getAttribute('data-copy-file-link')
-  if (file !== null) return file.replaceAll('\\', '/')
-  const href = element.getAttribute('href')
-  return href !== null && /^(?:https?:|mailto:|dsh:)/iu.test(href) ? href : null
-}
-function escapePlainText(text: string): string {
-  // A TeX command appearing as literal text (e.g. \begin{equation}) must not
-  // acquire another backslash. Only escape Markdown-active backslashes.
-  return text.replace(/\\(?=[\\`*_[\]<>])/gu, '\\\\').replace(/[`*_[\]<>]/gu, '\\$&')
-}
-function escapeText(text: string): string {
-  // Streaming and unsupported equation environments can still be visible as
-  // literal TeX. Preserve those spans before escaping surrounding prose.
-  const expressions = /\\begin\{([A-Za-z*]+)\}[\s\S]*?\\end\{\1\}|\$\$[\s\S]*?\$\$|\$(?:\\.|[^$\n])+\$/gu
-  let result = ''
-  let offset = 0
-  for (const match of text.matchAll(expressions)) {
-    result += escapePlainText(text.slice(offset, match.index)) + match[0]
-    offset = match.index + match[0].length
-  }
-  return result + escapePlainText(text.slice(offset))
-}
-function mathSource(element: Element): string | null {
-  const source = element.getAttribute('data-copy-math')
-  if (source === null) return null
-  return element.getAttribute('data-copy-math-display') === 'true'
-    ? `\n\n$$\n${source.trim()}\n$$\n\n` : `$${source}$`
-}
-function markdown(node: Node): string {
+function trimBreaks(text: string): string { return text.replace(/^\n+|\n+$/gu, '') }
+function selectedText(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) {
     const text = node.textContent ?? ''
     if (text.trim() === '' && text.includes('\n')
       && (node.parentElement === null || ['DIV', 'SECTION', 'UL', 'OL', 'TABLE', 'TBODY', 'THEAD', 'TR'].includes(node.parentElement.tagName))) return ''
-    return escapeText(text)
+    return text
   }
-  if (!(node instanceof Element)) return childrenMarkdown(node)
-  const math = mathSource(node)
-  if (math !== null) return math
+  if (!(node instanceof Element)) return childrenText(node)
+  const math = node.getAttribute('data-copy-math')
+  if (math !== null) {
+    const display = node.getAttribute('data-copy-math-display') === 'true'
+    const text = clipboardMath(math, display)
+    return display ? `\n\n${text}\n\n` : text
+  }
   if (node.matches(CHROME)) return ''
-  if (node.classList.contains('md-code-block')) {
-    const pre = node.querySelector('pre')
-    return pre === null ? '' : fencedCode(pre, node.getAttribute('data-copy-code-language') ?? '')
-  }
-  if (node.tagName === 'PRE') return fencedCode(node, node.querySelector('code')?.className.match(/language-([\w-]+)/u)?.[1] ?? '')
-  if (node.tagName === 'CODE') {
-    const text = node.textContent
-    const ticks = '`'.repeat(Math.max(1, ...(text.match(/`+/gu) ?? []).map(value => value.length + 1)))
-    const padding = /^`|`$/u.test(text) || (/^ .* $/u.test(text) && text.trim() !== '') ? ' ' : ''
-    return `${ticks}${padding}${text}${padding}${ticks}`
-  }
+  if (node.classList.contains('md-code-block')) return `\n\n${node.querySelector('pre')?.textContent ?? ''}\n\n`
+  if (node.tagName === 'PRE') return `\n\n${node.textContent}\n\n`
+  if (node.tagName === 'CODE') return node.textContent
   if (node.tagName === 'TABLE') {
     const rows = [...node.querySelectorAll('tr')].map(row => [...row.children]
-      .filter(cell => cell.matches('th,td')).map(cell => [...cell.childNodes].map(markdown).join('').trim()
-        .replaceAll('|', '\\|').replace(/\n+/gu, '<br>')))
-    if (rows.length === 0) return ''
-    const width = Math.max(...rows.map(row => row.length))
-    const lines = rows.map(row => `| ${Array.from({ length: width }, (_, i) => row[i] ?? '').join(' | ')} |`)
-    lines.splice(1, 0, `| ${Array.from({ length: width }, () => '---').join(' | ')} |`)
-    return `\n\n${lines.join('\n')}\n\n`
+      .filter(cell => cell.matches('th,td')).map(childrenText))
+    return `\n\n${clipboardTable(rows)}\n\n`
   }
   if (node.tagName === 'UL' || node.tagName === 'OL') {
-    const start = Number(node.getAttribute('start') ?? 1)
-    return `\n${[...node.children].filter(child => child.tagName === 'LI').map((item, index) => {
-      const marker = node.tagName === 'OL' ? `${String(start + index)}. ` : '- '
-      const body = childrenMarkdown(item).trim()
-      return marker + body.replaceAll('\n', '\n' + ' '.repeat(marker.length))
-    }).join('\n')}\n\n`
+    return `\n${[...node.children].filter(child => child.tagName === 'LI')
+      .map(item => trimBreaks(childrenText(item))).join('\n')}\n\n`
   }
-  if (node.tagName === 'INPUT' && node.getAttribute('type') === 'checkbox') {
-    return node.hasAttribute('checked') ? '[x] ' : '[ ] '
-  }
-  const body = childrenMarkdown(node)
-  const href = destination(node)
-  if (href !== null && body !== '') return `[${body}](<${href.replace(/[<>\s]/gu, encodeURIComponent)}>)`
+  if (node.tagName === 'IMG') return node.getAttribute('alt') ?? ''
   if (node.tagName === 'BR') return '\n'
-  if (node.tagName === 'HR') return '\n\n---\n\n'
-  if (/^H[1-6]$/u.test(node.tagName)) return `${'#'.repeat(Number(node.tagName.slice(1)))} ${body}\n\n`
-  if (node.tagName === 'STRONG') return `**${body}**`
-  if (node.tagName === 'EM') return `*${body}*`
-  if (node.tagName === 'DEL') return `~~${body}~~`
-  if (node.tagName === 'BLOCKQUOTE') return `${body.trim().split('\n').map(line => `> ${line}`).join('\n')}\n\n`
-  return BLOCKS.has(node.tagName) ? `${body}\n\n` : body
+  if (node.tagName === 'HR') return '\n\n'
+  const body = childrenText(node)
+  return BLOCKS.has(node.tagName) || /^H[1-6]$/u.test(node.tagName)
+    ? body.endsWith('\n\n') ? body : `${body}\n\n`
+    : body
 }
-function childrenMarkdown(node: Node): string {
-  return [...node.childNodes].map(markdown).reduce((text, next) =>
+function childrenText(node: Node): string {
+  return [...node.childNodes].map(selectedText).reduce((text, next) =>
     text.endsWith('\n\n') ? text + next.replace(/^\n+/u, '') : text + next, '')
-}
-function fencedCode(node: Element, language: string): string {
-  const text = node.textContent
-  const ticks = '`'.repeat(Math.max(3, ...(text.match(/`+/gu) ?? []).map(value => value.length + 1)))
-  return `\n\n${ticks}${language}\n${text}${text.endsWith('\n') ? '' : '\n'}${ticks}\n\n`
 }
 function elementOf(node: Node): Element | null { return node instanceof Element ? node : node.parentElement }
 
 /**
- * Copy a selected rendered passage as Markdown, with formulas taken from TeX source.
+ * Copy selected visible content as plain text, preserving formula source and table structure.
  * Formula boundaries are atomic: selecting a subscript copies its complete formula once.
  * @param root - Markdown root containing the complete selection.
  * @param event - Native copy gesture.
- * @returns Whether Markdown copying handled this selection.
+ * @returns Whether content copying handled this selection.
  */
 export function copyLinkedSelection(root: HTMLElement, event: ClipboardEvent): boolean {
   if (event.clipboardData === null) return false
@@ -113,13 +60,16 @@ export function copyLinkedSelection(root: HTMLElement, event: ClipboardEvent): b
   if (selection === null || selection.isCollapsed || selection.rangeCount !== 1) return false
   const selected = selection.getRangeAt(0)
   if (!root.contains(selected.startContainer) || !root.contains(selected.endContainer)) return false
+  return writeSelection(event, rangeContent(root, selected))
+}
+
+function rangeContent(root: HTMLElement, selected: Range): string {
   const range = selected.cloneRange()
   const firstMath = elementOf(range.startContainer)?.closest(MATH)
   const lastMath = elementOf(range.endContainer)?.closest(MATH)
   if (firstMath !== null && firstMath !== undefined && root.contains(firstMath)) range.setStartBefore(firstMath)
   if (lastMath !== null && lastMath !== undefined && root.contains(lastMath)) range.setEndAfter(lastMath)
-  // cloneContents omits common ancestors. Recover those wrappers so selections
-  // wholly inside emphasis, a heading, a link or a quote keep their Markdown role.
+  // Recover omitted table/block ancestors to preserve cell boundaries and line breaks.
   let fragment: Node = range.cloneContents()
   let ancestor = elementOf(range.commonAncestorContainer)
   while (ancestor !== null && ancestor !== root && root.contains(ancestor)) {
@@ -128,13 +78,15 @@ export function copyLinkedSelection(root: HTMLElement, event: ClipboardEvent): b
     fragment = wrapper
     ancestor = ancestor.parentElement
   }
-  const text = markdown(fragment).trim()
-  if (text === '') return false
+  return trimBreaks(selectedText(fragment))
+}
+
+function writeSelection(event: ClipboardEvent, text: string): boolean {
+  if (event.clipboardData === null || text === '') return false
   event.clipboardData.clearData()
   event.clipboardData.setData('text/plain', text)
-  event.clipboardData.setData('text/markdown', text)
   // A rendered HTML flavor wins over plain text in rich-text composers and
-  // reintroduces math glyph duplication. Both clipboard flavors carry source.
+  // reintroduces math glyph duplication. Only the text flavor is published.
   event.preventDefault()
   return true
 }
@@ -152,12 +104,38 @@ export function registerMarkdownCopy(root: HTMLElement): () => void {
   if (owner === undefined) {
     const roots = new Set<HTMLElement>()
     const handler = (event: ClipboardEvent): void => {
+      // An explicit copy button owns its fallback payload even if a passage is still selected.
+      if (doc.querySelector('textarea[data-dsh-clipboard-write]') !== null) return
       const selection = doc.getSelection()
       if (selection === null || selection.rangeCount !== 1) return
-      const node = selection.getRangeAt(0).startContainer
-      let element = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement
-      while (element !== null && !(element instanceof HTMLElement && roots.has(element))) element = element.parentElement
-      if (element instanceof HTMLElement && copyLinkedSelection(element, event)) event.stopPropagation()
+      const selected = selection.getRangeAt(0)
+      const containingRoot = (node: Node): HTMLElement | undefined => {
+        let element = elementOf(node)
+        while (element !== null) {
+          if (element instanceof HTMLElement && roots.has(element)) return element
+          element = element.parentElement
+        }
+        return undefined
+      }
+      const first = containingRoot(selected.startContainer)
+      const last = containingRoot(selected.endContainer)
+      if (first === undefined || last === undefined) return
+      if (first === last) {
+        if (copyLinkedSelection(first, event)) event.stopPropagation()
+        return
+      }
+      const selectedRoots = [...roots].filter(candidate => candidate.isConnected && selected.intersectsNode(candidate))
+      const outerRoots = selectedRoots.filter(candidate => !selectedRoots.some(other => other !== candidate && other.contains(candidate)))
+        .sort((left, right) => left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)
+      const text = outerRoots.map((candidate) => {
+        const bounds = doc.createRange()
+        bounds.selectNodeContents(candidate)
+        const part = selected.cloneRange()
+        if (part.compareBoundaryPoints(Range.START_TO_START, bounds) < 0) part.setStart(candidate, 0)
+        if (part.compareBoundaryPoints(Range.END_TO_END, bounds) > 0) part.setEnd(candidate, candidate.childNodes.length)
+        return rangeContent(candidate, part)
+      }).filter(value => value !== '').join('\n\n')
+      if (writeSelection(event, text)) event.stopPropagation()
     }
     owner = { roots, handler }
     documents.set(doc, owner)

@@ -31,6 +31,7 @@ export async function writeClipboard(text: string): Promise<boolean> {
   if (exec === undefined) return false
   const el = document.createElement('textarea')
   el.value = text
+  el.setAttribute('data-dsh-clipboard-write', '')
   el.setAttribute('readonly', '')
   el.style.position = 'fixed'
   el.style.left = '-9999px'

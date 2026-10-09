@@ -79,6 +79,8 @@ The completed-turn action footer follows the recorded Turn end. Its action row s
 
 -----
 
+Copying a complete assistant reply uses the same content-only projection as selecting rendered Markdown: prose is plain text, formulas retain TeX and tables retain Markdown structure. Copying an unformatted user bubble preserves its literal content.
+
 <a id="turn-process-folding"></a>
 ## Turn Process Folding
 

@@ -3,7 +3,8 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import {
-  IconEditOutlineRegular, IconBranchOutlineRegular, IconCheckOutlineRegular, IconCopyOutlineRegular, Tooltip, writeClipboard,
+  IconEditOutlineRegular, IconBranchOutlineRegular, IconCheckOutlineRegular, IconCopyOutlineRegular,
+  Tooltip, writeClipboard, markdownClipboardText,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatViewSlotProps } from '../contract/slots.ts'
 import { formatMessageClock } from './message-chrome.ts'
@@ -11,8 +12,10 @@ import { useCalendarDay } from './use-calendar-day.ts'
 import css from './MessageIconActions.module.css'
 
 export interface MessageIconActionsProps {
-  /** Plain text the copy action writes. */
+  /** Source content the copy action writes. */
   text: string
+  /** Apply the content-only Markdown projection for rendered assistant replies. */
+  markdown?: boolean
   /** Open the latest human message for editing; omission hides the action. */
   onEdit?: (() => void) | undefined
   /** Unix epoch ms for the clock label; omitted for transient messages. */
@@ -45,7 +48,7 @@ export interface MessageIconActionsProps {
  * @returns The actions row element.
  */
 export function MessageIconActions({
-  text, time, clock, onBranch, branchUnavailable = false, className,
+  text, markdown = false, time, clock, onBranch, branchUnavailable = false, className,
   extraActions, usageAction, onEdit, t,
 }: MessageIconActionsProps) {
   const day = useCalendarDay()
@@ -65,7 +68,7 @@ export function MessageIconActions({
     if (copied || copyPending.current) return
     const epoch = copyEpoch.current
     copyPending.current = true
-    void writeClipboard(text).then((ok) => {
+    void writeClipboard(markdown ? markdownClipboardText(text) : text).then((ok) => {
       if (epoch !== copyEpoch.current) return
       copyPending.current = false
       if (!ok) return
@@ -75,7 +78,7 @@ export function MessageIconActions({
         setCopied(false)
       }, 1000)
     })
-  }, [copied, text])
+  }, [copied, text, markdown])
   const clockEl = time === undefined ? null : (
     <span className={clock === 'start' ? css.timeStart : css.timeEnd}>
       {formatMessageClock(time, t, day)}

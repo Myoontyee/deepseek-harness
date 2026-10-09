@@ -79,6 +79,8 @@ Assistant 尝试结束且没有可见消息时，Chat 隐藏已发布的 Node，
 
 -----
 
+复制整条助手回复与选中渲染后 Markdown 使用相同的纯内容规则：普通文字为纯文本，公式保留 TeX，表格保留 Markdown 结构。复制未格式化的用户气泡时保留其字面内容。
+
 <a id="turn-process-folding"></a>
 ## 轮次过程折叠
 

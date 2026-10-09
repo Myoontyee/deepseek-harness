@@ -94,7 +94,7 @@ try {
     const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range)
   })
   await page.keyboard.press('Control+C')
-  const expected=String.raw`> 对缺陷像素集合 $D$ 与背景环 $B$，取灰度均值 $\mu_D$、$\mu_B$ 与背景标准差 $\sigma_B$。原始公式 \begin{equation} c=\frac{\mu_D-\mu_B}{\sigma_{B}} \end{equation}，后文 111 保留。`
+  const expected=String.raw`对缺陷像素集合 $D$ 与背景环 $B$，取灰度均值 $\mu_D$、$\mu_B$ 与背景标准差 $\sigma_B$。原始公式 \begin{equation} c=\frac{\mu_D-\mu_B}{\sigma_{B}} \end{equation}，后文 111 保留。`
   const copied=await electronApp.evaluate(async({clipboard})=>({text:await clipboard.readText(),types:(await clipboard.read()).flatMap(item=>item.types)}))
   assert.equal(copied.text,expected)
   assert.ok(!copied.types.includes('text/html'),'Rich HTML must not override Markdown when pasted')
@@ -119,8 +119,23 @@ try {
   await link.evaluate(element=>{const text=[...element.childNodes].find(node=>node.nodeType===Node.TEXT_NODE);const range=document.createRange();range.selectNodeContents(text);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range)})
   await page.keyboard.press('Control+C')
   const copiedLink=await electronApp.evaluate(async({clipboard})=>clipboard.readText())
-  assert.ok(decodeURI(copiedLink).includes('](<D:/Demo/HANDOFF_写作交接_20261008.md#L12>)'), copiedLink)
-  const result={passed:true,root,nativeCopy:true,nativePaste:true,texSource:true,partialFormulaAtomic:true,fileLinkPreserved:true}
+  assert.equal(copiedLink,'HANDOFF_写作交接_20261008.md')
+  await page.evaluate(() => window.getSelection()?.removeAllRanges())
+  await page.locator('[data-turn-tail]').last().getByRole('button',{name:'复制',exact:true}).click()
+  const whole=await electronApp.evaluate(async({clipboard})=>({text:await clipboard.readText(),types:(await clipboard.read()).flatMap(item=>item.types)}))
+  assert.ok(whole.text.includes('这是加粗内容，还有 斜体 和 删除线。'))
+  assert.ok(!whole.text.includes('**') && !whole.text.includes('## ') && !whole.text.includes('~~'))
+  assert.ok(!whole.text.includes('D:/Demo/'))
+  assert.ok(whole.text.includes(String.raw`| 名称 | 值 |
+| --- | --- |
+| 均值 | $\mu_D$ |`))
+  assert.ok(!whole.types.includes('text/html'))
+  await editor.click()
+  await page.keyboard.press('Control+A')
+  await page.keyboard.press('Control+V')
+  assert.equal(await editor.innerText(),whole.text)
+  await page.screenshot({path:join(root,'content-only-copy-paste.png')})
+  const result={wholeMessageCopy:true,plainFormatting:true,tablesRetained:true,passed:true,root,nativeCopy:true,nativePaste:true,texSource:true,partialFormulaAtomic:true,linkLabelOnly:true}
   await writeFile(join(repo,'.artifacts/markdown-copy-native-result.json'),JSON.stringify(result,null,2))
   console.log(JSON.stringify(result,null,2))
 } finally {

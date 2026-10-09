@@ -62,6 +62,7 @@ export const TurnTailNodeView = memo(function TurnTailNodeView({
       {tail}
       <MessageIconActions
         text={assistantText(closing.blocks)}
+        markdown
         time={closing.time}
         clock="end"
         // The branch action owns boundary resolution: it sends the real
