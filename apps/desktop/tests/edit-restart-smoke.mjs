@@ -112,7 +112,8 @@ try {
     if (phase < 2) {
       await page.getByRole('button', {name:'编辑消息',exact:true}).click()
       await page.getByLabel('编辑消息', {exact:true}).fill('重启验证修改稿 ' + (phase + 1))
-      await page.getByRole('button', {name:'保存并重新生成',exact:true}).click()
+      if (phase === 0) await page.getByLabel('编辑消息', {exact:true}).press('Control+Enter')
+      else await page.getByRole('button', {name:'保存并重新生成',exact:true}).click()
       await page.getByLabel('编辑消息', {exact:true}).waitFor({state:'hidden',timeout:30000})
       await transcript.getByText('重启验证修改稿 ' + (phase + 1), {exact:true}).waitFor()
       await page.getByRole('button', {name:'编辑消息',exact:true}).waitFor({timeout:30000})

@@ -17,6 +17,7 @@ export function MessageEditor({ text, allowEmpty, disabled, annotationCount, onS
   const [saving, setSaving] = useState(false)
   const [failure, setFailure] = useState('')
   const busy = useRef(false)
+  const composing = useRef(false)
   const live = useRef(true)
   const input = useRef<HTMLTextAreaElement>(null)
   useEffect(() => { live.current = true; input.current?.focus(); return () => { live.current = false } }, [])
@@ -41,16 +42,23 @@ export function MessageEditor({ text, allowEmpty, disabled, annotationCount, onS
     }
   }
   return (
-    <div className={css.editor} data-message-editor>
+    <div className={css.editor} data-message-editor onKeyDown={(event) => {
+      if (event.key !== 'Enter' || !event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return
+      event.stopPropagation()
+      if (composing.current || event.nativeEvent.isComposing || Reflect.get(event.nativeEvent, 'keyCode') === 229) return
+      event.preventDefault()
+      if (!event.repeat) void save()
+    }}>
       {annotationCount > 0 && <div>{t('message.annotations', { count: annotationCount })}</div>}
       <textarea ref={input} className={css.input} aria-label={t('message.edit')} value={draft}
+        onCompositionStart={() => { composing.current = true }} onCompositionEnd={() => { composing.current = false }}
         disabled={saving || disabled} onChange={(event) =>{  setDraft(event.target.value) }} />
       <p className={css.hint}>{t('message.editHint')}</p>
       {failure !== '' && <p role="alert" className={css.failure}>{failure}</p>}
       <div className={css.actions}>
         <button type="button" onClick={onCancel} disabled={saving}>{t('cancel')}</button>
         <button type="button" className={css.save} disabled={saving || disabled || (!allowEmpty && draft.trim() === '')}
-          onClick={() => { void save() }}>{t(saving ? 'message.editSaving' : 'message.editSave')}</button>
+          aria-keyshortcuts="Control+Enter" title={t('message.editSaveShortcut')} onClick={() => { void save() }}>{t(saving ? 'message.editSaving' : 'message.editSave')}</button>
       </div>
     </div>
   )

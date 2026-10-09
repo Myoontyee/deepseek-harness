@@ -7,8 +7,9 @@ export const NS = 'chat'
 export const zh = {
   'message.edit': '编辑消息',
   'message.editSave': '保存并重新生成',
+  'message.editSaveShortcut': '保存并重新生成（Ctrl+Enter）',
   'message.editSaving': '正在提交…',
-  'message.editHint': '原回复将重新生成；已经执行的文件修改不会撤销',
+  'message.editHint': 'Ctrl+Enter 保存并重新生成，Enter 换行。已经执行的文件修改不会撤销',
   'message.editBusy': '请等待当前任务和排队消息处理完成后再编辑',
   'message.editStale': '此消息已不是最新消息，请刷新后重试',
   'message.editCompacted': '此消息已被上下文压缩，暂时无法编辑',
@@ -212,8 +213,9 @@ export type ChatKey = keyof typeof zh
 export const en = {
   'message.edit': 'Edit message',
   'message.editSave': 'Save and regenerate',
+  'message.editSaveShortcut': 'Save and regenerate (Ctrl+Enter)',
   'message.editSaving': 'Submitting…',
-  'message.editHint': 'The answer will be regenerated. Existing file changes are not undone.',
+  'message.editHint': 'Ctrl+Enter saves and regenerates; Enter inserts a new line. Existing file changes are not undone.',
   'message.editBusy': 'Wait for active and queued work to finish before editing.',
   'message.editStale': 'This is no longer the latest message. Refresh and try again.',
   'message.editCompacted': 'This message has been compacted and cannot be edited.',

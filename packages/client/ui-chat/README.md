@@ -156,7 +156,7 @@ Active-Turn highlighting is approximate: `readVisibleTurn` binary-searches the c
 
 ## Edit the latest message
 
-An idle conversation exposes Edit on its latest ordinary user message. Save and regenerate keeps the Session identity, attachments and response annotations, replaces the old model-visible tail, and hides superseded transcript rows using a durable revision marker. Cancel leaves history unchanged; errors retain the draft. Running or queued conversations and compacted targets cannot be edited. Editing does not undo completed tool actions.
+An idle conversation exposes Edit on its latest ordinary user message. Save and regenerate keeps the Session identity, attachments and response annotations, replaces the old model-visible tail, and hides superseded transcript rows using a durable revision marker. Ctrl+Enter saves and regenerates; Enter inserts a newline. Composition and repeated keydown events do not submit. Cancel leaves history unchanged; errors retain the draft. Running or queued conversations and compacted targets cannot be edited. Editing does not undo completed tool actions.
 
 <a id="model-experience"></a>
 ## Model Experience
