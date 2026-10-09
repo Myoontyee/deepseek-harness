@@ -437,7 +437,13 @@ declare module '@deepseek-ai/dsh-llm' {
       requestId: SessionRequestId
     }
     /** Browser prompt correlation and optional Host-validated time zone. */
-    'user-rpc': { kind: 'user'; rpcId: SessionRequestId; clientTimeZone?: string }
+    'user-rpc': {
+      kind: 'user'
+      rpcId: SessionRequestId
+      clientTimeZone?: string
+      /** Queued latest-message revision, applied as a surface replacement in its admitted step. */
+      edit?: { startSeq: number; endSeq: number; surfaceEndSeq: number }
+    }
   }
 }
 

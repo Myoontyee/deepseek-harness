@@ -108,7 +108,7 @@ The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-a
 
 ## Same-Session message revisions
 
-`editMessage` validates the latest ordinary human message and an idle, empty inbox inside Agent maintenance. It appends an empty developer message with the existing surface replacement operation and additive `message-edit` source metadata, then queues the revised prompt with original attachments and a retry identity. Physical logs remain append-only. Compacted targets, stale sequences, empty ordinary prompts and busy sessions are rejected before mutation. New model input excludes the superseded tail; completed tool effects are not rolled back.
+`editMessage` validates the latest ordinary human message and an idle, empty inbox inside Agent maintenance. It queues and flushes the revised prompt with original attachments, a retry identity and a durable edit range. Once that prompt is admitted, the `agent/request` listener appends the empty developer replacement inside the newly opened step, before the model request. A rejected admission leaves the old surface intact; queued edits survive a saved-log restart. Physical logs remain append-only. Compacted targets, stale sequences, empty ordinary prompts and busy sessions are rejected before mutation. New model input excludes the superseded tail; completed tool effects are not rolled back.
 
 <a id="model-experience"></a>
 ## Model Experience

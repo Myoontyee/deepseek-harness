@@ -18,6 +18,7 @@ import {
   inspectApiSession,
   type ApiSessionAgentResult,
 } from './agent.ts'
+import { installMessageRevisions } from './edit-message.ts'
 import { SessionCommandController } from './commands.ts'
 import { SessionControlController } from './control.ts'
 import { SessionHistoryController } from './history.ts'
@@ -153,6 +154,7 @@ export class SessionController extends TypertRemoteService {
     super(ctx, 'sessionController', { namespace: 'session' })
     const resolved = SessionController.Config(config)
     installModelSelectionProjection(ctx)
+    installMessageRevisions(ctx)
     this.agents = new ApiSessionAgentController(ctx)
     this.relay = new SessionRelay(ctx, id => this.agents.resolveAgent(id), {
       maxMessageChars: config.relayMaxMessageChars ?? 16000,
