@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-api-git-controller",
   "description": "Workspace-scoped Git operations and GitHub workflow for Desktop",
-  "version": "0.2.1-alpha.1",
+  "version": "0.2.1-alpha.2",
   "publishConfig": {
     "access": "public"
   },
