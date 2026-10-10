@@ -1,9 +1,9 @@
-import { Fragment, memo, useEffect, useMemo, useState } from 'react'
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { PendingSubmission } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { MessageImageSource } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { fileExtension, FileTypeIcon, fileSizeText, JsonBlock, projectUserText, StateDot, TextShimmer } from '@deepseek-ai/dsh-client-ui-primitives'
-import { parseResponseAnnotations } from '@deepseek-ai/dsh-client-ui-primitives'
+import { parseResponseAnnotations, registerLiteralCopy } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatNodeOwnerProps, ChatNodeViewProps, ChatViewSlotProps } from '../contract/slots.ts'
 import type { ModelRetryNode, TurnErrorNode, UserMessageNode } from '../contract/snapshot.ts'
 import { CompactionItem } from './CompactionItem.tsx'
@@ -186,6 +186,9 @@ function UserStyleBubble({
 }): ReactNode {
   const { text, attachments: contentAttachments, rest } = contentParts(content)
   const annotated = parseResponseAnnotations(text)
+  const literalBody = useRef<HTMLSpanElement>(null)
+  useEffect(() => editor === undefined && literalBody.current !== null
+    ? registerLiteralCopy(literalBody.current) : undefined, [editor])
   const attachments = previewAttachments ?? contentAttachments
   const compactImages = attachments.length > 1
   const truncated = (total: number): string => t('json.truncated', { total })
@@ -237,7 +240,7 @@ function UserStyleBubble({
                 ))}
               </details>
             )}
-            {projectUserText(annotated?.text ?? text, referenceLabels, skillNames, 'skill', references)}
+            <span ref={literalBody} data-message-literal>{projectUserText(annotated?.text ?? text, referenceLabels, skillNames, 'skill', references)}</span>
             {rest.map((block, i) => <JsonBlock key={i} label={t('message.extraBlock')} payload={block} truncatedLabel={truncated} />)}
           </>}
         </div>}

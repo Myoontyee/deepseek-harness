@@ -46,6 +46,7 @@ export { FishLogo, FISH_LOGO_PATH, FISH_LOGO_VIEWBOX } from './FishLogo.tsx'
 export { BrandWordmark } from './BrandWordmark.tsx'
 export type { BrandWordmarkProps } from './BrandWordmark.tsx'
 export {
+  PermissionIconAutoReviewMedium, PermissionIconAutoReviewRegular,
   PermissionIconFullAccessMedium, PermissionIconFullAccessRegular,
   PermissionIconReadOnlyMedium, PermissionIconReadOnlyRegular,
   PermissionIconWorkspaceWriteMedium, PermissionIconWorkspaceWriteRegular,
@@ -83,6 +84,8 @@ export type { RelativeTime, RelativeTimeUnit } from './relative-time.ts'
 export { JsonTree } from './JsonTree.tsx'
 export type { JsonTreeProps, JsonTreeLabels } from './JsonTree.tsx'
 export { TerminalBlock, DEFAULT_TERMINAL_MAX_LINES } from './TerminalBlock.tsx'
+export { CommandText } from './CommandText.tsx'
+export type { CommandTextProps } from './CommandText.tsx'
 export type { TerminalBlockProps, TerminalBlockLabels } from './TerminalBlock.tsx'
 export { ReadBlock, DEFAULT_READ_MAX_LINES } from './ReadBlock.tsx'
 export type { ReadBlockProps, ReadBlockLine, ReadBlockLabels } from './ReadBlock.tsx'
@@ -104,6 +107,7 @@ export { MarkdownDelegateProvider } from './markdown/MarkdownDelegate.tsx'
 export type { MarkdownDelegate, MarkdownDelegateProviderProps, MarkdownExternalLinkHandler } from './markdown/MarkdownDelegate.tsx'
 export { MarkdownText } from './markdown/MarkdownText.tsx'
 export type { MarkdownCodeLabels, MarkdownFileMentions, MarkdownLabels, MarkdownPathImages } from './markdown/MarkdownText.tsx'
+export { registerLiteralCopy } from './markdown/copy-selection.ts'
 export { markdownClipboardText } from './markdown/clipboard-text.ts'
 export { extractMarkdownPlainText } from './markdown/plain-text.ts'
 export type { MarkdownPlainTextMode, MarkdownPlainTextOptions } from './markdown/plain-text.ts'

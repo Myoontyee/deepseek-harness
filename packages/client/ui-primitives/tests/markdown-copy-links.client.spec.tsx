@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render } from '@testing-library/react'
+import { useEffect, useRef } from 'react'
+import { registerLiteralCopy } from '../src/markdown/copy-selection.ts'
 import { MarkdownDelegateProvider } from '../src/markdown/MarkdownDelegate.tsx'
 import { writeClipboard } from '../src/clipboard.ts'
 import { markdownClipboardText } from '../src/markdown/clipboard-text.ts'
@@ -257,4 +259,34 @@ it('copies across registered Markdown regions without chrome, styling or duplica
   expect(data.get('text/plain')).toBe('first $\\mu_D$\n\nsecond')
   expect(data.has('text/html')).toBe(false)
   expect(data.has('text/markdown')).toBe(false)
+})
+
+function LiteralMessage({ text }: { text: string }) {
+  const root = useRef<HTMLSpanElement>(null)
+  useEffect(() => root.current === null ? undefined : registerLiteralCopy(root.current), [])
+  return <span ref={root}>{text}</span>
+}
+
+it('keeps literal user content between two assistant selections and at partial endpoints', () => {
+  const view = render(<div><MarkdownText text="**first**" />
+    <LiteralMessage text={'**literal**\nuser line'} /><MarkdownText text="## last" /></div>)
+  const first = view.getByText('first').firstChild!
+  const user = view.getByText(/literal/).firstChild!
+  const last = view.getByText('last').firstChild!
+  const range = document.createRange()
+  range.setStart(first, 0); range.setEnd(last, 4)
+  expect(copy(view.container, range).get('text/plain')).toBe('first\n\n**literal**\nuser line\n\nlast')
+  range.setStart(user, 2)
+  expect(copy(view.container, range).get('text/plain')).toBe('literal**\nuser line\n\nlast')
+  range.setStart(first, 0); range.setEnd(user, 12)
+  expect(copy(view.container, range).get('text/plain')).toBe('first\n\n**literal**\n')
+})
+
+it('retains selected code source blank lines at both edges', () => {
+  const source = '```python\n\n  x\n\n```'
+  const view = render(<MarkdownText text={source} />)
+  const range = document.createRange()
+  range.selectNodeContents(view.container.querySelector('code')!)
+  expect(copy(view.container, range).get('text/plain')).toBe('\n  x\n')
+  expect(markdownClipboardText(source)).toBe('\n  x\n')
 })

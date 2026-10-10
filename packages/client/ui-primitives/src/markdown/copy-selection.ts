@@ -42,7 +42,7 @@ function selectedText(node: Node): string {
 }
 function childrenText(node: Node): string {
   return [...node.childNodes].map(selectedText).reduce((text, next) =>
-    text.endsWith('\n\n') ? text + next.replace(/^\n+/u, '') : text + next, '')
+    text.endsWith('\n\n') ? text + next.replace(/^\n{1,2}/u, '') : text + next, '')
 }
 function elementOf(node: Node): Element | null { return node instanceof Element ? node : node.parentElement }
 
@@ -78,7 +78,14 @@ function rangeContent(root: HTMLElement, selected: Range): string {
     fragment = wrapper
     ancestor = ancestor.parentElement
   }
-  return trimBreaks(selectedText(fragment))
+  const text = selectedText(fragment)
+  const startsInCode = elementOf(selected.startContainer)?.closest('pre,code,.md-code-block') !== null
+    && elementOf(selected.startContainer)?.closest('pre,code,.md-code-block') !== undefined
+  const endsInCode = elementOf(selected.endContainer)?.closest('pre,code,.md-code-block') !== null
+    && elementOf(selected.endContainer)?.closest('pre,code,.md-code-block') !== undefined
+  // Remove only serializer boundaries at code edges, retaining source blank lines.
+  const start = startsInCode ? text.replace(/^\n{1,2}/u, '') : text.replace(/^\n+/u, '')
+  return endsInCode ? start.replace(/\n{1,2}$/u, '') : start.replace(/\n+$/u, '')
 }
 
 function writeSelection(event: ClipboardEvent, text: string): boolean {
@@ -91,7 +98,7 @@ function writeSelection(event: ClipboardEvent, text: string): boolean {
   return true
 }
 
-const documents = new WeakMap<Document, { roots: Set<HTMLElement>; handler: (event: ClipboardEvent) => void }>()
+const documents = new WeakMap<Document, { roots: Map<HTMLElement, 'markdown' | 'literal'>; handler: (event: ClipboardEvent) => void }>()
 
 /**
  * Share one copy listener across Markdown roots, including when the composer retains keyboard focus.
@@ -99,10 +106,23 @@ const documents = new WeakMap<Document, { roots: Set<HTMLElement>; handler: (eve
  * @returns Subscription release; the final release removes the native listener.
  */
 export function registerMarkdownCopy(root: HTMLElement): () => void {
+  return registerCopyRoot(root, 'markdown')
+}
+
+/**
+ * Include visible literal message text in selections spanning rendered Markdown replies.
+ * @param root - Literal text container excluding attachments, editors, and message actions.
+ * @returns Subscription release; the final release removes the native listener.
+ */
+export function registerLiteralCopy(root: HTMLElement): () => void {
+  return registerCopyRoot(root, 'literal')
+}
+
+function registerCopyRoot(root: HTMLElement, kind: 'markdown' | 'literal'): () => void {
   const doc = root.ownerDocument
   let owner = documents.get(doc)
   if (owner === undefined) {
-    const roots = new Set<HTMLElement>()
+    const roots = new Map<HTMLElement, 'markdown' | 'literal'>()
     const handler = (event: ClipboardEvent): void => {
       // An explicit copy button owns its fallback payload even if a passage is still selected.
       if (doc.querySelector('textarea[data-dsh-clipboard-write]') !== null) return
@@ -121,10 +141,11 @@ export function registerMarkdownCopy(root: HTMLElement): () => void {
       const last = containingRoot(selected.endContainer)
       if (first === undefined || last === undefined) return
       if (first === last) {
+        if (roots.get(first) === 'literal') return
         if (copyLinkedSelection(first, event)) event.stopPropagation()
         return
       }
-      const selectedRoots = [...roots].filter(candidate => candidate.isConnected && selected.intersectsNode(candidate))
+      const selectedRoots = [...roots.keys()].filter(candidate => candidate.isConnected && selected.intersectsNode(candidate))
       const outerRoots = selectedRoots.filter(candidate => !selectedRoots.some(other => other !== candidate && other.contains(candidate)))
         .sort((left, right) => left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)
       const text = outerRoots.map((candidate) => {
@@ -133,7 +154,10 @@ export function registerMarkdownCopy(root: HTMLElement): () => void {
         const part = selected.cloneRange()
         if (part.compareBoundaryPoints(Range.START_TO_START, bounds) < 0) part.setStart(candidate, 0)
         if (part.compareBoundaryPoints(Range.END_TO_END, bounds) > 0) part.setEnd(candidate, candidate.childNodes.length)
-        return rangeContent(candidate, part)
+        if (roots.get(candidate) === 'markdown') return rangeContent(candidate, part)
+        const literal = part.cloneContents()
+        literal.querySelectorAll('svg,[aria-hidden="true"]').forEach(node => node.remove())
+        return literal.textContent ?? ''
       }).filter(value => value !== '').join('\n\n')
       if (writeSelection(event, text)) event.stopPropagation()
     }
@@ -141,7 +165,7 @@ export function registerMarkdownCopy(root: HTMLElement): () => void {
     documents.set(doc, owner)
     doc.addEventListener('copy', handler, true)
   }
-  owner.roots.add(root)
+  owner.roots.set(root, kind)
   const retained = owner
   return () => {
     retained.roots.delete(root)
