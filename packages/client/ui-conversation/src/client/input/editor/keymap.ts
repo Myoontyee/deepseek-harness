@@ -14,6 +14,7 @@
  * The root's composition attribute suppresses placeholders until both the
  * native composition and the editor's final text reconciliation finish.
  */
+import { clipboardPlainText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { LexicalEditor } from 'lexical'
 import {
   COMMAND_PRIORITY_CRITICAL, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND,
@@ -61,6 +62,11 @@ export function registerComposerKeymap(editor: LexicalEditor, handlers: Composer
   // Composition watch: true through composition and for one tick after
   // compositionend (Safari's late closing keydown). The listener rides the
   // root element and re-arms on root swaps.
+  let plainPaste = false
+  const clearPlainPaste = (): void => { plainPaste = false }
+  const onPasteKey = (event: KeyboardEvent): void => {
+    plainPaste = (event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'v' && !event.isComposing
+  }
   let composing = false
   let composingUntil = 0
   let rootElement: HTMLElement | null = null
@@ -90,13 +96,26 @@ export function registerComposerKeymap(editor: LexicalEditor, handlers: Composer
   }
 
   return mergeRegister(
+    () => {
+      rootElement?.removeEventListener('keydown', onPasteKey, true)
+      rootElement?.removeEventListener('keyup', clearPlainPaste)
+      rootElement?.removeEventListener('blur', clearPlainPaste)
+      clearPlainPaste()
+    },
     editor.registerRootListener((root, prevRoot) => {
+      prevRoot?.removeEventListener('keydown', onPasteKey, true)
+      prevRoot?.removeEventListener('keyup', clearPlainPaste)
+      prevRoot?.removeEventListener('blur', clearPlainPaste)
+      clearPlainPaste()
       prevRoot?.removeEventListener('compositionstart', onCompositionStart)
       prevRoot?.removeEventListener('compositionend', onCompositionEnd)
       prevRoot?.removeAttribute('data-composer-composing')
       composing = false
       composingUntil = 0
       rootElement = root
+      root?.addEventListener('keydown', onPasteKey, true)
+      root?.addEventListener('keyup', clearPlainPaste)
+      root?.addEventListener('blur', clearPlainPaste)
       root?.addEventListener('compositionstart', onCompositionStart)
       root?.addEventListener('compositionend', onCompositionEnd)
       syncComposition()
@@ -160,7 +179,15 @@ export function registerComposerKeymap(editor: LexicalEditor, handlers: Composer
       // Duck-typed: the payload union includes InputEvent, and test engines
       // deliver clipboardData on plain events.
       const clipboardData = (event as ClipboardEvent).clipboardData ?? null
+      const forcePlain = plainPaste
+      clearPlainPaste()
       if (clipboardData === null) return false
+      if (forcePlain) {
+        event.preventDefault()
+        const text = clipboardData.getData('text/plain')
+        if (text !== '') handlers.pasteText(clipboardPlainText(text))
+        return true
+      }
       const files: File[] = []
       const directories = new Set<File>()
       for (const item of clipboardData.items) {

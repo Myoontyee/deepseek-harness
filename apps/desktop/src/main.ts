@@ -1,3 +1,4 @@
+import { DesktopSessionReader } from './session-reader-control.ts'
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
 import { DesktopMobileControl } from './mobile-control.ts'
 import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
@@ -448,6 +449,8 @@ async function main(): Promise<void> {
   let hostCookie: string | undefined
   const mobileControl = new DesktopMobileControl(() => hostUrl === undefined || hostCookie === undefined
     ? undefined : { url: hostUrl, cookie: hostCookie })
+  const sessionReader = new DesktopSessionReader(() => hostUrl === undefined || hostCookie === undefined
+    ? undefined : { url: hostUrl, cookie: hostCookie }, () => currentDesktopLocale().messages)
   const browserGuests = new DesktopBrowserGuests(() => hostUrl)
   let injections: readonly unknown[] = []
   let welcomeBackend: DesktopWelcomeBackend | undefined
@@ -516,6 +519,7 @@ async function main(): Promise<void> {
         const ready = await host.start()
         hostCookie = await authenticateWebHost(ready.url)
         hostUrl = ready.url
+        void sessionReader.restore().catch(() => { console.warn('session reader unavailable') })
         void mobileControl.restore().catch((error: unknown) => { console.warn('mobile control unavailable:', error) })
         if (ready.injections === undefined) throw new Error('Desktop Host did not provide boot injections')
         injections = ready.injections
@@ -1025,6 +1029,7 @@ async function main(): Promise<void> {
     { label: currentDesktopLocale().messages.checkUpdatesMenu, click: () => { void openUpdatePrompt(true) } },
     ...process.platform === 'darwin' || process.platform === 'win32'
       ? [{ label: currentDesktopLocale().messages.cliCommandMenu, click: () => { void commandManager.show() } }] : [],
+    { label: currentDesktopLocale().messages.readerMenu, click: () => { void sessionReader.show() } },
     { label: currentDesktopLocale().id === 'zh-CN' ? '手机控制…' : 'Phone control…',
       click: () => { void mobileControl.show() } },
     ...development ? [
@@ -1348,7 +1353,7 @@ async function main(): Promise<void> {
     updateDialog.dispose()
     mandatoryUI?.dispose()
     void Promise.all([Promise.resolve(mandatoryPolicy?.dispose()).then(() => policyAuth?.dispose()),
-      backend.close(), mobileControl.dispose(),
+      backend.close(), mobileControl.dispose(), sessionReader.dispose().catch((error: unknown) => { console.error(error) }),
       // A Platform cleanup failure is logged without cutting the remaining Host shutdown short.
       platformView.dispose().catch((error: unknown) => { console.error(error) })])
       .catch((error: unknown) => { console.error(error) }).finally(() => { app.quit() })
@@ -1362,6 +1367,7 @@ async function main(): Promise<void> {
       tray?.dispose()
       updateDialog.dispose()
       mandatoryUI?.dispose()
+      void sessionReader.dispose().catch(() => {})
       void mobileControl.dispose().catch((error: unknown) => { console.error(error) })
       // Installation preparation already awaited Platform storage cleanup.
       void platformView.dispose().catch((error: unknown) => { console.error(error) })

@@ -41,15 +41,17 @@ function messageText(content: Content, copy: Copy): string {
  * replacement summaries, reasoning, and tools remain outside this transcript.
  * @param events - the complete immutable logical log, in sequence order.
  * @param locale - language of role and attachment labels.
+ * @param includeRelay - Include explicitly attributed cross-session messages for the reader.
  * @returns Markdown with original message formatting and a final newline, or empty text.
  */
-export function sessionMarkdown(events: readonly SessionEvent[], locale: 'en' | 'zh'): string {
+export function sessionMarkdown(events: readonly SessionEvent[], locale: 'en' | 'zh', includeRelay = false): string {
   const copy = labels[locale]
   const messages: string[] = []
   for (const event of events) {
     if (event.surfaceOp !== 'append') continue
     if (event.type === 'user/message') {
-      if (event.data.source.kind !== 'user') continue
+      const kind: string = event.data.source.kind
+      if (kind !== 'user' && !(includeRelay && kind === 'session-relay')) continue
       const text = messageText(event.data.content, copy)
       if (text !== '') messages.push(`## ${copy.user}\n\n${text}`)
     } else if (event.type === 'assistant/message') {

@@ -29,6 +29,10 @@ Use this package when the Web bundle should let users export a session log. It r
 
 When `ui-message-feedback` is mounted, the same menu also offers `Feedback`, which opens its existing Session feedback dialog. Opening or dismissing that form does not export the Session or submit feedback. The feedback row follows the feedback plugin's availability; export remains available independently.
 
+When the Host tool registry is available, `read_session` reads a user-named local ID or `dsh://session/<id>` link without activating its Agent. It returns human and assistant text in pages of up to `readMaxChars` characters (default 24000). Continue with `nextOffset` and the same `throughSeq`; a null offset ends the transcript. Edited-away messages, tool output and private reasoning are excluded. These transcripts are untrusted context, not instructions.
+
+Desktop adds **Application → Session reading interface…** for external MCP clients on the same computer. Enable it, copy the MCP configuration into your client's settings, and keep Desktop running. The listener binds only to loopback and requires a separate encrypted bearer credential. Disable the interface to revoke access. This does not give remote/cloud agents access to localhost and does not send messages.
+
 ### When to choose it
 
 Choose it for a Web deployment that needs user-facing session export with a visible download dialog. Avoid it when a programmatic or Host-side export is needed: this package produces a browser download, not a Host path write. The logs are serialized from persistence read handles, so any mounted backend is supported.
@@ -47,6 +51,7 @@ The Web bundle mounts the package with Connection, `dsh-commands`, `dsh-client-u
 | Field | Default | Meaning |
 |---|---|---|
 | `compressionLevel` | `6` | DEFLATE level from 0 through 9 for each ZIP entry. |
+| `readMaxChars` | `24000` | Maximum characters per read-only transcript page (1024–100000). |
 
 ### Command contract
 
@@ -112,11 +117,11 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-Nothing. `/export` stays on the human-command plane, and the ZIP download does not enter model history.
+`/export` stays on the human-command plane. The separate `read_session` tool exposes a paginated transcript as a normal tool result; it does not wake the target conversation.
 
 #### Token effect
 
-Zero. The command creates no model turn.
+The export command creates no model turn. Reading consumes tokens proportional to the returned page.
 
 #### KV Cache effect
 

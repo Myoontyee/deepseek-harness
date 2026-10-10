@@ -6,7 +6,7 @@
  */
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { fireEvent } from '@testing-library/react'
-import { $createParagraphNode, $createTextNode, $getRoot, createEditor } from 'lexical'
+import { $createParagraphNode, $createTextNode, $getRoot, createEditor, PASTE_COMMAND } from 'lexical'
 import { registerPlainText } from '@lexical/plain-text'
 import { registerComposerKeymap } from '../src/client/input/editor/keymap.ts'
 
@@ -141,4 +141,35 @@ describe('keymap keydown routing', () => {
     fireEvent.keyDown(root, { key: 'Tab', keyCode: 9, shiftKey: true })
     expect(arbitrate).toHaveBeenLastCalledWith('tabBack', false)
   })
+})
+
+it('uses Ctrl+Shift+V once, resets on blur, and keeps Ctrl+V unchanged', () => {
+  const editor = createEditor({ namespace: 'plain-paste', onError: (error) => { throw error } })
+  const root = document.createElement('div')
+  root.contentEditable = 'true'
+  document.body.append(root)
+  editor.setRootElement(root)
+  const pasteText = vi.fn()
+  const intakeFiles = vi.fn()
+  const unregister = registerComposerKeymap(editor, {
+    arbitrate: () => 'pass', space: () => false, dismissPopup: () => {}, canSubmit: () => false,
+    submit: () => {}, intakeFiles, pasteText,
+  })
+  onTestFinished(() => { unregister(); editor.setRootElement(null); root.remove() })
+  const paste = (): void => {
+    const event = new Event('paste', { cancelable: true })
+    Object.defineProperty(event, 'clipboardData', { value: { items: [], getData: () => '**text** $x^2$' } })
+    editor.dispatchCommand(PASTE_COMMAND, event as ClipboardEvent)
+  }
+  fireEvent.keyDown(root, { key: 'v', ctrlKey: true, shiftKey: true })
+  paste()
+  expect(pasteText).toHaveBeenLastCalledWith('text x^(2)')
+  fireEvent.keyDown(root, { key: 'v', ctrlKey: true })
+  paste()
+  expect(pasteText).toHaveBeenLastCalledWith('**text** $x^2$')
+  fireEvent.keyDown(root, { key: 'v', ctrlKey: true, shiftKey: true })
+  fireEvent.blur(root)
+  paste()
+  expect(pasteText).toHaveBeenLastCalledWith('**text** $x^2$')
+  expect(intakeFiles).not.toHaveBeenCalled()
 })

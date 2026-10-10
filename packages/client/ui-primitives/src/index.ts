@@ -108,7 +108,7 @@ export type { MarkdownDelegate, MarkdownDelegateProviderProps, MarkdownExternalL
 export { MarkdownText } from './markdown/MarkdownText.tsx'
 export type { MarkdownCodeLabels, MarkdownFileMentions, MarkdownLabels, MarkdownPathImages } from './markdown/MarkdownText.tsx'
 export { registerLiteralCopy } from './markdown/copy-selection.ts'
-export { markdownClipboardText } from './markdown/clipboard-text.ts'
+export { markdownClipboardText, clipboardPlainText } from './markdown/clipboard-text.ts'
 export { extractMarkdownPlainText } from './markdown/plain-text.ts'
 export type { MarkdownPlainTextMode, MarkdownPlainTextOptions } from './markdown/plain-text.ts'
 export * from './icons/index.tsx'

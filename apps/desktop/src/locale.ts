@@ -1,6 +1,16 @@
 /** Typed English and Chinese copy owned by the Electron shell. */
 
 export const en = {
+  readerMenu: 'Session reading interface…',
+  readerEnabled: 'Local session reader is enabled',
+  readerDisabled: 'Local session reader is disabled',
+  readerDetail: 'Allow trusted MCP clients on this computer to read conversations by deep link. DSH must remain running. Copy the configuration into your client MCP settings; clients may require adapting the configuration format. The credential grants read access to local conversations: do not publish it. This interface cannot send messages or control DSH.',
+  readerCopy: 'Copy MCP configuration',
+  readerEnable: 'Enable',
+  readerDisable: 'Disable and revoke credential',
+  readerClose: 'Close',
+  readerFailed: 'Unable to start the session reader. Check system encryption availability and whether its saved port is occupied.',
+
   unreadCompletions: '{count} completed conversations unread',
   cliCommandMenu: 'Manage dsh Command…',
   cliCommandTitle: 'Manage dsh Command',
@@ -173,6 +183,15 @@ export const en = {
 export type DesktopMessages = { readonly [Key in keyof typeof en]: string }
 
 export const zh = {
+  readerMenu: '会话读取接口…',
+  readerEnabled: '本机会话读取接口已启用',
+  readerDisabled: '本机会话读取接口未启用',
+  readerDetail: '允许本机受信任的 MCP 客户端通过深度链接读取对话，DSH 需要保持运行。复制配置后填入客户端的 MCP 设置；不同客户端可能需要调整配置格式。凭据可以读取本地会话，请勿公开。此接口不能发送消息或控制 DSH。',
+  readerCopy: '复制 MCP 配置',
+  readerEnable: '启用',
+  readerDisable: '关闭并撤销凭据',
+  readerClose: '关闭窗口',
+  readerFailed: '无法启动会话读取接口，请检查系统加密服务以及保存的端口是否被占用。',
   unreadCompletions: '{count} 个会话已完成，尚未查看',
   cliCommandMenu: '管理 dsh 命令…',
   cliCommandTitle: '管理 dsh 命令',

@@ -40,6 +40,7 @@ import type { SubagentProvider } from '@deepseek-ai/dsh-subagent'
 import * as ToolSubagentControl from '@deepseek-ai/dsh-tool-subagent-control'
 import * as ToolSubagentListAgents from '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 import * as SshConnectionTools from '../packages/api/connection-controller/src/remote-tools.ts'
+import * as SessionLogExport from '../packages/session-query/session-log-export/src/index.ts'
 import * as SessionMessageTools from '../packages/api/session-controller/src/session-tools.ts'
 import SkillRegistry from '@deepseek-ai/dsh-skill'
 import * as SkillFileSystem from '@deepseek-ai/dsh-skill-filesystem'
@@ -189,6 +190,18 @@ export interface ToolPackage {
  * guard proves it is exhaustive against the on-disk glob.
  */
 const TOOL_PACKAGES: ToolPackage[] = [
+  {
+    pkg: '@deepseek-ai/dsh-session-log-export',
+    dir: 'session-log-export',
+    source: 'packages/session-query/session-log-export/src/index.ts',
+    requires: ['ctx.tools', 'ctx.sessionQuery'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      ctx.provide('commands', { register: () => () => {} } as never)
+      ctx.provide('connection', { fetch: { register: () => async () => {} } } as never)
+      await ctx.plugin(SessionLogExport)
+    },
+  },
   {
     pkg: '@deepseek-ai/dsh-api-connection-controller',
     dir: 'connection-controller',

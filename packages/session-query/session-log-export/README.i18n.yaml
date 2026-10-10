@@ -15,8 +15,8 @@
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
 /deepseek-ai-dsh-session-log-export/use-this-package:
-  en: 1135b03eb3423c74
-  zh: 2fd2a18d503df70c
+  en: 263cc1d611653f95
+  zh: 7963b5ef1c5c1cd8
 /deepseek-ai-dsh-session-log-export/use-this-package/when-to-choose-it:
   en: 2b9dbec4877d332e
   zh: dcf6638938eedb01
@@ -24,8 +24,8 @@
   en: 2fef1fe4411cc5da
   zh: cff5dbcc4901402b
 /deepseek-ai-dsh-session-log-export/use-this-package/configuration:
-  en: 377a0d8860c46f63
-  zh: 9eb7698f813b2fa3
+  en: 0792c49653844eff
+  zh: ccf4a827f42940e3
 /deepseek-ai-dsh-session-log-export/use-this-package/command-contract:
   en: 26329688b9a924a7
   zh: 94e21c10fdcfc1ac
@@ -54,11 +54,11 @@
   en: 55c1a61a041a2aeb
   zh: 48e05043cc42304f
 /deepseek-ai-dsh-session-log-export/model-experience/human-export-control/what-the-model-sees:
-  en: 6b3c3cfc5d68d5f9
-  zh: b1689c57ee3b4ccb
+  en: c8dc72cf0017b360
+  zh: 5213348397fe3e30
 /deepseek-ai-dsh-session-log-export/model-experience/human-export-control/token-effect:
-  en: 380535e564a4ea2c
-  zh: 2672eac76afd90f5
+  en: 2bfe0f51c70955c0
+  zh: 0837a8f7ce03bb3a
 /deepseek-ai-dsh-session-log-export/model-experience/human-export-control/kv-cache-effect:
   en: 78163c30fdf0b43d
   zh: 165043e307b38cb3

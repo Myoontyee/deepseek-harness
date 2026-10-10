@@ -1,4 +1,5 @@
 /** Content-only clipboard projection, retaining TeX and Markdown table structure. */
+import katex from 'katex'
 import { parseGfmWithMath } from './parse.ts'
 
 interface CopyNode {
@@ -34,8 +35,8 @@ export function clipboardTable(rows: readonly (readonly string[])[]): string {
   return lines.join('\n')
 }
 
-function content(node: CopyNode): string {
-  const children = (): string[] => node.children?.map(content) ?? []
+function content(node: CopyNode, plain = false): string {
+  const children = (): string[] => node.children?.map(child => content(child, plain)) ?? []
   switch (node.type) {
     case 'root':
     case 'blockquote':
@@ -44,17 +45,20 @@ function content(node: CopyNode): string {
     case 'list': return children().join('\n')
     case 'text':
     case 'inlineCode':
-    case 'html': return node.value ?? ''
-    case 'code': return node.lang?.match(/^[\w-]+/u)?.[0] === 'math' ? clipboardMath(node.value ?? '', true) : node.value ?? ''
-    case 'math': return clipboardMath(node.value ?? '', true)
-    case 'inlineMath': return clipboardMath(node.value ?? '', false)
+    case 'html': return plain && node.type === 'html' ? new DOMParser().parseFromString(node.value ?? '', 'text/html').body.textContent ?? '' : node.value ?? ''
+    case 'code': return node.lang?.match(/^[\w-]+/u)?.[0] === 'math' ? (plain ? plainMath(node.value ?? '') : clipboardMath(node.value ?? '', true)) : node.value ?? ''
+    case 'math': return (plain ? plainMath(node.value ?? '') : clipboardMath(node.value ?? '', true))
+    case 'inlineMath': return (plain ? plainMath(node.value ?? '') : clipboardMath(node.value ?? '', false))
     case 'image':
     case 'imageReference': return node.alt ?? ''
     case 'footnoteReference': return node.identifier ?? ''
     case 'break': return '\n'
     case 'definition':
     case 'thematicBreak': return ''
-    case 'table': return clipboardTable((node.children ?? []).map(row => (row.children ?? []).map(content)))
+    case 'table': {
+      const rows = (node.children ?? []).map(row => (row.children ?? []).map(cell => content(cell, plain)))
+      return plain ? rows.map(row => row.join('\t')).join('\n') : clipboardTable(rows)
+    }
     // Formatting and link wrappers contribute only their visible children.
     default: return children().join('')
   }
@@ -77,6 +81,54 @@ export function markdownClipboardText(source: string): string {
     return token
   })
   let text = content(parseGfmWithMath(protectedSource))
+  equations.forEach((equation, index) => { text = text.replaceAll(`${prefix}${index}\uE001`, equation) })
+  return text
+}
+
+/** Flatten one MathML presentation tree, never the duplicate HTML or TeX annotation. */
+function mathText(node: Element): string {
+  const children = Array.from(node.children).map(mathText)
+  switch (node.localName) {
+    case 'annotation': case 'annotation-xml': return ''
+    case 'mfrac': return `(${children[0] ?? ''})/(${children[1] ?? ''})`
+    case 'msub': return `${children[0] ?? ''}_${children[1] ?? ''}`
+    case 'msup': return `${children[0] ?? ''}^(${children[1] ?? ''})`
+    case 'msubsup': return `${children[0] ?? ''}_${children[1] ?? ''}^(${children[2] ?? ''})`
+    case 'msqrt': return `sqrt(${children.join('')})`
+    case 'mroot': return `root(${children[1] ?? ''}, ${children[0] ?? ''})`
+    case 'mtable': return children.join('\n')
+    case 'mtr': return children.join('\t')
+    case 'mspace': return ' '
+    default: return children.length > 0 ? children.join('') : node.textContent ?? ''
+  }
+}
+
+function plainMath(source: string): string {
+  try {
+    const markup = katex.renderToString(source, { output: 'mathml', throwOnError: true, trust: false, strict: 'ignore' })
+    const math = new DOMParser().parseFromString(markup, 'text/html').querySelector('math')
+    return math === null ? source : mathText(math)
+  } catch {
+    // Unsupported TeX stays legible and intact rather than silently losing content.
+    return source
+  }
+}
+
+/**
+ * Strip Markdown presentation for explicit paste-as-text, including math and tables.
+ * @param source - Clipboard text from DSH or another application.
+ * @returns Linear math, tab-separated table cells and unstyled content.
+ */
+export function clipboardPlainText(source: string): string {
+  let prefix = '\uE000dsh-plain-tex'
+  while (source.includes(prefix)) prefix += '_'
+  const equations: string[] = []
+  const protectedSource = source.replace(/\\begin\{([A-Za-z*]+)\}[\s\S]*?\\end\{\1\}/gu, (equation) => {
+    const token = `${prefix}${equations.length}\uE001`
+    equations.push(plainMath(equation))
+    return token
+  })
+  let text = content(parseGfmWithMath(protectedSource), true)
   equations.forEach((equation, index) => { text = text.replaceAll(`${prefix}${index}\uE001`, equation) })
   return text
 }

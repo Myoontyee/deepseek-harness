@@ -138,7 +138,17 @@ try {
   await page.keyboard.press('Control+V')
   assert.equal((await editor.innerText()).replaceAll('\r\n','\n'),contentText)
   await page.screenshot({path:join(root,'content-only-copy-paste.png')})
-  const result={wholeMessageCopy:true,plainFormatting:true,tablesRetained:true,passed:true,root,nativeCopy:true,nativePaste:true,texSource:true,partialFormulaAtomic:true,linkLabelOnly:true}
+  await editor.click()
+  await page.keyboard.press('Control+A')
+  await page.keyboard.press('Control+Shift+V')
+  const plain = (await editor.innerText()).replaceAll('\r\n','\n')
+  assert.ok(!plain.includes('**') && !plain.includes('$$') && !plain.includes('\\mu_'), 'Strong paste removes formatting and TeX commands')
+  assert.ok(plain.includes('μ_D'), 'Math is linearized once')
+  assert.ok(!plain.includes('| ---'), 'Tables are pasted as text cells')
+  await page.keyboard.press('Control+A')
+  await page.keyboard.press('Control+V')
+  assert.equal((await editor.innerText()).replaceAll('\r\n','\n'),contentText, 'Strong paste must not affect the next ordinary paste')
+  const result={strongPlainPaste:true,wholeMessageCopy:true,plainFormatting:true,tablesRetained:true,passed:true,root,nativeCopy:true,nativePaste:true,texSource:true,partialFormulaAtomic:true,linkLabelOnly:true}
   await writeFile(join(repo,'.artifacts/markdown-copy-native-result.json'),JSON.stringify(result,null,2))
   console.log(JSON.stringify(result,null,2))
 } finally {

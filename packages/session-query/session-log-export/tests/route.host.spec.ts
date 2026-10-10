@@ -98,9 +98,9 @@ describe('Session log export Fetch route', () => {
   })
 
   it('validates the compression level', () => {
-    expect(Config({})).toEqual({ compressionLevel: 6 })
-    expect(Config({ compressionLevel: 0 })).toEqual({ compressionLevel: 0 })
-    expect(Config({ compressionLevel: 9 })).toEqual({ compressionLevel: 9 })
+    expect(Config({})).toEqual({ compressionLevel: 6, readMaxChars: 24000 })
+    expect(Config({ compressionLevel: 0 })).toEqual({ compressionLevel: 0, readMaxChars: 24000 })
+    expect(Config({ compressionLevel: 9 })).toEqual({ compressionLevel: 9, readMaxChars: 24000 })
     for (const compressionLevel of [-1, 10, 1.5]) {
       expect(() => Config({ compressionLevel } as never)).toThrow()
     }
