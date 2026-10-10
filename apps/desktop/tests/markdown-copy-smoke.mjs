@@ -123,17 +123,20 @@ try {
   await page.evaluate(() => window.getSelection()?.removeAllRanges())
   await page.locator('[data-turn-tail]').last().getByRole('button',{name:'复制',exact:true}).click()
   const whole=await electronApp.evaluate(async({clipboard})=>({text:await clipboard.readText(),types:(await clipboard.read()).flatMap(item=>item.types)}))
-  assert.ok(whole.text.includes('这是加粗内容，还有 斜体 和 删除线。'))
-  assert.ok(!whole.text.includes('**') && !whole.text.includes('## ') && !whole.text.includes('~~'))
-  assert.ok(!whole.text.includes('D:/Demo/'))
-  assert.ok(whole.text.includes(String.raw`| 名称 | 值 |
+  await writeFile(join(root,'copy-evidence.json'),JSON.stringify({copied,math,copiedLink,whole},null,2))
+  // Windows async clipboard writes use CRLF; DOM text and selection-copy payloads use LF.
+  const contentText=whole.text.replaceAll('\r\n','\n')
+  assert.ok(contentText.includes('这是加粗内容，还有 斜体 和 删除线。'),'Copied prose must have no emphasis markers')
+  assert.ok(!contentText.includes('**') && !contentText.includes('## ') && !contentText.includes('~~'))
+  assert.ok(!contentText.includes('D:/Demo/'))
+  assert.ok(contentText.includes(String.raw`| 名称 | 值 |
 | --- | --- |
-| 均值 | $\mu_D$ |`))
-  assert.ok(!whole.types.includes('text/html'))
+| 均值 | $\mu_D$ |`),'Markdown table cells must retain the original TeX')
+  assert.ok(!whole.types.includes('text/html') && !whole.types.includes('text/markdown'))
   await editor.click()
   await page.keyboard.press('Control+A')
   await page.keyboard.press('Control+V')
-  assert.equal(await editor.innerText(),whole.text)
+  assert.equal((await editor.innerText()).replaceAll('\r\n','\n'),contentText)
   await page.screenshot({path:join(root,'content-only-copy-paste.png')})
   const result={wholeMessageCopy:true,plainFormatting:true,tablesRetained:true,passed:true,root,nativeCopy:true,nativePaste:true,texSource:true,partialFormulaAtomic:true,linkLabelOnly:true}
   await writeFile(join(repo,'.artifacts/markdown-copy-native-result.json'),JSON.stringify(result,null,2))
