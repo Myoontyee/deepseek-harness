@@ -14,3 +14,7 @@ it('leaves ordinary paste projection unchanged', () => {
 it('retains unknown formula content instead of losing it', () => {
   expect(clipboardPlainText('$\\unknowncommand{a}$')).toBe('\\unknowncommand{a}')
 })
+
+it('converts literal display environments and omits invisible equation labels', () => {
+  expect(clipboardPlainText(String.raw`before \begin{equation} c=\frac{\mu_D}{\mu_B} \label{eq:contrast} \end{equation} after`)).toBe('before c=(μ_D)/(μ_B) after')
+})

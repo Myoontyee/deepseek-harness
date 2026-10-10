@@ -105,9 +105,9 @@ function mathText(node: Element): string {
 
 function plainMath(source: string): string {
   try {
-    const markup = katex.renderToString(source, { output: 'mathml', throwOnError: true, trust: false, strict: 'ignore' })
+    const markup = katex.renderToString(source.replace(/\\label\{[^}]*\}/gu, ''), { output: 'mathml', displayMode: true, throwOnError: true, trust: false, strict: 'ignore' })
     const math = new DOMParser().parseFromString(markup, 'text/html').querySelector('math')
-    return math === null ? source : mathText(math)
+    return math === null ? source : mathText(math).trim()
   } catch {
     // Unsupported TeX stays legible and intact rather than silently losing content.
     return source
