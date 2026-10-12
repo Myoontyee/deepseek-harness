@@ -84,7 +84,7 @@ try {
   await page.locator('[data-conversation-session="' + sessionIds[1] + '"]').waitFor({ state: 'attached', timeout: 20000 })
 
   await electronApp.evaluate(async ({clipboard,ClipboardItem})=>{
-    globalThis.__clipboardBackup=await Promise.all((await clipboard.read()).map(async item=>new ClipboardItem(Object.fromEntries(await Promise.all(item.types.map(async type=>[type,await item.getType(type)]))))))
+    globalThis.__clipboardBackup=await Promise.all((await clipboard.read()).filter(item=>item.types.length>0).map(async item=>new ClipboardItem(Object.fromEntries(await Promise.all(item.types.map(async type=>[type,await item.getType(type)]))))))
   })
   const quote=page.locator('[data-conversation-session="'+sessionIds[1]+'"] blockquote').last()
   await quote.waitFor({timeout:30000})
@@ -153,7 +153,7 @@ try {
   console.log(JSON.stringify(result,null,2))
 } finally {
   const ownedProcess = electronApp?.process()
-  await electronApp?.evaluate(async ({clipboard,app})=>{try{if(globalThis.__clipboardBackup && /(?:缺陷像素集合|\\mu_D|HANDOFF_写作交接_20261008)/.test(await clipboard.readText()))await clipboard.write(globalThis.__clipboardBackup)}finally{app.exit(0)}}).catch(()=>{})
+  await electronApp?.evaluate(async ({clipboard,app})=>{try{if(globalThis.__clipboardBackup && /(?:缺陷像素集合|\\mu_D|HANDOFF_写作交接_20261008)/.test(await clipboard.readText())){if(globalThis.__clipboardBackup.length>0)await clipboard.write(globalThis.__clipboardBackup);else clipboard.clear()}}finally{app.exit(0)}}).catch(()=>{})
   await electronApp?.close().catch(()=>{})
   if (ownedProcess?.exitCode === null && ownedProcess.pid !== undefined) {
     try { execFileSync('taskkill.exe', ['/PID', String(ownedProcess.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' }) } catch {}
