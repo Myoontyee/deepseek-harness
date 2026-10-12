@@ -236,6 +236,10 @@ The model-facing `skill({ name })` tool validates the kebab-case name, finds the
 
 `SkillListRequest` addresses one Session by `sessionId`; `SkillListValue` returns the user-invocable entries with name, description, optional usage guidance, and model-invocation availability. `SessionSkillCatalog` reads the Session cwd and recorded preset without activating an Agent. A live Agent may supply its scoped registry, while a cold Session uses the preset's standing scope.
 
+## Managed installations
+
+The authenticated Session skill catalog also provides user skill installation and management. `ManagedSkillCandidate` identifies a discovered source and actual skill path; GitHub candidates include a pinned revision. `SkillInstallRequest` carries that repository, revision and path. `ManagedSkillRecord` stores installed identity, source, content hash, enabled/removed state and an optional backup. `SkillManagementSnapshot` combines records, local import candidates and repository subscriptions. Installation and reversible mutations invalidate discovery and notify connected Clients through `api-skills/changed`. See the [controller](../../packages/api/session-controller/README.md) and [settings UI](../../packages/client/ui-skill/README.md) for storage and user behavior.
+
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
 <a id="cordis-surface"></a>
@@ -259,6 +263,94 @@ Host service backing `ctx.remote.skills` without activating a cold Agent.
  * @throws RemoteError when the Session cannot be inspected or no registry can serve it.
  */
 @Remote async list(request: SkillListRequest, signal: AbortSignal): Promise<SkillListValue>
+
+/**
+ * List managed installations and available local imports.
+ * @returns Current management state.
+ */
+@Remote async installed(): Promise<SkillManagementSnapshot>
+
+/**
+ * Search the public skills.sh catalog.
+ * @param query - Public market search text.
+ * @param signal - Caller cancellation.
+ * @returns Matching public skill metadata.
+ */
+@Remote async discover(query: string, signal: AbortSignal): Promise<ManagedSkillCandidate[]>
+
+/**
+ * Persist explicit repository subscriptions.
+ * @param repositories - Explicit GitHub repository subscriptions.
+ */
+@Remote async setRepositories(repositories: string[]): Promise<void>
+
+/**
+ * Discover actual skill directories at a pinned repository revision.
+ * @param repository - GitHub owner/repository coordinates.
+ * @param signal - Caller cancellation.
+ * @returns Installable skill locations.
+ */
+@Remote async repositorySkills(repository: string, signal: AbortSignal): Promise<ManagedSkillCandidate[]>
+
+/**
+ * Read a pinned repository skill document as inert text.
+ * @param request - Pinned repository, revision and skill location.
+ * @param signal - Caller cancellation.
+ * @returns Skill document text.
+ */
+@Remote async preview(request: SkillInstallRequest, signal: AbortSignal): Promise<string>
+
+/**
+ * Install a reviewed repository skill without executing its code.
+ * @param request - Pinned repository, revision and skill location.
+ * @param signal - Caller cancellation.
+ */
+@Remote async installSkill(request: SkillInstallRequest, signal: AbortSignal): Promise<void>
+
+/**
+ * Copy an existing local skill into DSH management, preserving its source.
+ * @param id - Managed installation or local import identity.
+ */
+@Remote async importLocal(id: string): Promise<void>
+
+/**
+ * Inspect a bounded ZIP before installation.
+ * @param base64 - Bounded base64-encoded ZIP content.
+ * @returns Installable archive skill locations.
+ */
+@Remote async zipSkills(base64: string): Promise<ManagedSkillCandidate[]>
+
+/**
+ * Read a selected archive skill document as inert text.
+ * @param base64 - Bounded base64-encoded ZIP content.
+ * @param path - Selected skill directory within the archive.
+ * @returns Skill document text.
+ */
+@Remote async previewZip(base64: string, path: string): Promise<string>
+
+/**
+ * Install a reviewed skill from a bounded archive.
+ * @param base64 - Bounded base64-encoded ZIP content.
+ * @param path - Selected skill directory within the archive.
+ */
+@Remote async installZip(base64: string, path: string): Promise<void>
+
+/**
+ * Apply a reversible change to a managed installation.
+ * @param id - Managed installation or local import identity.
+ * @param action - User-requested reversible operation.
+ */
+@Remote async manage(id: string, action: 'enable' | 'disable' | 'remove' | 'restore'): Promise<void>
+
+/**
+ * Check upstream revisions without modifying installations.
+ * @param signal - Caller cancellation.
+ * @returns Installations with newer upstream revisions.
+ */
+@Remote async updates(signal: AbortSignal): Promise<Array<{ id: string; revision: string }>>
+
+/** Invalidate Host and browser skill catalogs without restarting any Agent. */
+@Remote async refresh(): Promise<void>
 ```
 
 Source: [`packages/api/session-controller/src/skill-catalog.ts`](../../packages/api/session-controller/src/skill-catalog.ts)
@@ -323,9 +415,29 @@ async snapshot(options: SkillViewOptions = {}): Promise<SkillCatalogSnapshot>
  * @returns the full skill, including body content, or `undefined`.
  */
 async get(name: string, options: SkillViewOptions = {}): Promise<SkillDefinition | undefined>
+
+/** Refresh all provider catalogs after a user-managed installation or explicit rescan. */
+refresh(): void
 ```
 
 Source: [`packages/skill/skill/src/index.ts`](../../packages/skill/skill/src/index.ts)
+
+<a id="api-skills-events"></a>
+
+### `api-skills/*` events
+
+<a id="api-skillschanged--emit"></a>
+
+#### `api-skills/changed` — emit
+
+A skill installation or provider change invalidates browser skill lists. @mode emit
+
+```ts cordis-catalog
+/** A skill installation or provider change invalidates browser skill lists. @mode emit */
+'api-skills/changed'(): void
+```
+
+Source: [`packages/api/session-controller/src/types.ts`](../../packages/api/session-controller/src/types.ts)
 
 <a id="skills-events"></a>
 

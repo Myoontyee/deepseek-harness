@@ -219,6 +219,7 @@ export const SERVICE_WALK_EXEMPTIONS: Record<string, string> = {
  * {@link EVENT_WALK_EXEMPTIONS} names each one with its documentation owner.
  */
 export const EVENT_SCOPE_PAGE: Record<string, string> = {
+  'api-skills': 'skills.md',
   'app-boot': 'boot.md',
   hmr: 'boot.md',
   'plugin-manager': 'boot.md',
@@ -757,6 +758,10 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   SettingsSecretView: 'settings.md',
   SettingsPathOp: 'settings.md',
   SettingsDescribeOptions: 'settings.md',
+  SkillManagementSnapshot: 'skills.md',
+  ManagedSkillCandidate: 'skills.md',
+  ManagedSkillRecord: 'skills.md',
+  SkillInstallRequest: 'skills.md',
   SkillListRequest: 'skills.md',
   SkillListValue: 'skills.md',
   AuthorizationEntry: 'credentials.md',

@@ -43,6 +43,9 @@
     },
     {
       "path": "../../util/workspace-path"
+    },
+    {
+      "path": "../ui-settings/tsconfig.client.json"
     }
   ]
 }

@@ -9,6 +9,8 @@ English | [中文](README.zh.md)
 
 `serializeResponseAnnotations` and `parseResponseAnnotations` share the versioned text envelope used by composer drafts and Chat messages. The envelope preserves quotations, optional comments, source Session addresses, and message keys in model-visible logged text; parsing incomplete or invalid envelopes returns null without discarding ordinary user text.
 
+New submissions include model-visible guidance connecting the selected passages to the current request, distinguishing quotations from instructions and asking delegated work to carry the relevant quotation and user feedback. Guidance is recorded with the ordinary user message; it improves explicit context but cannot guarantee model compliance. Existing version-1 envelopes without guidance remain readable.
+
 ## Summary
 
 Use `dsh-client-ui-primitives` to build web-client controls and render agent output with shared React UI. It includes standard controls, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. The renderers handle untrusted model output by dropping raw HTML, restricting links, and parsing ANSI escape sequences. The components import no Cordis runtime; callers supply localized labels, and theme-facing colors use `--dsw-*` design tokens.

@@ -77,7 +77,10 @@
     "@deepseek-ai/dsh-deque": "workspace:*",
     "@deepseek-ai/schemastery": "workspace:~",
     "mime-types": "^3.0.2",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "fflate": "^0.8.2",
+    "yaml": "^2.4.2",
+    "@deepseek-ai/dsh-home-paths": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~",
@@ -169,6 +172,7 @@
     "@deepseek-ai/dsh-workspace": "workspace:*",
     "@types/mime-types": "^3.0.1",
     "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-working-directory": "workspace:*"
+    "@deepseek-ai/dsh-working-directory": "workspace:*",
+    "@deepseek-ai/dsh-skill-filesystem": "workspace:*"
   }
 }

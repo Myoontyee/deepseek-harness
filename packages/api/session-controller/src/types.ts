@@ -675,3 +675,50 @@ export type SessionProjectionValue = JsonValue
 
 /** Application metadata returned by the serving desktop for one file. */
 export type SessionWorkspacePathApplication = NativeFileApplication
+
+/** Skill catalog invalidation shared with connected application clients. */
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /** A skill installation or provider change invalidates browser skill lists. @mode emit */
+    'api-skills/changed'(): void
+  }
+}
+
+/** A skill available for installation from a repository, archive, or local source. */
+export interface ManagedSkillCandidate {
+  id: string
+  name: string
+  description: string
+  path: string
+  source: string
+  repository?: string
+  revision?: string
+  installs?: number
+}
+/** An installation owned by the Skills settings page. */
+export interface ManagedSkillRecord {
+  id: string
+  name: string
+  description: string
+  source: string
+  repository?: string
+  revision?: string
+  skillPath?: string
+  hash: string
+  enabled: boolean
+  removed: boolean
+  backup?: string
+  installedAt: string
+}
+/** Current managed installations, import candidates and repository subscriptions. */
+export interface SkillManagementSnapshot {
+  installed: ManagedSkillRecord[]
+  local: ManagedSkillCandidate[]
+  repositories: string[]
+}
+/** User-authorized installation coordinates; remote revisions are pinned before download. */
+export interface SkillInstallRequest {
+  repository: string
+  revision: string
+  path: string
+}

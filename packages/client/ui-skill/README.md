@@ -22,6 +22,12 @@ English | [中文](README.zh.md)
 
 -----
 
+### Skill management
+
+Settings → Skills provides installed skills, the public skills.sh search catalog, GitHub repository subscriptions, local imports and ZIP installation. The search uses the same public API as [CC Switch](https://github.com/farion1231/cc-switch); GitHub installation resolves actual skill directories at a pinned commit and presents SKILL.md before writing files. Local imports preserve the original files. Managed updates and removal retain a restorable backup; conflicting unmanaged names and locally edited files are not overwritten.
+
+Installation, enable/disable, restoration and Rescan invalidate the Host registry and refresh retained Client catalogs without restarting. Changes affect future discovery and invocations; previously logged instructions remain in conversation history. Standard user skill roots must be enabled in the selected preset; project skills can override a user skill of the same name.
+
 <a id="use-this-package"></a>
 ## Use this package
 

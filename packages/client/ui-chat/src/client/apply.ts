@@ -11,6 +11,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-browser/client'
 import type {} from '@deepseek-ai/dsh-client-ui-input-trigger/client'
+import type {} from '@deepseek-ai/dsh-client-ui-commands/client'
 // The `file` entry of `SidebarRightResourceParamsMap`, which types `{ params: { line } }` below.
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client'
 import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
@@ -74,7 +75,7 @@ export const CHAT_NODE_INJECT: ChatNodeInjected = {
 /** Services required by the Chat target and its presentation registrations. */
 export const inject = [
   'slots', 'sessions', 'uiWorkspace', 'uiSession', 'uiConversation', 'locale',
-  'configForms', 'remote', 'remote.session', 'sidebarRight',
+  'configForms', 'remote', 'remote.session', 'remote.commands', 'remote.skills', 'sidebarRight',
 ]
 
 /**
@@ -284,6 +285,29 @@ export function apply(ctx: Context): void {
               else chatScrollPositions.set(sessionId, position)
             },
             read: () => chatScrollPositions.get(sessionId) ?? null,
+          },
+          editSlash: {
+            list: async () => {
+              const [commands, skills] = await Promise.all([
+                ctx.remote.commands.list(sessionId), ctx.remote.skills.list({ sessionId }),
+              ])
+              if (!commands.ok) throw new Error(commands.error.message)
+              if (!skills.ok) throw new Error(skills.error.message)
+              const names = new Set(commands.value.map(item => item.name))
+              return [
+                ...commands.value.map(item => ({ name: item.name, description: item.description, kind: 'command' as const })),
+                ...skills.value.skills.filter(item => !names.has(item.name))
+                  .map(item => ({ name: item.name, description: item.description, kind: 'skill' as const })),
+              ]
+            },
+            execute: async (text) => {
+              const result = await ctx.remote.commands.execute(sessionId, text, [])
+              if (!result.ok) throw new Error(result.error.message)
+              if (result.value === undefined) throw new Error('Unknown command')
+              if (result.value.result.kind === 'error') throw new Error(result.value.result.text)
+              try { ctx.emit('command/executed', sessionId, text.trim().split(/\s+/u)[0]?.slice(1) ?? '', result.value.result) }
+              catch (error) { console.warn('[ui-chat] command notification failed', error) }
+            },
           },
           editMessage: async (seq, text) => {
             if (editAttempt?.seq !== seq || editAttempt.text !== text) editAttempt = { seq, text,

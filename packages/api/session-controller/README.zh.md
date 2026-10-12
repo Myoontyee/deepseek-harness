@@ -24,6 +24,10 @@ kind: "package-reference"
 
 -----
 
+### 受管理技能
+
+经过认证的 skills Remote 管理 `$DSH_HOME/skills` 中的用户安装，以及 `$DSH_HOME/skill-manager` 中的元数据、禁用技能和备份。它支持发现 skills.sh 条目及固定 GitHub 提交的归档内容、以纯文本预览指令、本机技能与有限大小 ZIP 导入、版本检查和串行可恢复文件操作。归档拒绝路径穿越、忽略大小写后重复的路径及超限解压。安装不会执行下载的脚本。注册表失效后转发 `api-skills/changed` 通知，目录使用方收到该事件后重新加载。
+
 <a id="use-this-package"></a>
 ## 使用本包
 

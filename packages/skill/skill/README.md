@@ -22,6 +22,10 @@ Use this package to give agents and users one catalog of reusable, task-specific
 
 -----
 
+### Explicit refresh
+
+`refresh()` invalidates cached skill discovery and emits the existing change notification. Installation managers can refresh immediately even when filesystem watching is disabled. Subsequent discovery and loading use current providers; refresh does not rewrite instructions already recorded in a Session.
+
 <a id="use-this-package"></a>
 ## Use this package
 

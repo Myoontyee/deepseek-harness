@@ -618,6 +618,11 @@ export class SkillRegistry extends Service {
     return { entries: candidates, cacheable }
   }
 
+  /** Refresh all provider catalogs after a user-managed installation or explicit rescan. */
+  refresh(): void {
+    this.invalidateCache()
+  }
+
   private invalidateCache(): void {
     this.revision += 1
     this.collectCache.clear()

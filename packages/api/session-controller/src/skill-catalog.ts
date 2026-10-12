@@ -7,6 +7,8 @@ import { isUserInvocable } from '@deepseek-ai/dsh-skill'
 import type {} from '@deepseek-ai/dsh-working-directory'
 import type { ScopeKey } from '@deepseek-ai/dsh-scope'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import { SkillManagement } from './skill-management.ts'
+import type { ManagedSkillCandidate, SkillManagementSnapshot, SkillInstallRequest } from './types.ts'
 import type { SkillListRequest, SkillListValue } from './types.ts'
 
 declare module '@deepseek-ai/cordis' {
@@ -18,11 +20,14 @@ declare module '@deepseek-ai/cordis' {
 
 /** Host service backing `ctx.remote.skills` without activating a cold Agent. */
 export class SessionSkillCatalog extends TypertRemoteService {
+  private readonly management: SkillManagement
   static inject = ['agents', 'sessionQuery', 'typert', 'workingDirectory']
 
   /** @param ctx - Host context carrying Session reads and optional skill/preset services. */
   constructor(ctx: Context) {
     super(ctx, 'sessionSkillCatalog', { namespace: 'skills' })
+    ctx.on('skills/change', () => { ctx.emit('api-skills/changed') })
+    this.management = new SkillManagement(() => { ctx.get('skills')?.refresh() })
   }
 
   /**
@@ -89,6 +94,109 @@ export class SessionSkillCatalog extends TypertRemoteService {
       throw new RemoteError('gateway/internal', `skill listing failed: ${String(error)}`, {})
     }
   }
+
+  /**
+   * List managed installations and available local imports.
+   * @returns Current management state.
+   */
+  @Remote
+  async installed(): Promise<SkillManagementSnapshot> { return this.management.snapshot() }
+
+  /**
+   * Search the public skills.sh catalog.
+   * @param query - Public market search text.
+   * @param signal - Caller cancellation.
+   * @returns Matching public skill metadata.
+   */
+  @Remote
+  async discover(query: string, signal: AbortSignal): Promise<ManagedSkillCandidate[]> { return this.management.discover(query, signal) }
+
+  /**
+   * Persist explicit repository subscriptions.
+   * @param repositories - Explicit GitHub repository subscriptions.
+   */
+  @Remote
+  async setRepositories(repositories: string[]): Promise<void> { await this.management.repositories(repositories) }
+
+  /**
+   * Discover actual skill directories at a pinned repository revision.
+   * @param repository - GitHub owner/repository coordinates.
+   * @param signal - Caller cancellation.
+   * @returns Installable skill locations.
+   */
+  @Remote
+  async repositorySkills(repository: string, signal: AbortSignal): Promise<ManagedSkillCandidate[]> {
+    return this.management.repositorySkills(repository, signal)
+  }
+
+  /**
+   * Read a pinned repository skill document as inert text.
+   * @param request - Pinned repository, revision and skill location.
+   * @param signal - Caller cancellation.
+   * @returns Skill document text.
+   */
+  @Remote
+  async preview(request: SkillInstallRequest, signal: AbortSignal): Promise<string> { return this.management.preview(request, signal) }
+
+  /**
+   * Install a reviewed repository skill without executing its code.
+   * @param request - Pinned repository, revision and skill location.
+   * @param signal - Caller cancellation.
+   */
+  @Remote
+  async installSkill(request: SkillInstallRequest, signal: AbortSignal): Promise<void> { await this.management.install(request, signal) }
+
+  /**
+   * Copy an existing local skill into DSH management, preserving its source.
+   * @param id - Managed installation or local import identity.
+   */
+  @Remote
+  async importLocal(id: string): Promise<void> { await this.management.importLocal(id) }
+
+  /**
+   * Inspect a bounded ZIP before installation.
+   * @param base64 - Bounded base64-encoded ZIP content.
+   * @returns Installable archive skill locations.
+   */
+  @Remote
+  async zipSkills(base64: string): Promise<ManagedSkillCandidate[]> { return this.management.zipSkills(base64) }
+
+  /**
+   * Read a selected archive skill document as inert text.
+   * @param base64 - Bounded base64-encoded ZIP content.
+   * @param path - Selected skill directory within the archive.
+   * @returns Skill document text.
+   */
+  @Remote
+  async previewZip(base64: string, path: string): Promise<string> { return this.management.previewZip(base64, path) }
+
+  /**
+   * Install a reviewed skill from a bounded archive.
+   * @param base64 - Bounded base64-encoded ZIP content.
+   * @param path - Selected skill directory within the archive.
+   */
+  @Remote
+  async installZip(base64: string, path: string): Promise<void> { await this.management.installZip(base64, path) }
+
+  /**
+   * Apply a reversible change to a managed installation.
+   * @param id - Managed installation or local import identity.
+   * @param action - User-requested reversible operation.
+   */
+  @Remote
+  async manage(id: string, action: 'enable' | 'disable' | 'remove' | 'restore'): Promise<void> { await this.management.manage(id, action) }
+
+  /**
+   * Check upstream revisions without modifying installations.
+   * @param signal - Caller cancellation.
+   * @returns Installations with newer upstream revisions.
+   */
+  @Remote
+  async updates(signal: AbortSignal): Promise<Array<{ id: string; revision: string }>> { return this.management.updates(signal) }
+
+  /** Invalidate Host and browser skill catalogs without restarting any Agent. */
+  @Remote
+  async refresh(): Promise<void> { this.ctx.get('skills')?.refresh() }
 
   /** Resolve a live or standing preset scope without creating an Agent. */
   private async scopeFor(

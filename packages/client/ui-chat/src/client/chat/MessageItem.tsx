@@ -340,7 +340,7 @@ export function PendingSubmissionBubble({ submission, renderMessageImages, t }: 
 
 /** User and admitted-steering keyed Chat renderer. */
 export const UserMessageNodeView = memo(function UserMessageNodeView({
-  node, renderMessageImages, openFile, openSkill, editMessage, editableMessageSeq, t,
+  node, renderMessageImages, openFile, openSkill, editMessage, editSlash, editableMessageSeq, t,
 }: ChatNodeViewProps<'user' | 'steering'>) {
   const data = node.data
   const [editing, setEditing] = useState(false)
@@ -349,7 +349,7 @@ export const UserMessageNodeView = memo(function UserMessageNodeView({
   const canEdit = node.kind === 'user' && data.seq === editableMessageSeq && editMessage !== undefined
   return (
     <UserStyleBubble
-      editor={editing ? <MessageEditor text={annotated?.text ?? original.text} t={t}
+      editor={editing ? <MessageEditor text={annotated?.text ?? original.text} t={t} slash={editSlash}
         allowEmpty={original.attachments.length > 0 || (annotated?.annotations.length ?? 0) > 0}
         disabled={!canEdit} annotationCount={annotated?.annotations.length ?? 0}
         onCancel={() =>{  setEditing(false) }} onSave={async (text) => {

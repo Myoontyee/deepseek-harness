@@ -6,6 +6,12 @@ export const NS = 'chat'
 /** Simplified Chinese dictionary and key-set source of truth. */
 export const zh = {
   'message.edit': '编辑消息',
+  'message.editCatalogFailed': '命令与技能目录加载失败，请检查连接后重试。',
+  'message.editSlash': '命令与技能',
+  'message.editSkill': '技能',
+  'message.editCommand': '命令',
+  'message.editCommandHint': '此操作执行会话命令，不进行消息编辑。请核对命令及参数。',
+  'message.editRunCommand': '执行命令',
   'message.editSave': '保存并重新生成',
   'message.editSaveShortcut': '保存并重新生成（Ctrl+Enter）',
   'message.editSaving': '正在提交…',
@@ -216,6 +222,12 @@ export type ChatKey = keyof typeof zh
 /** English dictionary, checked against the Chinese key set. */
 export const en = {
   'message.edit': 'Edit message',
+  'message.editCatalogFailed': 'Command and skill catalog could not be loaded. Check the connection and try again.',
+  'message.editSlash': 'Commands and skills',
+  'message.editSkill': 'Skill',
+  'message.editCommand': 'Command',
+  'message.editCommandHint': 'This runs a session command instead of editing a message. Check the command and its arguments before running.',
+  'message.editRunCommand': 'Run command',
   'message.editSave': 'Save and regenerate',
   'message.editSaveShortcut': 'Save and regenerate (Ctrl+Enter)',
   'message.editSaving': 'Submitting…',

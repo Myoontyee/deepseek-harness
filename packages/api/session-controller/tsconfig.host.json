@@ -23,7 +23,8 @@
     "src/archived-session-gate.ts",
     "src/skill-catalog.ts",
     "src/session-relay.ts",
-    "src/session-tools.ts"
+    "src/session-tools.ts",
+    "src/skill-management.ts"
   ],
   "references": [
     {
@@ -116,6 +117,11 @@
     {
       "path": "../../session/working-directory"
     },
-    { "path": "../../core/tools" }
+    {
+      "path": "../../core/tools"
+    },
+    {
+      "path": "../../util/home-paths"
+    }
   ]
 }

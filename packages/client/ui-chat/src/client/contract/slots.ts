@@ -216,6 +216,8 @@ export interface ChatNodeOwnerProps {
   forkAt: (seq: number) => void
   /** Revise the latest human prompt in this same Session. */
   editMessage?: ((seq: number, text: string) => Promise<void>) | undefined
+  /** Command and skill selection inside the message editor. */
+  editSlash?: MessageEditSlash | undefined
   /** Exact last message sequence admitted for editing. */
   editableMessageSeq?: number | undefined
   /**
@@ -312,6 +314,8 @@ export interface ChatViewInjected {
   forkAt: (seq: number) => void
   /** Revise the latest human prompt in this same Session. */
   editMessage?: ((seq: number, text: string) => Promise<void>) | undefined
+  /** Command and skill selection inside the message editor. */
+  editSlash?: MessageEditSlash | undefined
   /** Exact last message sequence admitted for editing. */
   editableMessageSeq?: number | undefined
   fileMentions: (owner: TurnTailOwnerProps) => MarkdownFileMentions | undefined
@@ -322,7 +326,7 @@ export type ChatFlowDataInjected = Pick<ChatViewInjected, 'hooks' | 'keyedHooks'
 
 /** Ordered rows and reconciled local echoes rendered inside one Chat viewport. */
 export interface ChatFlowOwnerProps extends Pick<ChatNodeOwnerProps,
-  'cwd' | 'openSkill' | 'openFile' | 'inspectCall' | 'forkAt' | 'editMessage' | 'editableMessageSeq' | 'loadImage' | 'fileMentions'> {
+  'cwd' | 'openSkill' | 'openFile' | 'inspectCall' | 'forkAt' | 'editMessage' | 'editSlash' | 'editableMessageSeq' | 'loadImage' | 'fileMentions'> {
   readonly entries: readonly RenderEntry[]
   readonly pendingInputs: readonly (PendingSubmission | InboxState['next-step'][number])[]
   readonly lastInputTurn: number | undefined
@@ -429,4 +433,12 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'shell.quota-notice': { kind: 'chain'; scope: 'root'; owner: QuotaNoticeOwnerProps }
   }
+}
+
+/** Session-owned slash actions for the historical-message editor. */
+export interface MessageEditSlash {
+  /** Fetch the current command and user-invocable skill catalog. */
+  list(): Promise<Array<{ name: string; description: string; kind: 'command' | 'skill' }>>
+  /** Execute a Host command without replacing a historical message. */
+  execute(text: string): Promise<void>
 }

@@ -44,6 +44,9 @@ import { rankByName } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: pulls the SlotRegistry service merge (ctx.slots).
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { RemoteResult } from '@deepseek-ai/dsh-api-remotes/client'
+import { SkillsPage, type SkillsPageActions } from './SkillsPage.tsx'
 import { SkillRow } from './SkillRow.tsx'
 import { en, NS, zh, type SkillKey } from './locales.ts'
 
@@ -82,6 +85,31 @@ export function apply(ctx: ClientContext): void {
     { name: 'tool.call.toolview', key: 'skill', locale: NS },
     SkillRow,
   ))
+
+  const unwrap = <T>(result: RemoteResult<T>): T => {
+    if (!result.ok) throw new Error(result.error.message)
+    return result.value
+  }
+  const management: SkillsPageActions = {
+    snapshot: async () => unwrap(await ctx.remote.skills.installed()),
+    discover: async query => unwrap(await ctx.remote.skills.discover(query)),
+    repositorySkills: async repository => unwrap(await ctx.remote.skills.repositorySkills(repository)),
+    repositories: async values => unwrap(await ctx.remote.skills.setRepositories(values)),
+    preview: async request => unwrap(await ctx.remote.skills.preview(request)),
+    install: async request => unwrap(await ctx.remote.skills.installSkill(request)),
+    importLocal: async id => unwrap(await ctx.remote.skills.importLocal(id)),
+    zipSkills: async base64 => unwrap(await ctx.remote.skills.zipSkills(base64)),
+    previewZip: async (base64, path) => unwrap(await ctx.remote.skills.previewZip(base64, path)),
+    installZip: async (base64, path) => unwrap(await ctx.remote.skills.installZip(base64, path)),
+    manage: async (id, action) => unwrap(await ctx.remote.skills.manage(id, action)),
+    updates: async () => unwrap(await ctx.remote.skills.updates()),
+    refresh: async () => unwrap(await ctx.remote.skills.refresh()),
+    copy: (value) => { void navigator.clipboard.writeText(value).catch(() => {}) },
+  }
+  ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section', id: 'skills', order: 35, label: () => ctx.locale.bind(NS)('settingsNav'), locale: NS,
+    inject: () => management,
+  }, SkillsPage))
 
   const skills = ctx.remote.skills
   const sessions = ctx.sessions
@@ -129,6 +157,7 @@ export function apply(ctx: ClientContext): void {
     promise.then(
       // Settled snapshot backs the synchronous lexicon reads.
       (skills) => {
+        if (fetches.get(sessionId) !== entry || abort.signal.aborted) return
         entry.settled = skills
         notifyLexicon(sessionId)
       },
@@ -228,6 +257,11 @@ export function apply(ctx: ClientContext): void {
   // A preset decides which skill providers an agent reads, so a switched
   // session's cached catalog belongs to the composition it no longer runs.
   ctx.remote.$on('agent-preset/selected', invalidate)
+  ctx.remote.$on('api-skills/changed', () => {
+    const keys = [...fetches.keys()]
+    clearAll()
+    for (const key of keys) fetchCatalog(key).promise.catch(() => {})
+  })
   ctx.on('connection/reset', clearAll)
   ctx.effect(() => {
     const unregister = inputTriggers.registerSource(source)

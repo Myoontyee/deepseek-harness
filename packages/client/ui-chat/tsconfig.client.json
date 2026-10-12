@@ -9,7 +9,9 @@
     "src"
   ],
   "references": [
-    { "path": "../../util/crypto" },
+    {
+      "path": "../../util/crypto"
+    },
     {
       "path": "../../util/brand"
     },
@@ -117,6 +119,9 @@
     },
     {
       "path": "../product-analytics/tsconfig.client.json"
+    },
+    {
+      "path": "../ui-commands"
     }
   ],
   "exclude": [

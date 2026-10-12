@@ -82,3 +82,28 @@ it.each([{ text: '', disabled: false }, { text: '有效内容', disabled: true }
   fireEvent.keyDown(view.getByLabelText('编辑消息'), { key: 'Enter', ctrlKey: true })
   expect(onSave).not.toHaveBeenCalled()
 })
+
+it('selects a slash skill while editing, then saves through Ctrl+Enter', async () => {
+  const onSave = vi.fn().mockResolvedValue(undefined)
+  const slash = { list: vi.fn().mockResolvedValue([{ name: 'review', description: 'Review code', kind: 'skill' }]), execute: vi.fn() }
+  const view = render(<MessageEditor text="/rev" allowEmpty={false} disabled={false} annotationCount={0}
+    slash={slash} onSave={onSave} onCancel={() => {}} t={t} />)
+  const option = await view.findByRole('option')
+  fireEvent.click(option)
+  const input = view.getByLabelText('编辑消息') as HTMLTextAreaElement
+  expect(input.value).toBe('/review ')
+  await waitFor(() => expect((view.getByText('保存并重新生成') as HTMLButtonElement).disabled).toBe(false))
+  fireEvent.keyDown(input, { key: 'Enter', ctrlKey: true })
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith('/review '))
+  expect(slash.execute).not.toHaveBeenCalled()
+})
+it('executes an explicit session command without rewriting the historical message', async () => {
+  const onSave = vi.fn()
+  const slash = { list: vi.fn().mockResolvedValue([{ name: 'compact', description: 'Compact', kind: 'command' }]), execute: vi.fn().mockResolvedValue(undefined) }
+  const view = render(<MessageEditor text="/compact" allowEmpty={false} disabled={false} annotationCount={0}
+    slash={slash} onSave={onSave} onCancel={() => {}} t={t} />)
+  const run = await view.findByText('执行命令')
+  fireEvent.click(run)
+  await waitFor(() => expect(slash.execute).toHaveBeenCalledWith('/compact'))
+  expect(onSave).not.toHaveBeenCalled()
+})

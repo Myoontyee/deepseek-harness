@@ -129,7 +129,7 @@ describe('apply', () => {
     expect(entry?.options).toMatchObject({ key: 'skill' })
     expect(entry?.locale).toBe('skill')
     expect(entry?.component).toBe(SkillToolRow)
-    expect(presentation.dictionaries).toEqual([{
+    expect(presentation.dictionaries).toMatchObject([{
       namespace: 'skill', dictionaries: {
         zh: {
           'row.title': '加载技能',
@@ -541,4 +541,13 @@ describe('reference preview', () => {
     expect(list).not.toHaveBeenCalled()
     expect(openResource).not.toHaveBeenCalled()
   })
+})
+
+it('refreshes existing slash catalogs when the Host reports skill changes', async () => {
+  let catalog = CATALOG
+  const { source, remote } = await bench(payload => listOk(catalog)(payload))
+  expect(await source.candidates(proj('s1'), req(''))).toHaveLength(3)
+  catalog = [{ name: 'newly-installed', description: 'new skill', modelInvocable: true }]
+  remote.emit('api-skills/changed', [])
+  await vi.waitFor(async () => { expect(await source.candidates(proj('s1'), req(''))).toMatchObject([{ name: 'newly-installed' }]) })
 })

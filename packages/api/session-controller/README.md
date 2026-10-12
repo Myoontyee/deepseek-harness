@@ -24,6 +24,10 @@ Desktop analytics follows the [product collection policy](../../client/product-a
 
 -----
 
+### Managed skills
+
+The authenticated skills Remote manages user installations in `$DSH_HOME/skills` and metadata, disabled skills and backups in `$DSH_HOME/skill-manager`. It discovers skills.sh entries and pinned GitHub archive contents, previews inert instructions, imports local skills and bounded ZIP files, checks revisions, and serializes reversible file changes. Archives reject traversal, duplicate case-insensitive paths and excessive expansion. Installation never executes downloaded scripts. The forwarded `api-skills/changed` notification follows registry invalidation; catalog consumers reload on that event.
+
 <a id="use-this-package"></a>
 ## Use this package
 

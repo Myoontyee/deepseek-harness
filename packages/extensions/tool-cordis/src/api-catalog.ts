@@ -2660,6 +2660,78 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'user-invocable skill metadata without loading skill bodies.',
         throws: ['RemoteError when the Session cannot be inspected or no registry can serve it.'],
       },
+      {
+        signature: '@Remote async installed(): Promise<SkillManagementSnapshot>',
+        description: 'List managed installations and available local imports.',
+        parameters: [],
+        returns: 'Current management state.',
+      },
+      {
+        signature: '@Remote async discover(query: string, signal: AbortSignal): Promise<ManagedSkillCandidate[]>',
+        description: 'Search the public skills.sh catalog.',
+        parameters: [{ name: 'query', description: 'Public market search text.' }, { name: 'signal', description: 'Caller cancellation.' }],
+        returns: 'Matching public skill metadata.',
+      },
+      {
+        signature: '@Remote async setRepositories(repositories: string[]): Promise<void>',
+        description: 'Persist explicit repository subscriptions.',
+        parameters: [{ name: 'repositories', description: 'Explicit GitHub repository subscriptions.' }],
+      },
+      {
+        signature: '@Remote async repositorySkills(repository: string, signal: AbortSignal): Promise<ManagedSkillCandidate[]>',
+        description: 'Discover actual skill directories at a pinned repository revision.',
+        parameters: [{ name: 'repository', description: 'GitHub owner/repository coordinates.' }, { name: 'signal', description: 'Caller cancellation.' }],
+        returns: 'Installable skill locations.',
+      },
+      {
+        signature: '@Remote async preview(request: SkillInstallRequest, signal: AbortSignal): Promise<string>',
+        description: 'Read a pinned repository skill document as inert text.',
+        parameters: [{ name: 'request', description: 'Pinned repository, revision and skill location.' }, { name: 'signal', description: 'Caller cancellation.' }],
+        returns: 'Skill document text.',
+      },
+      {
+        signature: '@Remote async installSkill(request: SkillInstallRequest, signal: AbortSignal): Promise<void>',
+        description: 'Install a reviewed repository skill without executing its code.',
+        parameters: [{ name: 'request', description: 'Pinned repository, revision and skill location.' }, { name: 'signal', description: 'Caller cancellation.' }],
+      },
+      {
+        signature: '@Remote async importLocal(id: string): Promise<void>',
+        description: 'Copy an existing local skill into DSH management, preserving its source.',
+        parameters: [{ name: 'id', description: 'Managed installation or local import identity.' }],
+      },
+      {
+        signature: '@Remote async zipSkills(base64: string): Promise<ManagedSkillCandidate[]>',
+        description: 'Inspect a bounded ZIP before installation.',
+        parameters: [{ name: 'base64', description: 'Bounded base64-encoded ZIP content.' }],
+        returns: 'Installable archive skill locations.',
+      },
+      {
+        signature: '@Remote async previewZip(base64: string, path: string): Promise<string>',
+        description: 'Read a selected archive skill document as inert text.',
+        parameters: [{ name: 'base64', description: 'Bounded base64-encoded ZIP content.' }, { name: 'path', description: 'Selected skill directory within the archive.' }],
+        returns: 'Skill document text.',
+      },
+      {
+        signature: '@Remote async installZip(base64: string, path: string): Promise<void>',
+        description: 'Install a reviewed skill from a bounded archive.',
+        parameters: [{ name: 'base64', description: 'Bounded base64-encoded ZIP content.' }, { name: 'path', description: 'Selected skill directory within the archive.' }],
+      },
+      {
+        signature: '@Remote async manage(id: string, action: \'enable\' | \'disable\' | \'remove\' | \'restore\'): Promise<void>',
+        description: 'Apply a reversible change to a managed installation.',
+        parameters: [{ name: 'id', description: 'Managed installation or local import identity.' }, { name: 'action', description: 'User-requested reversible operation.' }],
+      },
+      {
+        signature: '@Remote async updates(signal: AbortSignal): Promise<Array<{ id: string; revision: string }>>',
+        description: 'Check upstream revisions without modifying installations.',
+        parameters: [{ name: 'signal', description: 'Caller cancellation.' }],
+        returns: 'Installations with newer upstream revisions.',
+      },
+      {
+        signature: '@Remote async refresh(): Promise<void>',
+        description: 'Invalidate Host and browser skill catalogs without restarting any Agent.',
+        parameters: [],
+      },
     ],
   },
   {
@@ -2884,6 +2956,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Load and validate the winning candidate, passing its opaque discovery locator back to the provider. Cancellation is rechecked after selection, including cache hits, and raced against loading so an uncooperative provider cannot hang the caller.',
         parameters: [{ name: 'name', description: 'kebab-case skill name.' }, { name: 'options', description: 'view options; `scope` selects the viewing agent\'s layers, `cwd` selects workspace-sensitive skills, and `signal` cancels work.' }],
         returns: 'the full skill, including body content, or `undefined`.',
+      },
+      {
+        signature: 'refresh(): void',
+        description: 'Refresh all provider catalogs after a user-managed installation or explicit rescan.',
+        parameters: [],
       },
     ],
   },
@@ -4227,6 +4304,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     summary: 'One Agent changed running state.',
     description: 'One Agent changed running state.',
     parameters: [{ name: 'sessionId', description: 'Agent and Session identity.' }, { name: 'running', description: 'whether the Agent is running.' }],
+  },
+  {
+    name: 'api-skills/changed',
+    mode: 'emit',
+    signature: '\'api-skills/changed\'(): void',
+    summary: 'A skill installation or provider change invalidates browser skill lists.',
+    description: 'A skill installation or provider change invalidates browser skill lists. @mode emit',
+    parameters: [],
   },
   {
     name: 'app-boot/config-reload',
@@ -6141,6 +6226,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface LspRange {\n    readonly start: LspPosition;\n    readonly end: LspPosition;\n}',
   },
   {
+    name: 'ManagedSkillCandidate',
+    declaration: 'export interface ManagedSkillCandidate {\n    id: string;\n    name: string;\n    description: string;\n    path: string;\n    source: string;\n    repository?: string;\n    revision?: string;\n    installs?: number;\n}',
+  },
+  {
+    name: 'ManagedSkillRecord',
+    declaration: 'export interface ManagedSkillRecord {\n    id: string;\n    name: string;\n    description: string;\n    source: string;\n    repository?: string;\n    revision?: string;\n    skillPath?: string;\n    hash: string;\n    enabled: boolean;\n    removed: boolean;\n    backup?: string;\n    installedAt: string;\n}',
+  },
+  {
     name: 'ManagementError',
     declaration: 'export interface ManagementError {\n    code: ReadOnlyReason | \'unknown-plugin\' | \'invalid-spec\' | \'ambiguous-install\' | \'not-bundle\' | \'not-removable\' | \'stop-profile\' | \'bundle-in-use\' | \'stale-approval\' | \'incompatible-version\' | \'operation-error\';\n    diagnostic?: string;\n    incompatible?: IncompatiblePlugin[];\n}',
   },
@@ -7641,6 +7734,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SkillEntry {\n    readonly path?: string;\n    readonly name: string;\n    readonly description: string;\n    readonly whenToUse?: string;\n    readonly modelInvocable: boolean;\n}',
   },
   {
+    name: 'SkillInstallRequest',
+    declaration: 'export interface SkillInstallRequest {\n    repository: string;\n    revision: string;\n    path: string;\n}',
+  },
+  {
     name: 'SkillInvocationPolicy',
     declaration: 'export interface SkillInvocationPolicy {\n    readonly modelInvocable: boolean;\n    readonly userInvocable: boolean;\n}',
   },
@@ -7655,6 +7752,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SkillLookupOptions',
     declaration: 'export interface SkillLookupOptions {\n    readonly cwd?: string | undefined;\n    readonly signal?: AbortSignal | undefined;\n}',
+  },
+  {
+    name: 'SkillManagementSnapshot',
+    declaration: 'export interface SkillManagementSnapshot {\n    installed: ManagedSkillRecord[];\n    local: ManagedSkillCandidate[];\n    repositories: string[];\n}',
   },
   {
     name: 'SkillProvider',

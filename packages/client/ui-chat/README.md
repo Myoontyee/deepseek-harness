@@ -206,3 +206,5 @@ None; Chat presentation does not assemble or mutate provider requests.
 None.
 
 </details>
+
+The inline editor offers `/` suggestions for current skills and Host commands. Picking a skill inserts its literal invocation into the edited prompt. A leading Host command changes the submit action to Execute command and runs through the command controller; it does not also replace the old prompt. Ctrl+Enter follows the displayed action.

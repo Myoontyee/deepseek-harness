@@ -14,3 +14,8 @@
 }
 .actions button:disabled { opacity: 0.5; cursor: default; }
 .actions .save { border-color: var(--dsw-alias-state-business-primary); }
+
+.menu { max-height: 240px; overflow-y: auto; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; }
+.menu button { display: flex; flex-wrap: wrap; width: 100%; gap: 8px; padding: 8px 10px; text-align: left; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.menu button[aria-selected="true"] { background: var(--dsw-specific-input-major); }
+.menu span { width: 100%; font-size: 12px; opacity: .75; }
