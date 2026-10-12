@@ -119,6 +119,11 @@ Read these pages when the package-level contract is not enough. They move from t
 
 -----
 
+
+### Windows text-edit guidance
+
+The tool description recommends structured literal edits, UTF-8 scripts, callable Python regex replacements for Windows paths/LaTeX, and PowerShell -LiteralPath. This reduces escaping retries; it is guidance, not automatic rewriting or a guarantee that generated scripts are correct.
+
 <a id="model-experience"></a>
 ## Model Experience
 

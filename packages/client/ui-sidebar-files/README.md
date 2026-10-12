@@ -49,6 +49,15 @@ State lives in the type's own store, bucketed by tab id: `root`, `levels` (loadi
 
 Each open `DirectoryNode` owns its target watch for the Tab lifetime; collapse closes that node and its hidden descendants. Expansion changes during ancestor restoration update the store and pending nodes, so restored descendants follow the latest expansion preferences. Automatic refresh defaults to enabled; its separate toggle is hidden while state, labels, styles, and toggle logic remain. Changes received during a directory read or its completion remain pending for another refresh.
 
+
+### File actions
+
+Right-click files, folders or empty tree space to create entries, open previews, reveal paths, open a terminal, search, add a structured conversation reference, copy/cut/paste, rename or move to system trash. Paste asks for a destination name and refuses overwrites. The internal file clipboard is session-scoped; absolute/relative path copying writes plain text to the system clipboard. Root mutations and link traversal are refused.
+
+With tree focus: Ctrl+C/X/V copies/cuts/pastes a file; Shift+Alt+C copies the absolute path; Ctrl+Shift+C (also after Ctrl+K) copies the relative path; F2 renames; Delete confirms recycling; Shift+Alt+R reveals; Shift+Alt+F searches; Shift+F10 opens the menu. Composer typing is unaffected.
+
+The document toolbar adds a copy menu, locate-in-tree, add-reference and reveal controls alongside the existing application picker. The files revealPath navigation expands ancestors and focuses the target. Injected FileActions keep components independent of services. Mutations currently require a local workspace; drag-and-drop and cross-session paste are unsupported.
+
 <a id="model-experience"></a>
 ## Model Experience
 
@@ -61,7 +70,6 @@ None; directory listings travel over the Remote and assemble no model request.
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
-- **Listing only.** No search, artifact filter, drag-and-drop, rename, context menu, or current-file highlight.
 - **One root.** The tree is rooted at the session's working directory; there is no way to browse above it, and the Host refuses paths outside the workspace root anyway.
 
 <a id="dev-note"></a>

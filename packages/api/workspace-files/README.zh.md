@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-使用本包可从 Web Client 预览 Session 文件系统允许读取的文件。它按页读取 UTF-8 文本、按有界窗口或完整文件读取原始字节、从基文件目录解析关联文件，并报告文件元数据。可以跟随一个文件或一个目录直接子项的变化。文件读取和监听可以指向工作区外路径；目录列举和监听仍限定于工作区。本服务不提供修改操作。
+使用本包可从 Web Client 预览 Session 文件系统允许读取的文件。它按页读取 UTF-8 文本、按有界窗口或完整文件读取原始字节、从基文件目录解析关联文件，并报告文件元数据。可以跟随一个文件或一个目录直接子项的变化。文件读取和监听可以指向工作区外路径；目录列举和监听仍限定于工作区。本服务也支持显式本地文件操作。
 
 ## 目录
 
@@ -123,6 +123,13 @@ Typert 生成 `./typert` 与 `./remote` 暴露的 Host 与 Client Remote 产物�
 - [Sidebar 文本预览](../../client/ui-sidebar-documentpreview/README.zh.md)——经 `file` 提供者跟随文件并读取其页的 tab 类型。
 
 -----
+
+
+### 文件操作
+
+changeEntry(sessionId, request) 接受 FileEntryChange：新建文件/目录、重命名、复制、移动或移到回收站。修改串行执行，解析父目录并限定在会话工作区内，拒绝符号链接、根目录修改和覆盖目标。复制使用独占临时条目，失败时仅清理自身条目。回收站调用禁用通配符展开。此本地接口不修改 SSH 文件系统。
+
+searchEntries(sessionId, directory, query, content) 按字面值搜索名称或 UTF-8 内容，支持取消和条目/字节上限，跳过二进制文件与链接，返回路径、行号、文本和截断标记。
 
 <a id="model-experience"></a>
 ## 模型体验

@@ -8,7 +8,7 @@
  * relative paths, with the sandbox policy root as its no-cwd fallback, not a
  * read-containment restriction. Directory listings and change observations
  * remain workspace-scoped. File-kind checks and configured read caps apply to
- * every preview; this service exposes no mutations.
+ * every preview. Explicit file-tree mutations are confined to a local workspace.
  *
  * A page is cut from `streamText`, which decodes and rejects non-UTF-8 as it
  * goes, so the file is read only up to the first character past the page and
@@ -19,6 +19,9 @@
  * file content across the wire, which is a different level of exposure.
  */
 
+import type { FileEntryChange } from './types.ts'
+import { fileURLToPath } from 'node:url'
+import { changeFileEntry, searchFileEntries } from './file-operations.ts'
 import { posix, win32 } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
@@ -191,6 +194,7 @@ export class WorkspaceFiles extends TypertRemoteService {
   })
 
   private readonly feed: WorkspaceChangeFeed
+  private fileMutation: Promise<unknown> = Promise.resolve()
 
   /**
    * @param ctx - Host context carrying the filesystem and the sandbox policy.
@@ -339,6 +343,44 @@ export class WorkspaceFiles extends TypertRemoteService {
   @Remote({ mode: 'stream' })
   changes(workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal): AsyncIterable<WorkspaceFileWatchFrame> {
     return this.feed.follow(workspaceFileScope.workspaceRoot, path, signal)
+  }
+
+  /**
+   * Change a user-selected local workspace entry; trash operations use the OS recycle bin.
+   * @param workspaceFileScope - Session-derived workspace directory.
+   * @param request - Explicit operation and workspace-contained paths.
+   * @param signal - Cancellation before mutation admission.
+   * @returns The affected absolute path.
+   */
+  @Remote
+  async changeEntry(workspaceFileScope: WorkspaceFileScope, request: FileEntryChange, signal: AbortSignal): Promise<string> {
+    const root = await this.localWorkspace(workspaceFileScope, signal)
+    const operation = this.fileMutation.then(() => changeFileEntry(root, request, signal))
+    this.fileMutation = operation.catch(() => {})
+    return operation
+  }
+
+  /**
+   * Search file names or text beneath a selected local directory.
+   * @param workspaceFileScope - Session-derived workspace directory.
+   * @param directory - Workspace-contained directory.
+   * @param query - Literal search text.
+   * @param content - Whether to search text contents instead of names.
+   * @param signal - Caller cancellation.
+   * @returns Bounded matches and a truncation indication.
+   */
+  @Remote
+  async searchEntries(workspaceFileScope: WorkspaceFileScope, directory: string, query: string, content: boolean,
+    signal: AbortSignal): Promise<{ matches: Array<{ path: string; line: number; text: string }>; truncated: boolean }> {
+    return searchFileEntries(await this.localWorkspace(workspaceFileScope, signal), directory, query, content,
+      this.config.maxEntries, this.config.maxFileBytes, signal)
+  }
+
+  private async localWorkspace(scope: WorkspaceFileScope, signal: AbortSignal): Promise<string> {
+    const target = await this.ctx.fs.resolve(scope.workspaceRoot, { signal })
+    const url = new URL(this.ctx.fs.fileUrl(target))
+    if (url.protocol !== 'file:' || url.hostname !== '') throw new Error('FILE_ENTRY_LOCAL_ONLY')
+    return fileURLToPath(url)
   }
 
   private async relativePath(scope: WorkspaceFileScope, baseFile: string, path: string, signal: AbortSignal): Promise<string> {

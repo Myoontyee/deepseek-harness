@@ -11,6 +11,13 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
 import type {} from './locales.ts'
 import { GuideArtworkFiles } from '@deepseek-ai/dsh-client-ui-primitives'
 
+declare module '@deepseek-ai/dsh-client-ui-sidebar-right/client' {
+  interface SidebarRightTabParamsMap {
+    /** Reveal a file by expanding its workspace ancestors. */
+    files: { revealPath: string }
+  }
+}
+
 /** The tab kind this package owns. */
 export const FILES_KIND = 'files'
 

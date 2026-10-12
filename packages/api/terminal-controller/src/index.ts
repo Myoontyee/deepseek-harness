@@ -361,7 +361,15 @@ export class TerminalController extends TypertRemoteService {
     agent: Agent, owner: OwnedSession, request: TerminalCreateRequest, signal: AbortSignal, profile?: TerminalShell,
   ): Promise<BrowserTerminal> {
     const { subprocess, workingDirectory } = this.execution(agent)
-    const cwd = await workingDirectory.ensure(agent, signal)
+    let cwd = await workingDirectory.ensure(agent, signal)
+    if (request.cwd !== undefined) {
+      const fs = agent.ctx.get('fs')
+      if (fs === undefined) throw new Error('Filesystem provider is unavailable')
+      const root = await fs.resolve(cwd, { signal })
+      const target = await fs.resolve(request.cwd, { cwd, signal })
+      if (!fs.contains(root, target) || (await fs.stat(target, signal))?.type !== 'directory') throw new Error('Terminal directory must be inside the workspace')
+      cwd = fs.processPath(target)
+    }
     const shell = profile ?? (request.shellPath === undefined
       ? await resolveShell(subprocess, this.config.shell, signal)
       : (await this.shells(agent, signal)).find(candidate => candidate.path === request.shellPath))

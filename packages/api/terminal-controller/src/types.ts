@@ -57,6 +57,8 @@ export interface WebTerminalInfo {
 
 /** Create is idempotent for an open identity; closed identities cannot be recreated. */
 export interface TerminalCreateRequest {
+  /** Optional existing directory inside the session workspace; does not change the session cwd. */
+  readonly cwd?: string
   /** A path returned by shell discovery; absent selects the execution default. */
   readonly shellPath?: string
   readonly id: WebTerminalId

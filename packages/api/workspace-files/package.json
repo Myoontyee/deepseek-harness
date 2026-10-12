@@ -55,7 +55,8 @@
     "@deepseek-ai/dsh-deque": "workspace:*",
     "@deepseek-ai/dsh-typert-protocol": "workspace:*",
     "@deepseek-ai/schemastery": "workspace:~",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "trash": "^10.1.1"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~"

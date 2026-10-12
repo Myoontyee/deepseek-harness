@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to preview files readable through a Session's filesystem from the web client. It reads UTF-8 text by page, reads bounded byte windows or complete files, resolves related files from a base file's directory, and reports file metadata. Follow changes to a file or a directory's direct entries. File reads and watches may target paths outside the workspace; directory listing and watches remain workspace-scoped. The service exposes no mutation operation.
+Use this package to preview files readable through a Session's filesystem from the web client. It reads UTF-8 text by page, reads bounded byte windows or complete files, resolves related files from a base file's directory, and reports file metadata. Follow changes to a file or a directory's direct entries. File reads and watches may target paths outside the workspace; directory listing and watches remain workspace-scoped. The service also offers explicit local workspace file actions.
 
 ## Table of Contents
 
@@ -123,6 +123,13 @@ Typert generates the Host and Client Remote artifacts exposed by `./typert` and 
 - [Sidebar text preview](../../client/ui-sidebar-documentpreview/README.md) — the tab type that follows a file through the `file` provider and reads its pages.
 
 -----
+
+
+### File actions
+
+changeEntry(sessionId, request) accepts FileEntryChange: new-file/new-folder, rename, copy, move or trash. Serialized mutations resolve parents beneath the session workspace, reject symlinks/root mutation and refuse overwrites. Copy uses a private staging entry and cleans up only that entry on failure. Trash uses the OS recycle facility with glob expansion disabled. SSH filesystems are not mutated through this local API.
+
+searchEntries(sessionId, directory, query, content) searches literal names or UTF-8 content with cancellation, entry and byte caps; binary files and linked paths are skipped. Results carry path, line, text and an explicit truncation flag.
 
 <a id="model-experience"></a>
 ## Model Experience

@@ -25,7 +25,7 @@ const TIMEOUT_CODE = 'PERSISTENT_PWSH_TIMEOUT'
 const SCROLLBACK_PAGE_LINES = 1_000
 const POLL_INTERVAL_MS = 25
 
-const DEFAULT_DESCRIPTION = 'Run commands in a persistent PowerShell shell. State, including the current directory and exported environment variables, persists across calls for this agent.'
+const DEFAULT_DESCRIPTION = 'Run commands in a persistent PowerShell shell. State, including the current directory and exported environment variables, persists across calls for this agent. Prefer the structured edit tool for literal file edits. In Python use UTF-8 and str.replace for literal replacements; use a callable re.sub replacement for Windows paths or LaTeX to avoid interpreting backslashes. Pass file contents through saved scripts or literal here-strings, not shell interpolation. Use PowerShell -LiteralPath for filenames containing brackets.'
 
 interface ResolvedConfig {
   backendType: string

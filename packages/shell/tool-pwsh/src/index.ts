@@ -124,6 +124,7 @@ function pwshDescription(windowsSandbox: boolean): string {
   const base = 'Execute a PowerShell command (`pwsh -Command`) and return its stdout/stderr. '
     + 'Each call runs in a fresh pwsh process; pass `workdir` instead of using `cd`. Paths use native Windows form (`C:\\...`); read environment '
     + 'variables with `$env:NAME`. '
+    + 'For file edits prefer the structured edit tool with literal matching. When Python is needed, use UTF-8 files and str.replace for literal replacements; with re.sub use a callable replacement (lambda m: replacement) for Windows paths or LaTeX so backslashes are not reinterpreted. Do not interpolate file contents into shell commands; use saved scripts or literal here-strings. PowerShell uses -LiteralPath for paths containing brackets. '
     + 'Managed `$env:DSH_*` variables expose current harness environment facts. '
     + 'Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. '
     + 'On Windows a force-killed command settles as `[exit code: 1]` without a signal marker — treat it as an interruption, not a command failure. '

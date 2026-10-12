@@ -16,6 +16,11 @@ import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { FileNotice, type FileNoticeState } from './FileNotice.tsx'
+import { createFileActions } from './action-face.ts'
+import { FileToolbar } from './FileToolbar.tsx'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client'
 import { FILES_ID, filesDefinition } from './definition.tsx'
 import { createList, createWatch, filesFace } from './face.ts'
 import { FilesBody } from './FilesBody.tsx'
@@ -49,7 +54,7 @@ const NS = 'sidebarFiles'
  * Required browser services: the tab registry, the keyed seat, the Remote
  * carrier and its namespace, and copy.
  */
-export const inject = ['slots', 'locale', 'sidebarRightTabs', 'sidebarRight', 'remote', 'remote.workspaceFiles']
+export const inject = ['slots', 'locale', 'sidebarRightTabs', 'sidebarRight', 'remote', 'remote.workspaceFiles', 'remote.session', 'remote.terminal', 'sessions']
 
 /**
  * Client plugin body: register the type, its dictionaries, its body, and its chip title.
@@ -82,7 +87,19 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-sidebar-files: dictionaries')
 
   const store = createFilesStore()
-  const inject = filesFace(createList(ctx.remote), createWatch(ctx.remote))
+  const treeFace = filesFace(createList(ctx.remote), createWatch(ctx.remote))
+  const notices = createSnapshotStore<FileNoticeState>({ text: '', seq: 0 })
+  const notify = (text: string): void => { notices.update((state) => { state.text = text; state.seq++ }) }
+  const fileActions = createFileActions(ctx, notify)
+  ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+    name: 'shell.overlay', id: 'file-actions.notice',
+    inject: () => ({ hooks: { fileNotice: notices }, dismissNotice: () => { notify('') } }),
+  }, FileNotice))
+  const inject: typeof treeFace = (sessionId, actions) => ({ ...treeFace(sessionId, actions), fileActions: fileActions(sessionId) })
+  ctx.slots.inject('sidebar.right.tab.document.actions', () => ctx.slots.register({
+    name: 'sidebar.right.tab.document.actions', id: 'file-tools', order: -10, locale: NS,
+    inject: sessionId => ({ fileActions: fileActions(sessionId) }),
+  }, FileToolbar))
   ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
     {
       name: 'sidebar.right.pane.tab', key: FILES_ID, locale: NS, store, inject,

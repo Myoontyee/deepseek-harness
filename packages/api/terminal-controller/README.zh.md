@@ -73,6 +73,11 @@ Client 在分配前将每条 Session/内容与终端身份的关联保存到独�
 - [用户终端权限](../../../.agents/notes/implemented/architecture/2026-09-16-user-terminal-permissions.zh.md)
 - [Web terminal decision](../../../.agents/notes/implemented/feature/2026-09-09-web-sidebar-terminal.zh.md)
 
+
+### 选定目录
+
+TerminalCreateRequest.cwd 可指定会话工作区内已有目录。创建进程前通过文件系统提供者验证目录类型和工作区边界。已存在的终端身份保留原始 cwd；不会更改会话 cwd。
+
 <a id="model-experience"></a>
 ## 模型体验
 

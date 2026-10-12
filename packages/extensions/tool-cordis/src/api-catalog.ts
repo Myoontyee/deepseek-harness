@@ -4061,6 +4061,18 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: '`ready` once the target watch is active, then current metadata for queued and live invalidations.',
         throws: ['RemoteError when watching is unavailable or a directory is outside the workspace.'],
       },
+      {
+        signature: '@Remote async changeEntry(workspaceFileScope: WorkspaceFileScope, request: FileEntryChange, signal: AbortSignal): Promise<string>',
+        description: 'Change a user-selected local workspace entry; trash operations use the OS recycle bin.',
+        parameters: [{ name: 'workspaceFileScope', description: 'Session-derived workspace directory.' }, { name: 'request', description: 'Explicit operation and workspace-contained paths.' }, { name: 'signal', description: 'Cancellation before mutation admission.' }],
+        returns: 'The affected absolute path.',
+      },
+      {
+        signature: '@Remote async searchEntries(workspaceFileScope: WorkspaceFileScope, directory: string, query: string, content: boolean, signal: AbortSignal): Promise<{ matches: Array<{ path: string; line: number; text: string }>; truncated: boolean }>',
+        description: 'Search file names or text beneath a selected local directory.',
+        parameters: [{ name: 'workspaceFileScope', description: 'Session-derived workspace directory.' }, { name: 'directory', description: 'Workspace-contained directory.' }, { name: 'query', description: 'Literal search text.' }, { name: 'content', description: 'Whether to search text contents instead of names.' }, { name: 'signal', description: 'Caller cancellation.' }],
+        returns: 'Bounded matches and a truncation indication.',
+      },
     ],
   },
   {
@@ -5648,6 +5660,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'FileDiff',
     declaration: 'export interface FileDiff {\n    path: string;\n    oldText: string | null;\n    newText: string;\n}',
+  },
+  {
+    name: 'FileEntryChange',
+    declaration: 'export interface FileEntryChange {\n    operation: \'new-file\' | \'new-folder\' | \'rename\' | \'copy\' | \'move\' | \'trash\';\n    path: string;\n    destination?: string;\n}',
   },
   {
     name: 'FileLocation',
@@ -8187,7 +8203,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'TerminalCreateRequest',
-    declaration: 'export interface TerminalCreateRequest {\n    readonly shellPath?: string;\n    readonly id: WebTerminalId;\n    readonly cols: number;\n    readonly rows: number;\n}',
+    declaration: 'export interface TerminalCreateRequest {\n    readonly cwd?: string;\n    readonly shellPath?: string;\n    readonly id: WebTerminalId;\n    readonly cols: number;\n    readonly rows: number;\n}',
   },
   {
     name: 'TerminalEnvironment',

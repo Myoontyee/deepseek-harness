@@ -803,7 +803,7 @@ Deliveries belong to the calling Session; Web ui-deliverables supplies source-fi
 
 ### `pwsh`
 
-Execute a PowerShell command (`pwsh -Command`) and return its stdout/stderr. Each call runs in a fresh pwsh process; pass `workdir` instead of using `cd`. Paths use native Windows form (`C:\...`); read environment variables with `$env:NAME`. Managed `$env:DSH_*` variables expose current harness environment facts. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. On Windows a force-killed command settles as `[exit code: 1]` without a signal marker — treat it as an interruption, not a command failure. Provide `description` before `command` in the arguments. Before any delete or move, verify that the resolved absolute target path is the intended one; never run it against a computed path you have not checked. Do not assign to automatic variables such as `$HOME`; variable names are case-insensitive, so `$home` is the same read-only variable. Commands may run under a file sandbox; a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]`, a policy denial: do not retry another way.
+Execute a PowerShell command (`pwsh -Command`) and return its stdout/stderr. Each call runs in a fresh pwsh process; pass `workdir` instead of using `cd`. Paths use native Windows form (`C:\...`); read environment variables with `$env:NAME`. For file edits prefer the structured edit tool with literal matching. When Python is needed, use UTF-8 files and str.replace for literal replacements; with re.sub use a callable replacement (lambda m: replacement) for Windows paths or LaTeX so backslashes are not reinterpreted. Do not interpolate file contents into shell commands; use saved scripts or literal here-strings. PowerShell uses -LiteralPath for paths containing brackets. Managed `$env:DSH_*` variables expose current harness environment facts. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. On Windows a force-killed command settles as `[exit code: 1]` without a signal marker — treat it as an interruption, not a command failure. Provide `description` before `command` in the arguments. Before any delete or move, verify that the resolved absolute target path is the intended one; never run it against a computed path you have not checked. Do not assign to automatic variables such as `$HOME`; variable names are case-insensitive, so `$home` is the same read-only variable. Commands may run under a file sandbox; a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]`, a policy denial: do not retry another way.
 
 ```json
 {
@@ -931,7 +931,7 @@ One owner-isolated persistent bash tool; deployment composition supplies the PTY
 
 ### `pwsh`
 
-Run commands in a persistent PowerShell shell. State, including the current directory and exported environment variables, persists across calls for this agent.
+Run commands in a persistent PowerShell shell. State, including the current directory and exported environment variables, persists across calls for this agent. Prefer the structured edit tool for literal file edits. In Python use UTF-8 and str.replace for literal replacements; use a callable re.sub replacement for Windows paths or LaTeX to avoid interpreting backslashes. Pass file contents through saved scripts or literal here-strings, not shell interpolation. Use PowerShell -LiteralPath for filenames containing brackets.
 
 ```json
 {

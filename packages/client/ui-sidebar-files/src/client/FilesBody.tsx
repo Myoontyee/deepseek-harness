@@ -21,6 +21,8 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
 import type { WorkspaceDirectoryEntry } from '@deepseek-ai/dsh-api-workspace-files/types'
+import { FileTools } from './FileTools.tsx'
+import { relativeFilePath } from './file-actions.ts'
 import { childPath } from './face.ts'
 import type { FilesInjected } from './face.ts'
 import type {} from './locales.ts'
@@ -139,7 +141,7 @@ function Level({ path, tree }: { path: string; tree: TreeContext }): ReactNode {
 /** The file tree's body: the workspace root and whatever the reader has opened under it. */
 export function FilesBody({
   useTabInfo, sessionId, useSessions, useStore, actions,
-  start, refresh, setAutoRefresh, toggle, t, renderSlot,
+  start, refresh, setAutoRefresh, toggle, t, renderSlot, fileActions,
 }: FilesBodyProps): ReactNode {
   const { tab } = useTabInfo()
   useEffect(() => tab.actions.bindCommands({ refresh: () => { refresh(tab.id) } }), [tab.actions, tab.id, refresh])
@@ -172,6 +174,28 @@ export function FilesBody({
     start(tab.id, cwd, signal)
   }, [state, cwd, tab.id, signal, start])
 
+  const navigation = tab.navigation.params as { revealPath?: string } | undefined
+  const revealPath = navigation?.revealPath
+  const revealed = useRef<number>()
+  useEffect(() => {
+    if (state === undefined || revealPath === undefined || revealed.current === tab.navigation.revision) return
+    const relative = relativeFilePath(state.root, revealPath)
+    if (relative === revealPath || relative === '.') return
+    const parts = relative.split('/')
+    let parent = state.root
+    for (const part of parts.slice(0, -1)) {
+      const path = childPath(parent, part)
+      if (!state.expanded.includes(path)) { toggle(tab.id, parent, path, state.expanded, signal); return }
+      if (state.levels[path]?.kind !== 'ready') return
+      parent = path
+    }
+    const path = childPath(parent, parts.at(-1) ?? '')
+    const row = Array.from(bodyRef.current?.querySelectorAll<HTMLElement>('[data-files-entry]') ?? []).find(entry => entry.dataset.filesPath === path)
+    if (row !== undefined) revealed.current = tab.navigation.revision
+    row?.scrollIntoView({ block: 'nearest' })
+    row?.querySelector<HTMLButtonElement>('button')?.focus()
+  }, [revealPath, tab.navigation.revision, state, toggle, tab.id, signal])
+
   if (cwd === undefined) {
     return (
       <div className={css.status} data-files-state="no-workspace">
@@ -190,7 +214,7 @@ export function FilesBody({
   const reload = (): void => {
     refresh(tab.id)
   }
-  return (
+  const body = (
     <div className={css.root} data-files-state="tree" data-files-root={state.root}>
       <div className={css.header}>
         <PathLabel path={state.root} className={css.path} data-files-path />
@@ -222,10 +246,13 @@ export function FilesBody({
         ref={bodyRef}
         className={css.body}
         data-files-body
+        tabIndex={0}
         onScroll={(event) => { scrollTopRef.current = event.currentTarget.scrollTop }}
       >
         <ul className={css.level}><Level path={state.root} tree={tree} /></ul>
       </div>
     </div>
   )
+  return fileActions === undefined ? body
+    : <FileTools root={state.root} fileActions={fileActions} t={t} onChanged={reload}>{body}</FileTools>
 }

@@ -174,3 +174,10 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     }
   }
 }
+
+/** File-tree mutations; destinations are absolute paths within the same workspace. */
+export interface FileEntryChange {
+  operation: 'new-file' | 'new-folder' | 'rename' | 'copy' | 'move' | 'trash'
+  path: string
+  destination?: string
+}

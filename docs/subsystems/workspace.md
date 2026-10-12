@@ -479,6 +479,26 @@ Host Remote file reads and workspace directory observations over the composed fi
  * @throws RemoteError when watching is unavailable or a directory is outside the workspace.
  */
 @Remote({ mode: 'stream' }) changes(workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal): AsyncIterable<WorkspaceFileWatchFrame>
+
+/**
+ * Change a user-selected local workspace entry; trash operations use the OS recycle bin.
+ * @param workspaceFileScope - Session-derived workspace directory.
+ * @param request - Explicit operation and workspace-contained paths.
+ * @param signal - Cancellation before mutation admission.
+ * @returns The affected absolute path.
+ */
+@Remote async changeEntry(workspaceFileScope: WorkspaceFileScope, request: FileEntryChange, signal: AbortSignal): Promise<string>
+
+/**
+ * Search file names or text beneath a selected local directory.
+ * @param workspaceFileScope - Session-derived workspace directory.
+ * @param directory - Workspace-contained directory.
+ * @param query - Literal search text.
+ * @param content - Whether to search text contents instead of names.
+ * @param signal - Caller cancellation.
+ * @returns Bounded matches and a truncation indication.
+ */
+@Remote async searchEntries(workspaceFileScope: WorkspaceFileScope, directory: string, query: string, content: boolean, signal: AbortSignal): Promise<{ matches: Array<{ path: string; line: number; text: string }>; truncated: boolean }>
 ```
 
 Source: [`packages/api/workspace-files/src/index.ts`](../../packages/api/workspace-files/src/index.ts)

@@ -109,6 +109,11 @@ kind: "package-reference"
 
 -----
 
+
+### Windows 文本编辑提示
+
+工具描述建议使用结构化字面文本编辑、UTF-8 脚本、针对 Windows 路径/LaTeX 的 Python 正则函数替换，以及 PowerShell 的 -LiteralPath，以减少转义错误重试。这是提示约束，不会自动改写脚本，也不保证生成代码必然正确。
+
 <a id="model-experience"></a>
 ## 模型体验
 

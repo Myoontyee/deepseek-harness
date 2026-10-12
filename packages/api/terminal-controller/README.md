@@ -73,6 +73,11 @@ Closing saves an unfinished cleanup request before releasing the tab, then await
 - [User-terminal permissions](../../../.agents/notes/implemented/architecture/2026-09-16-user-terminal-permissions.md)
 - [Web terminal decision](../../../.agents/notes/implemented/feature/2026-09-09-web-sidebar-terminal.md)
 
+
+### Selected directory
+
+TerminalCreateRequest.cwd optionally selects an existing directory inside the session workspace. The filesystem provider verifies containment and directory kind before process creation. Existing terminal identities retain their original cwd; the session cwd is unchanged.
+
 <a id="model-experience"></a>
 ## Model Experience
 
