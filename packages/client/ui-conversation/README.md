@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 Desktop product events use the optional [product analytics service](../product-analytics/README.md); ordinary Web interactions are excluded.
 
-Selecting text within one Chat message offers **Add to conversation**. The composer stores quotations separately from request text and displays a collapsible annotation count; each quotation has an optional comment and can be removed. Ordinary sends include the annotations with their source Session address and message key in the persisted text, including annotation-only sends. Failed sends restore annotations without replacing newer request text. Slash commands retain annotations and require their removal before command submission. Unsent annotations remain browser-memory drafts for that Session.
+Selecting text within one Chat message offers **Add to conversation**. The composer stores quotations separately from request text and displays a count chip with a hover preview. Preview cards show the selected text, retained comment, and edit/delete controls. Clicking the chip or edit action opens the comment manager; edits are retained immediately. The chip's clear button removes all quotation drafts without changing request text. Disabled submission state permits reading but locks mutations. Ordinary sends include the annotations with their source Session address and message key in the persisted text, including annotation-only sends. Failed sends restore annotations without replacing newer request text. Slash commands retain annotations and require their removal before command submission. Unsent annotations remain browser-memory drafts for that Session.
 
 ## Summary
 

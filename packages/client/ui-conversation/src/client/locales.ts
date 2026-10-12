@@ -10,6 +10,12 @@ const PLAN_NEXT_ACTION_EN = 'describe your task to generate plan'
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
   'annotation.add': '添加到对话',
+  'annotation.selectedText': '所选文本：',
+  'annotation.edit': '编辑评论',
+  'annotation.clear': '清空所有注释',
+  'annotation.close': '关闭注释',
+  'annotation.done': '完成',
+  'annotation.savedHint': '评论自动保留，发送时会与所选原文一起交给模型',
   'annotation.count': '{count} 条注释',
   'annotation.comment': '补充评论（可选）',
   'annotation.remove': '移除注释',
@@ -393,6 +399,12 @@ export type ConversationKey = keyof typeof zh
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
   'annotation.add': 'Add to conversation',
+  'annotation.selectedText': 'Selected text:',
+  'annotation.edit': 'Edit comment',
+  'annotation.clear': 'Clear all annotations',
+  'annotation.close': 'Close annotations',
+  'annotation.done': 'Done',
+  'annotation.savedHint': 'Comments are retained automatically and sent to the model with the selected text',
   'annotation.count': '{count} annotations',
   'annotation.comment': 'Add a comment (optional)',
   'annotation.remove': 'Remove annotation',
