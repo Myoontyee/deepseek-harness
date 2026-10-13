@@ -111,6 +111,29 @@ try {
       w.removeAllListeners('show'); w.show();w.focus();w.webContents.focus()
     }
   })
+  // A second real product window must receive the existing unread snapshot,
+  // then acknowledge it for both windows when its conversation is viewed.
+  await page.evaluate(async ({a,b})=>{
+    await window.dshDesktop.completion.report({selected:b,ready:false,sessions:[{id:a,running:true}]})
+    await window.dshDesktop.completion.report({selected:b,ready:false,sessions:[{id:a,running:false}]})
+  },{a:sessionIds[0],b:sessionIds[1]})
+  const doneSelector='[data-row-key="session:'+sessionIds[0]+'"] [data-state="done"]'
+  await page.locator(doneSelector).waitFor()
+  const otherEvent=electronApp.waitForEvent('window')
+  await page.evaluate(id=>window.dshDesktop.sessions.openWindow(id),sessionIds[1])
+  const other=await otherEvent
+  await other.locator('[data-conversation-session="'+sessionIds[1]+'"]').waitFor({timeout:60000})
+  await other.locator(doneSelector).waitFor()
+  const otherWindow = await electronApp.browserWindow(other)
+  await otherWindow.evaluate(w => { w.removeAllListeners('show'); w.show(); w.focus(); w.webContents.focus() })
+  await other.locator('[data-row-key="session:'+sessionIds[0]+'"]').click()
+  await other.locator('[data-conversation-session="'+sessionIds[0]+'"]').waitFor()
+  await otherWindow.evaluate(w => { w.focus(); w.webContents.focus() })
+  await other.locator(doneSelector).waitFor({state:'detached'})
+  await page.locator(doneSelector).waitFor({state:'detached'})
+  await other.close()
+  await page.bringToFront()
+  evidence.multiwindowUnread=true
   const modelButton=page.getByText('请选择模型',{exact:true})
   if(await modelButton.count()) {
     await modelButton.click()
@@ -118,14 +141,20 @@ try {
   }
   const editor=page.locator('[contenteditable="true"]').last()
   await editor.fill('ANNOTATION_REQUEST_TEST')
-  async function selectPassage(needle) {
+  async function selectPassage(needle, comment) {
     const paragraph=page.locator('[data-conversation-session="'+sessionIds[1]+'"] p').filter({hasText:needle}).first()
     await paragraph.evaluate(element=>{
       const range=document.createRange();range.selectNodeContents(element)
       const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range)
       element.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))
     })
-    await page.getByRole('menuitem',{name:'添加到对话',exact:true}).click()
+    await page.getByRole('menuitem',{name:comment === undefined ? '添加到对话' : '添加注释',exact:true}).click()
+    if(comment !== undefined) {
+      const dialog=page.getByRole('dialog')
+      await dialog.getByRole('textbox').fill(comment)
+      await dialog.locator('[data-copy-math]').waitFor()
+      await dialog.getByRole('button',{name:'添加注释',exact:true}).click()
+    }
   }
   async function preview(count) {
     await page.locator('[data-draft-annotations]').getByRole('button',{name:count+' 条注释',exact:true}).hover()
@@ -133,7 +162,7 @@ try {
     await card.waitFor()
     return card
   }
-  await selectPassage('这是会话互通体验版')
+  await selectPassage('这是会话互通体验版', 'DIRECT_COMMENT_TEST')
   await selectPassage('安装后的正式会话使用')
   let card=await preview(2)
   assert.equal(await card.locator('blockquote').count(),2)
@@ -191,6 +220,8 @@ try {
   assert.equal(received.annotations[0].comment,'ANNOTATION_COMMENT_FINAL')
   assert.ok(received.annotations[0].text.includes('这是会话互通体验版'))
   assert.ok(received.annotations[0].sourceMessage)
+  assert.ok(received.annotations[0].text.includes('$CNR < 1$'))
+  assert.ok(received.annotations[0].text.includes('**对比度**'))
   await page.locator('[data-draft-annotations]').waitFor({state:'detached'})
   evidence.passed=true
   evidence.preview=true;evidence.edit=true;evidence.deleteOne=true;evidence.clearAll=true

@@ -27,9 +27,11 @@ export class CompletionBadge {
   private readonly unread = new Set<string>()
   private readonly selections = new Map<number, string | null>()
   private focused: number | null = null
-  private published = 0
-  /** @param render - Paint the native count after it changes. */
-  constructor(private readonly render: (count: number) => void) {}
+  private published = '[]'
+  /** @param render - Paint the native count. @param changed - Broadcast changed unread identities to product windows. */
+  constructor(private readonly render: (count: number) => void, private readonly changed: (ids: readonly string[]) => void = () => {}) {}
+  /** Shared unread identities for sidebar snapshots in all product windows. */
+  get unreadIds(): readonly string[] { return [...this.unread].sort() }
   /** Number of conversations with an unacknowledged completion. */
   get count(): number { return this.unread.size }
   /** @param windowId - Sender. @param report - Validated state. @param primary - Sole completion observer. */
@@ -62,9 +64,12 @@ export class CompletionBadge {
   private acknowledge(): void {
     const viewed = this.viewed()
     if (viewed !== null) this.unread.delete(viewed)
-    if (this.published === this.count) return
-    this.published = this.count
+    const ids = this.unreadIds
+    const key = JSON.stringify(ids)
+    if (this.published === key) return
+    this.published = key
     this.render(this.count)
+    this.changed(ids)
   }
 }
 

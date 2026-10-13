@@ -5,14 +5,14 @@ const BLOCKS = new Set(['P', 'DIV', 'SECTION', 'BLOCKQUOTE'])
 const MATH = '[data-copy-math]'
 const CHROME = 'svg,[aria-hidden="true"],button:not([data-copy-file-link]),[data-code-block-banner]'
 function trimBreaks(text: string): string { return text.replace(/^\n+|\n+$/gu, '') }
-function selectedText(node: Node): string {
+function selectedText(node: Node, markdown = false): string {
   if (node.nodeType === Node.TEXT_NODE) {
     const text = node.textContent ?? ''
     if (text.trim() === '' && text.includes('\n')
       && (node.parentElement === null || ['DIV', 'SECTION', 'UL', 'OL', 'TABLE', 'TBODY', 'THEAD', 'TR'].includes(node.parentElement.tagName))) return ''
-    return text
+    return markdown ? text.replace(/[\\\x60*_[\]<>$]/gu, '\\$&') : text
   }
-  if (!(node instanceof Element)) return childrenText(node)
+  if (!(node instanceof Element)) return childrenText(node, markdown)
   const math = node.getAttribute('data-copy-math')
   if (math !== null) {
     const display = node.getAttribute('data-copy-math-display') === 'true'
@@ -20,28 +20,48 @@ function selectedText(node: Node): string {
     return display ? `\n\n${text}\n\n` : text
   }
   if (node.matches(CHROME)) return ''
+  if (markdown && (node.tagName === 'PRE' || node.classList.contains('md-code-block'))) {
+    const code = node.tagName === 'PRE' ? node.textContent ?? '' : node.querySelector('pre')?.textContent ?? ''
+    const fence = '`'.repeat(Math.max(3, ...[...code.matchAll(/`+/gu)].map(match => match[0].length + 1)))
+    return '\n\n' + fence + '\n' + code + '\n' + fence + '\n\n'
+  }
+  if (markdown && node.tagName === 'CODE') {
+    const code = node.textContent ?? ''
+    const fence = '`'.repeat(Math.max(1, ...[...code.matchAll(/`+/gu)].map(match => match[0].length + 1)))
+    return fence + ' ' + code + ' ' + fence
+  }
   if (node.classList.contains('md-code-block')) return `\n\n${node.querySelector('pre')?.textContent ?? ''}\n\n`
   if (node.tagName === 'PRE') return `\n\n${node.textContent}\n\n`
   if (node.tagName === 'CODE') return node.textContent
   if (node.tagName === 'TABLE') {
     const rows = [...node.querySelectorAll('tr')].map(row => [...row.children]
-      .filter(cell => cell.matches('th,td')).map(childrenText))
+      .filter(cell => cell.matches('th,td')).map(cell => childrenText(cell, markdown)))
     return `\n\n${clipboardTable(rows)}\n\n`
   }
   if (node.tagName === 'UL' || node.tagName === 'OL') {
     return `\n${[...node.children].filter(child => child.tagName === 'LI')
-      .map(item => trimBreaks(childrenText(item))).join('\n')}\n\n`
+      .map((item, index) => (markdown ? node.tagName === 'OL' ? String(Number(node.getAttribute('start') ?? 1) + index) + '. ' : '- ' : '')
+        + trimBreaks(childrenText(item, markdown))).join('\n')}\n\n`
   }
   if (node.tagName === 'IMG') return node.getAttribute('alt') ?? ''
   if (node.tagName === 'BR') return '\n'
   if (node.tagName === 'HR') return '\n\n'
-  const body = childrenText(node)
+  const body = childrenText(node, markdown)
+  if (markdown) {
+    const destination = node.getAttribute('data-copy-file-link') ?? node.getAttribute('href')
+    if (destination !== null) return '[' + body + '](<' + destination.replaceAll('<', '%3C').replaceAll('>', '%3E') + '>)'
+    if (node.tagName === 'STRONG' || node.tagName === 'B') return '**' + body + '**'
+    if (node.tagName === 'EM' || node.tagName === 'I') return '*' + body + '*'
+    if (node.tagName === 'DEL') return '~~' + body + '~~'
+    if (node.tagName === 'BLOCKQUOTE') return trimBreaks(body).split('\n').map(line => '> ' + line).join('\n') + '\n\n'
+    if (/^H[1-6]$/u.test(node.tagName)) return '#'.repeat(Number(node.tagName[1])) + ' ' + body + '\n\n'
+  }
   return BLOCKS.has(node.tagName) || /^H[1-6]$/u.test(node.tagName)
     ? body.endsWith('\n\n') ? body : `${body}\n\n`
     : body
 }
-function childrenText(node: Node): string {
-  return [...node.childNodes].map(selectedText).reduce((text, next) =>
+function childrenText(node: Node, markdown = false): string {
+  return [...node.childNodes].map(child => selectedText(child, markdown)).reduce((text, next) =>
     text.endsWith('\n\n') ? text + next.replace(/^\n{1,2}/u, '') : text + next, '')
 }
 function elementOf(node: Node): Element | null { return node instanceof Element ? node : node.parentElement }
@@ -63,7 +83,7 @@ export function copyLinkedSelection(root: HTMLElement, event: ClipboardEvent): b
   return writeSelection(event, rangeContent(root, selected))
 }
 
-function rangeContent(root: HTMLElement, selected: Range): string {
+function rangeContent(root: HTMLElement, selected: Range, markdown = false): string {
   const range = selected.cloneRange()
   const firstMath = elementOf(range.startContainer)?.closest(MATH)
   const lastMath = elementOf(range.endContainer)?.closest(MATH)
@@ -78,7 +98,7 @@ function rangeContent(root: HTMLElement, selected: Range): string {
     fragment = wrapper
     ancestor = ancestor.parentElement
   }
-  const text = selectedText(fragment)
+  const text = selectedText(fragment, markdown)
   const startsInCode = elementOf(selected.startContainer)?.closest('pre,code,.md-code-block') !== null
     && elementOf(selected.startContainer)?.closest('pre,code,.md-code-block') !== undefined
   const endsInCode = elementOf(selected.endContainer)?.closest('pre,code,.md-code-block') !== null
@@ -174,4 +194,15 @@ function registerCopyRoot(root: HTMLElement, kind: 'markdown' | 'literal'): () =
       documents.delete(doc)
     }
   }
+}
+
+/**
+ * Preserve selected response structure as Markdown, with atomic original TeX formulas.
+ * @param root - Content owner containing both ends of the selection.
+ * @param selected - Selected passage; never modified.
+ * @returns Markdown for the selected passage, or empty text outside the owner.
+ */
+export function annotationSelectionMarkdown(root: HTMLElement, selected: Range): string {
+  if (!root.contains(selected.startContainer) || !root.contains(selected.endContainer)) return ''
+  return rangeContent(root, selected, true)
 }

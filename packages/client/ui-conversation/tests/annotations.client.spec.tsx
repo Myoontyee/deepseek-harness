@@ -155,3 +155,26 @@ it('allows reading annotations while submission has locked edits', () => {
   expect((view.getByRole('button', { name: '移除注释' }) as HTMLButtonElement).disabled).toBe(true)
   input.dispose()
 })
+
+it('adds a direct comment paired with its selected Markdown quotation and original formula', () => {
+  const container = document.createElement('div')
+  container.innerHTML = '<div data-chat-node-key="math1"><strong>引用</strong><span data-copy-math="CNR &lt; 1"><span>C</span><span>N</span><span>R</span><span aria-hidden="true">CNR</span></span></div>'
+  document.body.append(container)
+  onTestFinished(() => { container.remove() })
+  const addAnnotation = vi.fn(() => true)
+  const view = render(<SelectionAnnotation container={container} sessionId="source" addAnnotation={addAnnotation} t={t} />)
+  const range = document.createRange()
+  range.selectNodeContents(container.firstElementChild!)
+  const selection = window.getSelection()!
+  selection.removeAllRanges()
+  selection.addRange(range)
+  Object.defineProperty(Range.prototype, 'getBoundingClientRect', { configurable: true, value: () => new DOMRect(40, 80, 120, 20) })
+  fireEvent.pointerUp(container.firstElementChild!)
+  fireEvent.click(view.getByText('添加注释'))
+  expect(addAnnotation).not.toHaveBeenCalled()
+  fireEvent.change(view.getByRole('textbox', { name: '补充评论（可选）' }), { target: { value: '这是我的备注' } })
+  fireEvent.click(view.getByRole('button', { name: '添加注释', exact: true }))
+  expect(addAnnotation).toHaveBeenCalledWith(expect.objectContaining({
+    text: '**引用**$CNR < 1$', comment: '这是我的备注', sourceMessage: 'math1',
+  }))
+})

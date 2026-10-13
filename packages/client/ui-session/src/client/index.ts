@@ -284,6 +284,7 @@ export class UiSession extends Service {
   private pendingSnapshot: ReadonlyMap<SessionId, SessionPendingInteractionBase> = new Map()
   private readonly running = new Map<SessionId, boolean>()
   private readonly completionUnread = new Set<SessionId>()
+  private nativeCompletionUnread: ReadonlySet<string> | undefined
   private statusSnapshot: SessionStatusSnapshot = new Map()
   private readonly statusListeners = new Set<() => void>()
   private mainRetainId: SessionId | undefined
@@ -481,6 +482,15 @@ export class UiSession extends Service {
     this.publishStatus()
   }
 
+  /**
+   * Apply the Desktop owner's shared unread state to every sidebar.
+   * @param ids - Authoritative unread conversation identities.
+   */
+  setCompletionSnapshot(ids: readonly string[]): void {
+    this.nativeCompletionUnread = new Set(ids)
+    this.publishStatus()
+  }
+
   private observeRunning(sessionId: SessionId, running: boolean): void {
     const previous = this.running.get(sessionId)
     const beforeBaseline = this.sessions.list.getSnapshot().phase === 'pending'
@@ -530,7 +540,7 @@ export class UiSession extends Service {
       next.set(id, {
         running: this.running.get(id),
         pendingInteraction: this.pendingSnapshot.get(id),
-        completionUnread: this.completionUnread.has(id),
+        completionUnread: this.nativeCompletionUnread?.has(id) ?? this.completionUnread.has(id),
       })
     }
     if (sameSessionStatus(this.statusSnapshot, next)) return

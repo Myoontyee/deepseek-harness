@@ -6,6 +6,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InputActions, DraftAnnotation } from '../../contract/input.ts'
 import type { ConversationContentProps } from '../../contract/slots.ts'
+import { AnnotationQuote } from './AnnotationQuote.tsx'
 import css from './Annotations.module.css'
 
 /**
@@ -44,7 +45,7 @@ export function AnnotationDrafts({ annotations, actions, disabled, t }: {
             aria-label={t('annotation.remove')} disabled={disabled} onClick={() => { remove(annotation.id) }}><IconTrashOutlineRegular /></button></Tooltip>
         </span>
       </div>
-      <blockquote className={css.quote}>{annotation.text}</blockquote>
+      <AnnotationQuote text={annotation.text} t={t} />
       {annotation.sourceLabel && <div className={css.source}>{annotation.sourceLabel}</div>}
       {editable ? <label className={css.commentLabel}>
         {t('annotation.comment')}

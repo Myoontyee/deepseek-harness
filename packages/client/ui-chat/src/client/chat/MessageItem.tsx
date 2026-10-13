@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import type { PendingSubmission } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { MessageImageSource } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { fileExtension, FileTypeIcon, fileSizeText, JsonBlock, projectUserText, StateDot, TextShimmer } from '@deepseek-ai/dsh-client-ui-primitives'
-import { parseResponseAnnotations, registerLiteralCopy } from '@deepseek-ai/dsh-client-ui-primitives'
+import { MarkdownText, parseResponseAnnotations, registerLiteralCopy } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ChatNodeOwnerProps, ChatNodeViewProps, ChatViewSlotProps } from '../contract/slots.ts'
 import type { ModelRetryNode, TurnErrorNode, UserMessageNode } from '../contract/snapshot.ts'
 import { CompactionItem } from './CompactionItem.tsx'
@@ -11,6 +11,7 @@ import { ContextInjectionRow } from './ContextInjectionRow.tsx'
 import { MessageEditor } from './MessageEditor.tsx'
 import { serializeResponseAnnotations } from '@deepseek-ai/dsh-client-ui-primitives'
 import { MessageIconActions } from './MessageIconActions.tsx'
+import { markdownLabels } from '../markdown-labels.ts'
 import css from './MessageItem.module.css'
 
 type UserImage = Extract<UserMessageNode['content'][number], { type: 'image' }>
@@ -234,7 +235,7 @@ function UserStyleBubble({
                 {annotated.annotations.map((annotation, index) => (
                   <div className={css.annotation} key={index}>
                     <span className={css.annotationSource}>{annotation.sourceLabel}</span>
-                    <blockquote>{annotation.text}</blockquote>
+                    <MarkdownText text={annotation.text} variant="compact" labels={markdownLabels(t)} />
                     {annotation.comment !== '' && <p>{annotation.comment}</p>}
                   </div>
                 ))}

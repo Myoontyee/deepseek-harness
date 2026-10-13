@@ -10,6 +10,11 @@ const PLAN_NEXT_ACTION_EN = 'describe your task to generate plan'
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
   'annotation.add': '添加到对话',
+  'annotation.create': '添加注释',
+  'annotation.cancel': '取消',
+  'annotation.copy': '复制',
+  'annotation.copied': '已复制',
+  'annotation.footnotes': '脚注',
   'annotation.selectedText': '所选文本：',
   'annotation.edit': '编辑评论',
   'annotation.clear': '清空所有注释',
@@ -399,6 +404,11 @@ export type ConversationKey = keyof typeof zh
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
   'annotation.add': 'Add to conversation',
+  'annotation.create': 'Add annotation',
+  'annotation.cancel': 'Cancel',
+  'annotation.copy': 'Copy',
+  'annotation.copied': 'Copied',
+  'annotation.footnotes': 'Footnotes',
   'annotation.selectedText': 'Selected text:',
   'annotation.edit': 'Edit comment',
   'annotation.clear': 'Clear all annotations',

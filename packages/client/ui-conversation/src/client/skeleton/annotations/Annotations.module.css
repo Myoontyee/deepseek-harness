@@ -11,7 +11,7 @@
 .heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .tools { display: flex; align-items: center; gap: 4px; }
 .source { font-size: 13px; color: var(--dsw-alias-label-secondary); }
-.quote { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
+.quote { margin: 8px 0; white-space: normal; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
 .commentPreview { display: block; width: 100%; margin-top: 8px; padding: 8px; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; color: var(--dsw-alias-label-secondary); border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md); background: transparent; cursor: pointer; }
 .commentLabel { display: block; margin-top: 12px; font-size: 13px; color: var(--dsw-alias-label-secondary); }
 .comment { box-sizing: border-box; width: 100%; min-height: 80px; margin-top: 6px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md); background: var(--dsw-specific-input-major); color: var(--dsw-alias-label-primary); font: inherit; font-size: 14px; resize: vertical; }

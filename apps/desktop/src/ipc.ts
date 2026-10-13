@@ -29,6 +29,8 @@ export const DESKTOP_IPC = {
   browserOpenRequested: 'dsh-desktop:browser-open-requested',
   directoryPick: 'dsh-desktop:directory-pick',
   completionReport: 'dsh-desktop:completion-report',
+  completionSnapshot: 'dsh-desktop:completion-snapshot',
+  completionChanged: 'dsh-desktop:completion-changed',
   openSessionWindow: 'dsh-desktop:open-session-window',
   takeSessionLink: 'dsh-desktop:take-session-link',
   sessionLinkChanged: 'dsh-desktop:session-link-changed',
@@ -83,7 +85,10 @@ export interface DesktopUpdatePresentation {
 export interface DshDesktopProductApi {
   readonly protocolVersion: 1
   /** Report observed conversation state to the native unread badge. */
-  readonly completion: { report(value: CompletionReport): Promise<void> }
+  readonly completion: {
+    report(value: CompletionReport): Promise<void>
+    subscribe(listener: (ids: readonly string[]) => void): () => void
+  }
   readonly browser: DesktopBrowserBridge
   readonly keyboard: DesktopKeyboardApi
   readonly shortcuts: DesktopShortcutsApi

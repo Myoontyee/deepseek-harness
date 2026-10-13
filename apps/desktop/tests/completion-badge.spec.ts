@@ -54,3 +54,18 @@ it('validates the native IPC report', () => {
     expect(parseCompletionReport(input)).toBeNull()
   }
 })
+
+it('publishes shared identities even when one unread completion replaces another at the same count', () => {
+  const changed = vi.fn()
+  const badge = new CompletionBadge(() => {}, changed)
+  const report = (a: boolean, b: boolean) => ({ selected: null, ready: true, sessions: [{ id: 'a', running: a }, { id: 'b', running: b }] })
+  badge.report(1, report(true, true), true)
+  badge.report(1, report(false, true), true)
+  expect(badge.unreadIds).toEqual(['a'])
+  badge.report(1, report(true, false), true)
+  expect(changed).toHaveBeenLastCalledWith(['b'])
+  badge.report(2, { ...report(false, false), selected: 'b' }, false)
+  expect(badge.unreadIds).toEqual(['b'])
+  badge.focus(2)
+  expect(changed).toHaveBeenLastCalledWith([])
+})

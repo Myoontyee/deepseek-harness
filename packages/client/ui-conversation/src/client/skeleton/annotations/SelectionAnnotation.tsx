@@ -1,7 +1,9 @@
 /** Text-selection action scoped to one conversation transcript. */
 import { useEffect, useState } from 'react'
-import { Menu } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Menu, Modal, annotationSelectionMarkdown } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ResponseAnnotation } from '@deepseek-ai/dsh-client-ui-primitives'
+import { AnnotationQuote } from './AnnotationQuote.tsx'
+import css from './Annotations.module.css'
 import type { ConversationContentProps } from '../../contract/slots.ts'
 
 interface SelectedPassage {
@@ -26,6 +28,8 @@ export function SelectionAnnotation({ container, sessionId, addAnnotation, t }: 
   addAnnotation: (annotation: ResponseAnnotation) => boolean
   t: ConversationContentProps['t']
 }) {
+  const [commenting, setCommenting] = useState<ResponseAnnotation | null>(null)
+  const [comment, setComment] = useState('')
   const [passage, setPassage] = useState<SelectedPassage | null>(null)
   useEffect(() => {
     if (container === null) return
@@ -35,7 +39,8 @@ export function SelectionAnnotation({ container, sessionId, addAnnotation, t }: 
       if (selection === null || selection.isCollapsed || selection.rangeCount === 0) {  clear(); return }
       const owner = messageOwner(selection.anchorNode)
       if (owner === null || !container.contains(owner) || owner !== messageOwner(selection.focusNode)) {  clear(); return }
-      const text = selection.toString()
+      if (!(owner instanceof HTMLElement)) { clear(); return }
+      const text = annotationSelectionMarkdown(owner, selection.getRangeAt(0))
       if (text.trim() === '') {  clear(); return }
       setPassage({
         range: selection.getRangeAt(0).cloneRange(),
@@ -52,13 +57,24 @@ export function SelectionAnnotation({ container, sessionId, addAnnotation, t }: 
       container.removeEventListener('keyup', capture)
     }
   }, [container, sessionId, t])
+  if (commenting !== null) return <Modal open title={t('annotation.create')} closeLabel={t('annotation.close')}
+    onClose={() => { setCommenting(null) }} contentClassName={css.editor ?? ''}
+    footer={<><button type="button" className={css.done} onClick={() => { setCommenting(null) }}>{t('annotation.cancel')}</button>
+      <button type="button" className={css.done} onClick={() => {
+        if (addAnnotation({ ...commenting, comment })) setCommenting(null)
+      }}>{t('annotation.create')}</button></>}>
+    <AnnotationQuote text={commenting.text} t={t} />
+    <textarea className={css.comment} data-modal-autofocus value={comment} aria-label={t('annotation.comment')}
+      placeholder={t('annotation.comment')} onChange={(event) => { setComment(event.target.value) }} />
+  </Modal>
   if (passage === null) return null
   return (
     <Menu open anchor={null} portal compact side="top"
       getAnchorRect={() => passage.range.commonAncestorContainer.isConnected ? passage.range.getBoundingClientRect() : null}
-      items={[{ id: 'annotate', label: t('annotation.add') }]}
+      items={[{ id: 'add', label: t('annotation.add') }, { id: 'annotate', label: t('annotation.create') }]}
       onClose={() =>{  setPassage(null) }}
-      onSelect={() => {
+      onSelect={(id) => {
+        if (id === 'annotate') { setCommenting(passage.annotation); setComment(''); setPassage(null); return }
         if (addAnnotation(passage.annotation)) setPassage(null)
       }} />
   )

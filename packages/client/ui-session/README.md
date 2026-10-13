@@ -22,7 +22,7 @@ Running status comes from Host list baselines or status events. Subagent catalog
 
 ## Native completion reports
 
-The optional Desktop bridge reports existing Session status, selection and catalog observations. The native shell owns unread counts, deduplication and acknowledgement. Browser-only clients do not install a reporter.
+The optional Desktop bridge reports existing Session status, selection and catalog observations. The native shell owns unread counts, deduplication and acknowledgement. Desktop also broadcasts authoritative unread identities to every product window, including an initial snapshot for newly opened windows. Acknowledging a completion in a focused window clears every sidebar. Browser-only clients retain their local completion policy.
 
 <a id="model-experience"></a>
 ## Model Experience

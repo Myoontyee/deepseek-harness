@@ -3,6 +3,7 @@ import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { UiSession } from './index.ts'
 
 interface CompletionBridge {
+  subscribe?(listener: (ids: readonly string[]) => void): () => void
   report(value: { selected: string | null; ready: boolean; sessions: { id: string; running: boolean }[] }): Promise<void>
 }
 
@@ -18,6 +19,7 @@ export function installCompletionReports(ui: UiSession, sessions: ISessions): ()
   }).dshDesktop
   const bridge = desktop?.protocolVersion === 1 ? desktop.completion : undefined
   if (bridge === undefined) return () => {}
+  const stopUnread = bridge.subscribe?.((ids) => { ui.setCompletionSnapshot(ids) })
   let last = ''
   const report = (): void => {
     const selected = ui.adapter.current.getSnapshot().key
@@ -36,5 +38,5 @@ export function installCompletionReports(ui: UiSession, sessions: ISessions): ()
   const stopCurrent = ui.adapter.current.subscribe(report)
   const stopList = sessions.list.subscribe(report)
   report()
-  return () => { stopStatus(); stopCurrent(); stopList() }
+  return () => { stopUnread?.(); stopStatus(); stopCurrent(); stopList() }
 }

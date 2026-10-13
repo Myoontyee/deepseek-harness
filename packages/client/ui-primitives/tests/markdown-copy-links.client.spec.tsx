@@ -2,7 +2,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { useEffect, useRef } from 'react'
-import { registerLiteralCopy } from '../src/markdown/copy-selection.ts'
+import { registerLiteralCopy, annotationSelectionMarkdown } from '../src/markdown/copy-selection.ts'
 import { MarkdownDelegateProvider } from '../src/markdown/MarkdownDelegate.tsx'
 import { writeClipboard } from '../src/clipboard.ts'
 import { markdownClipboardText } from '../src/markdown/clipboard-text.ts'
@@ -289,4 +289,22 @@ it('retains selected code source blank lines at both edges', () => {
   range.selectNodeContents(view.container.querySelector('code')!)
   expect(copy(view.container, range).get('text/plain')).toBe('\n  x\n')
   expect(markdownClipboardText(source)).toBe('\n  x\n')
+})
+
+
+it('preserves annotation Markdown and original TeX while ordinary copy stays content-only', () => {
+  const view = render(<MarkdownText text={'## Title\n\n**Strong** and $\\mu_D$\n\n| A | B |\n| --- | --- |\n| $CNR < 1$ | yes |'} />)
+  const root = view.container.firstElementChild as HTMLElement
+  const range = document.createRange()
+  range.selectNodeContents(root)
+  const markdown = annotationSelectionMarkdown(root, range)
+  expect(markdown).toContain('## Title')
+  expect(markdown).toContain('**Strong**')
+  expect(markdown).toContain('$\\mu_D$')
+  expect(markdown).toContain('| $CNR < 1$ | yes |')
+  expect(copy(root, range).get('text/plain')).not.toContain('**Strong**')
+  const math = root.querySelector('[data-copy-math]')!
+  const character = math.querySelector('.katex-html')!
+  range.selectNodeContents(character)
+  expect(annotationSelectionMarkdown(root, range)).toBe('$\\mu_D$')
 })

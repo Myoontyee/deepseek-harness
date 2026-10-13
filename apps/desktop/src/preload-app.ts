@@ -13,7 +13,22 @@ import { createDesktopBrowserBridge } from './preload-browser.ts'
 function createProductApi(): DshDesktopProductApi {
   return {
     protocolVersion: 1,
-    completion: { report: value => ipcRenderer.invoke(DESKTOP_IPC.completionReport, value) as Promise<void> },
+    completion: {
+      report: value => ipcRenderer.invoke(DESKTOP_IPC.completionReport, value) as Promise<void>,
+      subscribe(listener) {
+        let disposed = false
+        let received = false
+        const receive = (_event: Electron.IpcRendererEvent, ids: readonly string[]): void => {
+          received = true
+          if (!disposed) listener(ids)
+        }
+        ipcRenderer.on(DESKTOP_IPC.completionChanged, receive)
+        void (ipcRenderer.invoke(DESKTOP_IPC.completionSnapshot) as Promise<readonly string[]>)
+          .then((ids) => { if (!disposed && !received) listener(ids) })
+          .catch((error: unknown) => { console.warn('Desktop completion snapshot failed:', error) })
+        return () => { disposed = true; ipcRenderer.off(DESKTOP_IPC.completionChanged, receive) }
+      },
+    },
     browser: createDesktopBrowserBridge(),
     deviceInfo: () => ipcRenderer.invoke(DESKTOP_IPC.deviceInfo) as Promise<string>,
     sessions: {

@@ -213,6 +213,8 @@ These limits define how the atoms behave at the edges; they are current package 
 
 Selecting a rendered Markdown passage copies content as plain text only, without an HTML or Markdown clipboard flavor. Headings, emphasis, quotes, list markers, code fences and link destinations are omitted; paragraph breaks, code content and literal characters remain. Formulas copy original TeX inside `$...$` or `$$...$$`, once even for a partial formula selection. Tables retain Markdown rows and columns with unstyled cell content. `markdownClipboardText` provides the same policy for complete message source without depending on visible DOM. Selections spanning registered Markdown and literal user-body regions join content in document order, preserving literal user characters and omitting intervening interface controls. Selections ending outside these content regions retain native browser behavior.
 
+Annotation quotations use annotationSelectionMarkdown to retain selected Markdown structure and original TeX. This does not change content-only clipboard behavior.
+
 <a id="dev-note"></a>
 ### Dev Note
 

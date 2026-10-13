@@ -375,7 +375,11 @@ async function main(): Promise<void> {
       if (window !== undefined && !window.isDestroyed()) window.setOverlayIcon(icon, count === 0 ? '' : label)
     }
   }
-  const completionBadge = new CompletionBadge(paintCompletionBadge)
+  const completionBadge = new CompletionBadge(paintCompletionBadge, (ids) => {
+    for (const window of [mainWindow, ...sessionWindows.keys()]) {
+      if (window !== undefined && !window.isDestroyed()) window.webContents.send(DESKTOP_IPC.completionChanged, ids)
+    }
+  })
   const bindCompletionBadge = (window: BrowserWindow): void => {
     window.on('focus', () => { completionBadge.focus(window.id) })
     window.on('blur', () => { completionBadge.blur(window.id) })
@@ -1137,6 +1141,10 @@ async function main(): Promise<void> {
       window.hide()
     }
   }
+  ipcMain.handle(DESKTOP_IPC.completionSnapshot, (event) => {
+    assertProductSender(event)
+    return completionBadge.unreadIds
+  })
   ipcMain.handle(DESKTOP_IPC.completionReport, (event, value: unknown) => {
     const owner = assertProductSender(event)
     const report = parseCompletionReport(value)
