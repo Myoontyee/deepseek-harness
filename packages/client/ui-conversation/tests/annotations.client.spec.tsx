@@ -173,7 +173,7 @@ it('adds a direct comment paired with its selected Markdown quotation and origin
   fireEvent.click(view.getByText('添加注释'))
   expect(addAnnotation).not.toHaveBeenCalled()
   fireEvent.change(view.getByRole('textbox', { name: '补充评论（可选）' }), { target: { value: '这是我的备注' } })
-  fireEvent.click(view.getByRole('button', { name: '添加注释', exact: true }))
+  fireEvent.click(view.getByRole('button', { name: '添加注释' }))
   expect(addAnnotation).toHaveBeenCalledWith(expect.objectContaining({
     text: '**引用**$CNR < 1$', comment: '这是我的备注', sourceMessage: 'math1',
   }))
