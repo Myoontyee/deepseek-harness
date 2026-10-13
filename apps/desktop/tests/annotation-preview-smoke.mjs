@@ -162,6 +162,31 @@ try {
     await card.waitFor()
     return card
   }
+  await page.setViewportSize({width:850,height:650})
+  for(let i=0;i<4;i++) await selectPassage('这是会话互通体验版', ('LONG_REMARK_'+i+'\n').repeat(12))
+  const longPreview=await preview(4)
+  assert.ok(await longPreview.evaluate(el=>el.scrollHeight>el.clientHeight+100),'Long annotations must have a bounded scroll container')
+  await longPreview.hover()
+  await page.mouse.wheel(0,600)
+  await page.waitForFunction(()=>document.querySelector('[data-annotation-preview]')?.scrollTop>0)
+  await longPreview.focus()
+  await page.keyboard.press('End')
+  await page.waitForFunction(()=>{const el=document.querySelector('[data-annotation-preview]');return el&&el.scrollTop+el.clientHeight>=el.scrollHeight-2})
+  await longPreview.getByRole('button',{name:'编辑评论',exact:true}).last().click()
+  const longDialog=page.getByRole('dialog')
+  assert.equal(await longDialog.getByRole('textbox').last().inputValue(),('LONG_REMARK_3\n').repeat(12))
+  await longDialog.getByRole('button',{name:'完成',exact:true}).click()
+  const scrollAgain=await preview(4)
+  await scrollAgain.focus()
+  await page.keyboard.press('End')
+  await page.waitForFunction(()=>{const el=document.querySelector('[data-annotation-preview]');return el&&el.scrollTop>0})
+  await scrollAgain.hover()
+  await page.mouse.wheel(0,-10000)
+  await page.waitForFunction(()=>document.querySelector('[data-annotation-preview]')?.scrollTop===0)
+  await page.keyboard.press('Escape')
+  await page.locator('[data-draft-annotations]').getByRole('button',{name:'清空所有注释',exact:true}).click()
+  await page.locator('[data-draft-annotations]').waitFor({state:'detached'})
+  await page.setViewportSize({width:1440,height:1000})
   await selectPassage('这是会话互通体验版', 'DIRECT_COMMENT_TEST')
   await selectPassage('安装后的正式会话使用')
   let card=await preview(2)
@@ -223,6 +248,7 @@ try {
   assert.ok(received.annotations[0].text.includes('$CNR < 1$'))
   assert.ok(received.annotations[0].text.includes('**对比度**'))
   await page.locator('[data-draft-annotations]').waitFor({state:'detached'})
+  evidence.longAnnotationScroll=true
   evidence.passed=true
   evidence.preview=true;evidence.edit=true;evidence.deleteOne=true;evidence.clearAll=true
   evidence.requestPreserved=true;evidence.modelReceivedExactAnnotation=true;evidence.viewportFit=true

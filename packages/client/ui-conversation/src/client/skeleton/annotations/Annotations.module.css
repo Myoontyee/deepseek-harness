@@ -6,6 +6,14 @@
 .badge:hover, .clear:hover, .iconButton:hover, .commentPreview:hover { background: var(--dsw-alias-interactive-bg-hover); }
 .clear:disabled, .iconButton:disabled, .commentPreview:disabled { cursor: default; opacity: .5; }
 .items { padding: 4px; }
+.items[data-annotation-preview] {
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
 .item { padding: 12px 4px; color: var(--dsw-alias-label-primary); }
 .item + .item { border-top: 1px solid var(--dsw-alias-border-l2); }
 .heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

@@ -34,7 +34,8 @@ export function AnnotationDrafts({ annotations, actions, disabled, t }: {
     if (annotations.length === 1) setOpen(false)
   }
   const count = t('annotation.count', { count: annotations.length })
-  const cards = (editable: boolean) => <div className={css.items} data-annotation-preview={editable ? undefined : ''}>
+  const cards = (editable: boolean) => <div className={css.items} data-annotation-preview={editable ? undefined : ''}
+    tabIndex={editable ? undefined : 0} role={editable ? undefined : 'region'} aria-label={editable ? undefined : count}>
     {annotations.map((annotation, index) => <section className={css.item} key={annotation.id} data-annotation-id={annotation.id}>
       <div className={css.heading}>
         <span className={css.source}>{index + 1}. {t('annotation.selectedText')}</span>
