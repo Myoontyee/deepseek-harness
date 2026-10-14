@@ -27,6 +27,7 @@ const VIEWPORT_MARGIN = 8
  * @param props.widthAnchorRef - optional element whose width and horizontal position size the preview.
  * @param props.inline - keep the anchor in prose; show a contained preview on hover or keyboard focus.
  * @param props.disabled - suppress opening; turning true dismisses an open card.
+ * @param props.retainFocus - keep interactive preview content open while it owns focus; dismiss on outside click or Escape.
  * @param props.copyText - optional primary value copied by activation and
  * included in the card's accessible name.
  * @param props.copyLabel - localized accessible activation-label prefix.
@@ -35,7 +36,7 @@ const VIEWPORT_MARGIN = 8
  */
 export function HoverCard({
   anchor, content, openDelayMs = 500, disabled = false,
-  copyText, copyLabel, copiedLabel, variant = 'compact', widthAnchorRef, inline = false,
+  copyText, copyLabel, copiedLabel, variant = 'compact', widthAnchorRef, inline = false, retainFocus = false,
 }: {
   anchor: ReactNode
   /** Inline media preview using the shared menu material and keyboard focus. */
@@ -43,6 +44,7 @@ export function HoverCard({
   content: ReactNode
   openDelayMs?: number
   disabled?: boolean
+  retainFocus?: boolean
   variant?: 'compact' | 'preview'
   widthAnchorRef?: RefObject<HTMLElement | null>
 } & ({ copyText?: string | undefined; copyLabel: string; copiedLabel: string } | {
@@ -120,7 +122,7 @@ export function HoverCard({
   useEffect(() => {
     if (!open || (variant !== 'preview' && !inline)) return
     const dismiss = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') return
+      if (event.key !== 'Escape' || event.isComposing) return
       if (inline) event.stopPropagation()
       clearTimer()
       cancelClose()
@@ -129,6 +131,19 @@ export function HoverCard({
     window.addEventListener('keydown', dismiss, inline)
     return () => { window.removeEventListener('keydown', dismiss, inline) }
   }, [open, variant, inline, cancelClose, close])
+
+  useEffect(() => {
+    if (!open || !retainFocus) return
+    const dismiss = (event: PointerEvent): void => {
+      const target = event.target as Node
+      if (rootRef.current?.contains(target) || cardRef.current?.contains(target)) return
+      clearTimer()
+      cancelClose()
+      close()
+    }
+    document.addEventListener('pointerdown', dismiss, true)
+    return () => { document.removeEventListener('pointerdown', dismiss, true) }
+  }, [open, retainFocus, cancelClose, close])
 
   // Fixed-position from the anchor rect before paint; track the anchor while
   // open (capture-phase scroll catches nested panes), as in Menu portal mode.
@@ -235,6 +250,10 @@ export function HoverCard({
       role={copyable ? 'button' : undefined}
       tabIndex={copyable ? 0 : undefined}
       aria-label={copyable ? `${copyLabel}: ${copyText}` : undefined}
+      onFocusCapture={retainFocus ? () => { cancelClose(); setPhase('open') } : undefined}
+      onBlurCapture={retainFocus ? (event) => {
+        if (!event.currentTarget.contains(event.relatedTarget) && !event.currentTarget.matches(':hover')) armClose()
+      } : undefined}
       onClick={copyable
         ? (e) => {
           const selection = window.getSelection()
@@ -279,6 +298,7 @@ export function HoverCard({
       }}
       onPointerLeave={() => {
         clearTimer()
+        if (retainFocus && cardRef.current?.contains(document.activeElement)) { cancelClose(); return }
         // Leaving a closed card schedules a no-op close; only arm while
         // open, matching Menu's shape.
         if (open) armClose()

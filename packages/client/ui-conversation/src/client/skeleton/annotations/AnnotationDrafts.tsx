@@ -41,7 +41,9 @@ export function AnnotationDrafts({ annotations, actions, disabled, t }: {
         <span className={css.source}>{index + 1}. {t('annotation.selectedText')}</span>
         <span className={css.tools}>
           {!editable && <Tooltip label={t('annotation.edit')}><button type="button" className={css.iconButton}
-            aria-label={t('annotation.edit')} disabled={disabled} onClick={() => { edit(annotation.id) }}><IconEditOutlineRegular /></button></Tooltip>}
+            aria-label={t('annotation.edit')} disabled={disabled} onClick={(event) => {
+              event.currentTarget.closest('[data-annotation-id]')?.querySelector('textarea')?.focus()
+            }}><IconEditOutlineRegular /></button></Tooltip>}
           <Tooltip label={t('annotation.remove')}><button type="button" className={css.iconButton}
             aria-label={t('annotation.remove')} disabled={disabled} onClick={() => { remove(annotation.id) }}><IconTrashOutlineRegular /></button></Tooltip>
         </span>
@@ -54,14 +56,14 @@ export function AnnotationDrafts({ annotations, actions, disabled, t }: {
           data-modal-autofocus={annotation.id === (editing ?? annotations[0]?.id) ? '' : undefined}
           aria-label={t('annotation.comment')} placeholder={t('annotation.comment')}
           onChange={(event) => { actions.updateAnnotation(annotation.id, event.target.value) }} />
-      </label> : <button type="button" className={css.commentPreview} disabled={disabled} onClick={() => { edit(annotation.id) }}>
-        {annotation.comment || t('annotation.comment')}
-      </button>}
+      </label> : <textarea className={`${css.comment} ${css.commentPreview}`} disabled={disabled}
+        value={annotation.comment} aria-label={t('annotation.comment')} placeholder={t('annotation.comment')}
+        onChange={(event) => { actions.updateAnnotation(annotation.id, event.target.value) }} />}
     </section>)}
   </div>
   return <div className={css.tray} ref={container} data-draft-annotations>
     <div className={css.chip}>
-      <HoverCard variant="preview" widthAnchorRef={container} openDelayMs={150} disabled={open}
+      <HoverCard variant="preview" widthAnchorRef={container} openDelayMs={150} disabled={open} retainFocus
         anchor={<button type="button" className={css.badge} aria-expanded={open} aria-haspopup="dialog" onClick={() => { edit() }}>
           <IconQueueOutlineRegular />{count}
         </button>}
