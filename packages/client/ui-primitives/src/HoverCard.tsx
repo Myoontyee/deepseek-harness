@@ -120,7 +120,7 @@ export function HoverCard({
   }, [])
 
   useEffect(() => {
-    if (!open || (variant !== 'preview' && !inline)) return
+    if (!open || (variant !== 'preview' && !inline && !retainFocus)) return
     const dismiss = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape' || event.isComposing) return
       if (inline) event.stopPropagation()
@@ -130,7 +130,7 @@ export function HoverCard({
     }
     window.addEventListener('keydown', dismiss, inline)
     return () => { window.removeEventListener('keydown', dismiss, inline) }
-  }, [open, variant, inline, cancelClose, close])
+  }, [open, variant, inline, retainFocus, cancelClose, close])
 
   useEffect(() => {
     if (!open || !retainFocus) return
@@ -250,7 +250,7 @@ export function HoverCard({
       role={copyable ? 'button' : undefined}
       tabIndex={copyable ? 0 : undefined}
       aria-label={copyable ? `${copyLabel}: ${copyText}` : undefined}
-      onFocusCapture={retainFocus ? () => { cancelClose(); setPhase('open') } : undefined}
+      onFocusCapture={retainFocus ? () => { if (!disabled) { cancelClose(); setPhase('open') } } : undefined}
       onBlurCapture={retainFocus ? (event) => {
         if (!event.currentTarget.contains(event.relatedTarget) && !event.currentTarget.matches(':hover')) armClose()
       } : undefined}

@@ -680,8 +680,8 @@ it('flips inline media above a bottom link and constrains it without covering th
   expect(Number.parseFloat(card.style.maxHeight)).toBe(window.innerHeight - 50)
 })
 
-it('retains an editing preview after pointer exit and dismisses outside or on non-composing Escape', () => {
-  render(<HoverCard retainFocus variant="preview" anchor={<span>edit anchor</span>} content={<textarea aria-label="remark" />} />)
+it.each(['compact', 'preview'] as const)('retains an editing %s card after pointer exit and dismisses outside or on non-composing Escape', (variant) => {
+  render(<HoverCard retainFocus variant={variant} anchor={<span>edit anchor</span>} content={<textarea aria-label="remark" />} />)
   const anchor = screen.getByText('edit anchor')
   stubAnchorRect(anchor, { top: 500, right: 400 })
   const wrapper = anchor.parentElement!
