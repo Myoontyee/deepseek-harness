@@ -94,6 +94,18 @@ try {
 
 
 
+  await electronApp.evaluate(({dialog}) => {
+    globalThis.fixtureOriginalDialog = dialog.showMessageBox
+    dialog.showMessageBox = async () => ({response:0,checkboxChecked:false})
+  })
+  const qrOpened = electronApp.waitForEvent('window')
+  const invitationAction = page.evaluate(() => window.dshDesktop.devices.invoke('invitation'))
+  const qr = await qrOpened
+  await qr.getByAltText('一次性配对二维码').waitFor({timeout:20000})
+  assert.ok(await qr.getByAltText('一次性配对二维码').evaluate(image => image.complete && image.naturalWidth > 0))
+  await qr.close()
+  await invitationAction
+  await electronApp.evaluate(({dialog}) => { dialog.showMessageBox = globalThis.fixtureOriginalDialog; delete globalThis.fixtureOriginalDialog })
   await page.getByText('File quote fixture', {exact:true}).first().click()
   const preview = page.locator('[data-textpreview-body]')
   await preview.getByText('File quotation', {exact:false}).waitFor({timeout:30000})
@@ -155,7 +167,7 @@ try {
   gateway.revoke(gateway.devices[0].id)
   await page.getByRole('button',{name:'刷新',exact:true}).click()
   await page.getByRole('heading',{name:'Fixture MacBook · 未连接',exact:true}).waitFor({timeout:40000})
-  const result={passed:true,root,fileQuoteToModel:true,pairedConversationList:true,remoteConversationOpened:true,remoteTaskSent:true,noLocalPreload:true,revocation:true,androidHardwareTested:false}
+  const result={passed:true,root,fileQuoteToModel:true,pairedConversationList:true,remoteConversationOpened:true,remoteTaskSent:true,noLocalPreload:true,qrRendered:true,revocation:true,androidHardwareTested:false}
   await writeFile(join(repo,'.artifacts/file-devices-smoke-result.json'),JSON.stringify(result,null,2))
   console.log(JSON.stringify(result))
 } finally {
