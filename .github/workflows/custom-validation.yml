@@ -42,6 +42,7 @@ jobs:
           packages/client/ui-primitives/tests/hover-card.client.spec.tsx
           packages/client/ui-primitives/tests/markdown-copy-links.client.spec.tsx
           packages/client/ui-chat/tests/message-copy.client.spec.tsx
+          packages/client/ui-chat/tests/user-content-copy.client.spec.tsx
           packages/client/ui-chat/tests/message-editor.client.spec.tsx
           packages/client/ui-workspace/tests/apply.client.spec.ts
           packages/client/ui-workspace/tests/session-actions.client.spec.tsx

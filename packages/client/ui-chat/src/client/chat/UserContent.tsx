@@ -1,7 +1,7 @@
 /** Reusable user contents inside a caller-owned message row. */
-import { Fragment } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import type { FactoryComponentPropsOf } from '@deepseek-ai/dsh-client-ui-slots'
-import { fileExtension, FileTypeIcon, fileSizeText, JsonBlock, MarkdownText, parseResponseAnnotations } from '@deepseek-ai/dsh-client-ui-primitives'
+import { fileExtension, FileTypeIcon, fileSizeText, JsonBlock, MarkdownText, parseResponseAnnotations, registerLiteralCopy } from '@deepseek-ai/dsh-client-ui-primitives'
 import { markdownLabels } from '../markdown-labels.ts'
 import css from './MessageItem.module.css'
 
@@ -18,6 +18,8 @@ FactoryComponentPropsOf<'conversation.chat.user.content'>) {
   const { text, attachments, extraBlocks, referenceLabels = EMPTY_LABELS } = content
   const annotated = parseResponseAnnotations(text)
   const bodyText = annotated?.text ?? text
+  const literalBody = useRef<HTMLSpanElement>(null)
+  useEffect(() => literalBody.current === null ? undefined : registerLiteralCopy(literalBody.current), [])
   const compactImages = attachments.length > 1
   const truncated = (total: number): string => t('json.truncated', { total })
   const showBubble = text !== '' || extraBlocks.length > 0
@@ -57,7 +59,9 @@ FactoryComponentPropsOf<'conversation.chat.user.content'>) {
               {annotation.comment && <div>{renderFactorySlot('conversation.user.text', { text: annotation.comment, facts, interactive, ellipsis })}</div>}
             </div>)}
           </details>}
-          {renderFactorySlot('conversation.user.text', { text: bodyText, facts, interactive, ellipsis })}
+          <span ref={literalBody} data-message-literal>
+            {renderFactorySlot('conversation.user.text', { text: bodyText, facts, interactive, ellipsis })}
+          </span>
         </div>
         {extraBlocks.map((block, index) => (
           <JsonBlock key={index} label={t('message.extraBlock')} payload={block} truncatedLabel={truncated} />
