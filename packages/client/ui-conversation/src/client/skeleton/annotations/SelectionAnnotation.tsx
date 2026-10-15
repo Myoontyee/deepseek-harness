@@ -30,6 +30,14 @@ export function SelectionAnnotation({ container, sessionId, addAnnotation, t }: 
 }) {
   const [commenting, setCommenting] = useState<ResponseAnnotation | null>(null)
   const [comment, setComment] = useState('')
+  const [drafts, setDrafts] = useState<Record<string, ResponseAnnotation>>({})
+  const draftKey = (annotation: ResponseAnnotation): string => JSON.stringify([sessionId, annotation.sourceMessage, annotation.text])
+  const forget = (annotation: ResponseAnnotation): void => {
+    setDrafts(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== draftKey(annotation))))
+  }
+  const submit = (): void => {
+    if (commenting !== null && addAnnotation({ ...commenting, comment })) { forget(commenting); setCommenting(null) }
+  }
   const [passage, setPassage] = useState<SelectedPassage | null>(null)
   useEffect(() => {
     if (container === null) return
@@ -57,31 +65,38 @@ export function SelectionAnnotation({ container, sessionId, addAnnotation, t }: 
       container.removeEventListener('keyup', capture)
     }
   }, [container, sessionId, t])
-  if (commenting !== null) return <Modal open title={t('annotation.create')} closeLabel={t('annotation.close')}
+  if (commenting !== null) return <Modal open closeOnBackdrop={false} title={t('annotation.create')} closeLabel={t('annotation.close')}
     onClose={() => { setCommenting(null) }} contentClassName={css.editor ?? ''}
     onKeyDownCapture={(event) => {
       if (event.key !== 'Enter' || !event.ctrlKey || event.altKey || event.shiftKey || event.metaKey
         || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
       event.preventDefault(); event.stopPropagation()
-      if (!event.repeat && addAnnotation({ ...commenting, comment })) setCommenting(null)
+      if (!event.repeat) submit()
     }}
     footer={<><button type="button" className={css.done} onClick={() => { setCommenting(null) }}>{t('annotation.cancel')} <small aria-hidden="true">Esc</small></button>
-      <button type="button" className={css.done} onClick={() => {
-        if (addAnnotation({ ...commenting, comment })) setCommenting(null)
-      }}>{t('annotation.create')} <small aria-hidden="true">Ctrl+Enter</small></button></>}>
+      <button type="button" className={css.done} onClick={submit}>{t('annotation.create')} <small aria-hidden="true">Ctrl+Enter</small></button></>}>
+    <p>{t('annotation.draftHint')}</p>
     <AnnotationQuote text={commenting.text} t={t} />
     <textarea className={css.comment} data-modal-autofocus value={comment} aria-label={t('annotation.comment')}
-      placeholder={t('annotation.comment')} onChange={(event) => { setComment(event.target.value) }} />
+      placeholder={t('annotation.comment')} onChange={(event) => {
+        const value = event.target.value
+        setComment(value); setDrafts(current => ({ ...current, [draftKey(commenting)]: { ...commenting, comment: value } }))
+      }} />
   </Modal>
-  if (passage === null) return null
-  return (
-    <Menu open anchor={null} portal compact side="top"
+  return <>
+    {Object.entries(drafts).map(([key, draft]) => <div className={css.pendingDraft} key={key}>
+      <button type="button" onClick={() => { setCommenting(draft); setComment(draft.comment); setPassage(null) }}>
+        {t('annotation.resume')} — {draft.text.slice(0, 48)}
+      </button>
+      <button type="button" onClick={() => { forget(draft) }}>{t('annotation.discardDraft')}</button>
+    </div>)}
+    {passage !== null && <Menu open anchor={null} portal compact side="top"
       getAnchorRect={() => passage.range.commonAncestorContainer.isConnected ? passage.range.getBoundingClientRect() : null}
       items={[{ id: 'add', label: t('annotation.add') }, { id: 'annotate', label: t('annotation.create') }]}
       onClose={() =>{  setPassage(null) }}
       onSelect={(id) => {
-        if (id === 'annotate') { setCommenting(passage.annotation); setComment(''); setPassage(null); return }
+        if (id === 'annotate') { setCommenting(passage.annotation); setComment(drafts[draftKey(passage.annotation)]?.comment ?? ''); setPassage(null); return }
         if (addAnnotation(passage.annotation)) setPassage(null)
-      }} />
-  )
+      }} />}
+  </>
 }

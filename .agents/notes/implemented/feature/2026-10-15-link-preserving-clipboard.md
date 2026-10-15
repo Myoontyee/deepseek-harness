@@ -23,3 +23,5 @@ Rich HTML clipboard payloads can reintroduce font styling and duplicated formula
 Markdown-aware destinations can reconstruct links from pasted text. Other editors receive literal Markdown link text. Existing selection, full-message, formula, table, masking and plain-paste tests cover the distinct paths.
 
 Annotation creation dialogs accept Ctrl+Enter and cancel with Escape. Plain Enter keeps its newline behavior; composing input and repeated keydown events cannot submit. Rejected draft admission keeps the remark available for retry.
+
+Annotation dialogs no longer dismiss on backdrop clicks. Closing with Escape, Cancel or the close button retains each quotation and remark in component-local draft state, with explicit resume and discard controls. Successful admission removes that temporary draft. These drafts do not survive leaving the page or restarting the application; the dialog states this boundary.

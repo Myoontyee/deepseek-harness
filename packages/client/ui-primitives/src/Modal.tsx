@@ -18,6 +18,7 @@ interface ModalBaseProps {
   shortcutModal?: string
   onKeyDownCapture?: KeyboardEventHandler<HTMLDivElement>
   backdropBlur?: boolean
+  closeOnBackdrop?: boolean
 }
 
 type ModalProps = ModalBaseProps & (
@@ -37,6 +38,7 @@ type ModalProps = ModalBaseProps & (
  * data-modal-autofocus instead of React autoFocus to preserve return focus.
  * @param props.footer - action row (Cancel / Create).
  * @param props.contentClassName - optional class for a scrollable content region.
+ * @param props.closeOnBackdrop - allow mask clicks to close the dialog; defaults to true.
  * @param props.backdropBlur - disable when the caller already blurs the page; defaults to true.
  * @param props.shortcutModal - command scope allowed by shortcut owners; unnamed
  * dialogs block application commands unless their owner allows the "other" scope.
@@ -47,7 +49,7 @@ type ModalProps = ModalBaseProps & (
  */
 export function Modal({
   open, onClose, title, closeLabel, description, children, footer, className, contentClassName,
-  onKeyDownCapture, headless = false, backdropBlur = true, shortcutModal,
+  onKeyDownCapture, headless = false, backdropBlur = true, closeOnBackdrop = true, shortcutModal,
 }: ModalProps) {
   const dialog = useRef<HTMLDivElement>(null)
   useModalLayer(dialog, open, onClose)
@@ -56,7 +58,7 @@ export function Modal({
 
   return createPortal((
     <div className={css.root} role="presentation" onKeyDownCapture={onKeyDownCapture}>
-      <div className={css.mask} style={backdropBlur ? undefined : { backdropFilter: 'none' }} aria-hidden="true" onClick={onClose} />
+      <div className={css.mask} style={backdropBlur ? undefined : { backdropFilter: 'none' }} aria-hidden="true" onClick={closeOnBackdrop ? onClose : undefined} />
       <div
         ref={dialog}
         tabIndex={-1}

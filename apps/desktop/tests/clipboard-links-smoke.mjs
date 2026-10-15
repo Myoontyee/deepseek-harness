@@ -140,12 +140,20 @@ try {
   await remark.press('Escape')
   await page.getByRole('dialog').waitFor({state:'detached'})
   remark = await openAnnotation()
-  await remark.fill('Keyboard annotation fixture')
+  const longRemark = 'Keyboard annotation fixture. '.repeat(120)
+  await remark.fill(longRemark)
+  await page.getByRole('dialog').evaluate(element => element.previousElementSibling.dispatchEvent(new MouseEvent('click',{bubbles:true})))
+  assert.equal(await remark.inputValue(), longRemark)
+  await remark.press('Escape')
+  await page.getByRole('button',{name:/继续编辑暂存注释/}).click()
+  remark = page.getByRole('textbox',{name:'补充评论（可选）',exact:true})
+  assert.equal(await remark.inputValue(), longRemark)
+  await page.screenshot({path:join(root,'annotation-shortcuts-draft.png')})
   await remark.press('Control+Enter')
   await page.getByRole('dialog').waitFor({state:'detached'})
   await page.locator('[data-draft-annotations]').getByRole('button',{name:'1 条注释',exact:true}).waitFor()
   await page.screenshot({path:join(root,'clipboard-links-plain-paste.png')})
-  const result={passed:true,root,selectedFileLink:true,wholeMessageLink:true,normalPastePreservesMarkdown:true,plainPasteRemovesLinkMarkup:true,systemClipboardUntouched:true,annotationKeyboardShortcuts:true}
+  const result={passed:true,root,selectedFileLink:true,wholeMessageLink:true,normalPastePreservesMarkdown:true,plainPasteRemovesLinkMarkup:true,systemClipboardUntouched:true,annotationKeyboardShortcuts:true,annotationBackdropProtection:true,annotationDraftResumed:true}
   await writeFile(join(repo,'.artifacts/clipboard-links-smoke-result.json'),JSON.stringify(result,null,2))
   console.log(JSON.stringify(result))
 } finally {

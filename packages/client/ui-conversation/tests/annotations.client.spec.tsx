@@ -156,7 +156,7 @@ it('allows reading annotations while submission has locked edits', () => {
   input.dispose()
 })
 
-it.each(['button', 'keyboard', 'escape'])('adds a direct comment with preserved quotation using %s', (method) => {
+it.each(['button', 'keyboard', 'escape', 'draft'])('adds a direct comment with preserved quotation using %s', (method) => {
   const container = document.createElement('div')
   container.innerHTML = '<div data-chat-node-key="math1"><strong>引用</strong><span data-copy-math="CNR &lt; 1"><span>C</span><span>N</span><span>R</span><span aria-hidden="true">CNR</span></span></div>'
   document.body.append(container)
@@ -179,6 +179,14 @@ it.each(['button', 'keyboard', 'escape'])('adds a direct comment with preserved 
     return
   }
   fireEvent.change(view.getByRole('textbox', { name: '补充评论（可选）' }), { target: { value: '这是我的备注' } })
+  if (method === 'draft') {
+    fireEvent.click(view.getByRole('dialog').previousElementSibling!)
+    expect(view.getByRole('dialog')).toBeTruthy()
+    fireEvent.keyDown(view.getByRole('textbox', { name: '补充评论（可选）' }), { key: 'Escape' })
+    expect(view.queryByRole('dialog')).toBeNull()
+    fireEvent.click(view.getByRole('button', { name: /继续编辑暂存注释/ }))
+    expect(view.getByRole('textbox', { name: '补充评论（可选）' })).toHaveProperty('value', '这是我的备注')
+  }
   const editor = view.getByRole('textbox', { name: '补充评论（可选）' })
   fireEvent.keyDown(editor, { key: 'Enter' })
   fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true, isComposing: true })
@@ -186,6 +194,7 @@ it.each(['button', 'keyboard', 'escape'])('adds a direct comment with preserved 
   expect(addAnnotation).not.toHaveBeenCalled()
   if (method === 'keyboard') fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true })
   else fireEvent.click(view.getByRole('button', { name: '添加注释' }))
+  expect(view.queryByRole('button', { name: /继续编辑暂存注释/ })).toBeNull()
   expect(addAnnotation).toHaveBeenCalledWith(expect.objectContaining({
     text: '**引用**$CNR < 1$', comment: '这是我的备注', sourceMessage: 'math1',
   }))

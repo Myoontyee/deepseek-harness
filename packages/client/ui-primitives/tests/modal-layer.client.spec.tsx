@@ -180,3 +180,13 @@ it('gives a new modal Escape ahead of an older menu', () => {
   expect(menuClosed).toBe(false)
   expect(childClosed).toBe(true)
 })
+
+it.each([true, false])('makes backdrop dismissal optional: %s', (closeOnBackdrop) => {
+  const onClose = vi.fn()
+  const view = render(<Modal open title="Draft" closeLabel="Close" onClose={onClose} closeOnBackdrop={closeOnBackdrop} />)
+  fireEvent.click(view.getByRole('dialog').previousElementSibling!)
+  expect(onClose).toHaveBeenCalledTimes(closeOnBackdrop ? 1 : 0)
+  onClose.mockClear()
+  fireEvent.keyDown(view.getByRole('dialog'), { key: 'Escape' })
+  expect(onClose).toHaveBeenCalledTimes(1)
+})

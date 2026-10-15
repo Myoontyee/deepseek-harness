@@ -43,6 +43,8 @@ jobs:
           pnpm exec vitest run
           packages/client/ui-settings-connections/tests/devices.client.spec.ts
           packages/client/ui-sidebar-documentpreview/tests/file-selection.client.spec.tsx
+          packages/client/ui-conversation/tests/annotations.client.spec.tsx
+          packages/client/ui-primitives/tests/modal-layer.client.spec.tsx
           packages/client/ui-primitives/tests/hover-card.client.spec.tsx
           packages/client/ui-primitives/tests/markdown-copy-links.client.spec.tsx
           packages/client/ui-primitives/tests/clipboard-plain-text.client.spec.ts
