@@ -25,7 +25,7 @@ const keystore = process.env.DSH_ANDROID_KEYSTORE
 const passwordFile = process.env.DSH_ANDROID_PASSWORD_FILE
 const sdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT
 if (!keystore || !passwordFile || !sdk) throw new Error('Configure local keystore, password-file and Android SDK paths')
-const env = { ...process.env, DSH_ANDROID_STORE_PASSWORD: readFileSync(passwordFile, 'utf8').trimEnd() }
+const env = { ...process.env, DSH_ANDROID_STORE_PASSWORD: readFileSync(passwordFile, 'utf8').replace(/[\r\n]+$/u, '') }
 const artifacts = join(root, '.artifacts')
 mkdirSync(artifacts, { recursive: true })
 const staging = mkdtempSync(join(artifacts, 'local-signed-release-'))

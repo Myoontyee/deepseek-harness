@@ -94,6 +94,7 @@ jobs:
         with:
           name: custom-${{ matrix.target }}
           path: .custom-release/*
+          include-hidden-files: true
           if-no-files-found: error
       - uses: actions/upload-artifact@v7.0.1
         if: failure()
@@ -134,6 +135,7 @@ jobs:
         with:
           name: custom-android
           path: .custom-release/*
+          include-hidden-files: true
           if-no-files-found: error
 
   publish:

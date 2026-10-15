@@ -53,7 +53,13 @@ try {
     gh(['auth', 'setup-git'])
     git(['push', 'origin', `HEAD:refs/heads/${branch}`])
     writeFileSync(body, `Official release: ${latest.html_url}\n\nThis merge has no textual conflicts. Functional validation is still required for custom annotations, message editing, clipboard policy, session relay, Desktop windows, mobile pairing, and skills. Do not publish a custom tag until checks and platform builds pass.\n\nWorkflows created using GITHUB_TOKEN do not automatically trigger ordinary push/PR workflows; dispatch validation explicitly before approving this PR.\n`)
-    gh(['pr', 'create', '--repo', repository, '--base', baseBranch, '--head', branch, '--draft', '--title', `Upgrade custom base to ${tag}`, '--body-file', body])
+    try {
+      gh(['pr', 'create', '--repo', repository, '--base', baseBranch, '--head', branch, '--draft', '--title', `Upgrade custom base to ${tag}`, '--body-file', body])
+    } catch (error) {
+      if (!String(error.stderr ?? '').includes('not permitted to create or approve pull requests')) throw error
+      writeFileSync(body, `Official release: ${latest.html_url}\n\nThe merge branch is ready for local review: https://github.com/${repository}/compare/${baseBranch}...${branch}\n\nGitHub does not permit this workflow token to create pull requests. Repository approval permissions were not changed. Create a draft PR from the branch after reviewing the compatibility checks.\n`)
+      gh(['issue', 'create', '--repo', repository, '--title', `Review upstream ${tag} merge branch`, '--body-file', body])
+    }
     gh(['workflow', 'run', 'custom-validation.yml', '--repo', repository, '--ref', branch])
   }
 } finally {
