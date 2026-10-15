@@ -177,3 +177,22 @@ it.each([
     expect((await screen.findByRole('tooltip')).textContent).toBe(label)
   } finally { f.view.unmount(); f.status.resolve({ phase: 'idle' }) }
 })
+
+it('shows both channels independently and sends the selected channel', () => {
+  const onOpen = vi.fn()
+  const view = render(<DesktopUpdateIndicator wide hidden={false} t={translate(zh)} onOpen={onOpen}
+    view={{ failed: false, opening: false, colors: { official: 'green', custom: 'purple' },
+      presentation: { phase: 'ready', custom: true, version: '2.0.0', official: { phase: 'available', version: '3.0.0' } } }} />)
+  fireEvent.click(view.getByRole('button', { name: '官方原版' }))
+  expect(onOpen).toHaveBeenLastCalledWith('official')
+  expect(view.getByRole('button', { name: '官方原版' }).getAttribute('data-color')).toBe('green')
+  expect(view.getByRole('button', { name: '安装并重启' }).getAttribute('data-color')).toBe('purple')
+})
+
+it('retains color preferences across source instances', () => {
+  const first = new DesktopUpdateSource(undefined)
+  first.setColors({ custom: 'orange', official: 'purple' }); first.dispose()
+  const second = new DesktopUpdateSource(undefined)
+  expect(second.store.getSnapshot().colors).toEqual({ custom: 'orange', official: 'purple' })
+  second.dispose(); localStorage.clear()
+})

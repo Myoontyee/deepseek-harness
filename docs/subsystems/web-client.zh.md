@@ -6,6 +6,15 @@ Web Client 是由独立加载插件组装而成的浏览器侧 Cordis 应用。�
 
 [快捷键](../../packages/client/shortcuts/README.zh.md)负责窗口内命令注册和物理键分发；[快捷键速查](../../packages/client/ui-shortcuts/README.zh.md)展示可用命令及局部输入操作。命令 owner 声明各运行端／平台的默认键位，并与鼠标控件共用既有操作。共用模态组件裁决顶层 Esc 并恢复焦点。
 
+## 持久讨论与助手
+
+[讨论服务](../../packages/api/discussion-controller/README.zh.md)负责话题元数据和明确确认的记忆；[讨论界面](../../packages/client/ui-discussions/README.zh.md)为每个主对话打开一个讨论区。消息和附件由原生会话保存。关闭或归档话题不会删除历史，带回结论只更新主对话草稿。
+
+`DiscussionAssistant` 和 `AssistantDraft` 描述保存的身份、职责及记忆策略。`AssistantMemory` 和 `MemoryDraft` 描述按助手或精确项目限定的确认记忆。`DiscussionTopic` 和 `TopicDraft` 将独立会话关联到原始引用和主对话。`AssistantId`、`AssistantMemoryId` 和 `DiscussionId` 是不透明标识；`AssistantTemplate` 和 `AssistantMemoryMode` 分别选择初始策略和当前记忆范围。完整字段定义见 [types.ts](../../packages/api/discussion-controller/src/types.ts)。
+
+只有话题准备上下文时才读取记忆。不运行后台模型循环，也不自动提取事实。选中条目受配置的字符预算限制；关闭记忆仍保留已保存条目和对话历史。
+
+
 ## 分层与所有权
 
 | 层 | 主要 owner | 职责 |
@@ -98,3 +107,89 @@ Web 和桌面端共享[代码工作工具偏好](../../packages/client/ui-settin
 - [API Gateway](../api-gateway.zh.md)：Host method、生成的 Remote contribution、stream 与 forwarded event。
 - [Web Client Slots](slots.zh.md)：component、hook、store、injection 与 placement。
 - [Conversation](conversation.zh.md)：持久 event correlation、target snapshot，以及 Chat 或 Trajectory view contribution。
+
+<!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
+
+<a id="cordis-surface"></a>
+
+## Cordis API
+
+Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+
+<a id="ctxdiscussioncontroller--discussioncontroller"></a>
+
+### `ctx.discussionController` — `DiscussionController`
+
+Metadata lives in a storage domain; messages and attachments use native Session storage.
+
+```ts cordis-catalog
+/** List saved identities without starting any model process.
+ * @returns Saved assistant profiles, including archived ones.
+ */
+@Remote assistants(): DiscussionAssistant[]
+
+/** Save a user-defined assistant without creating a conversation.
+ * @param draft - Explicit identity and memory policy.
+ * @returns Durably stored assistant.
+ */
+@Remote async createAssistant(draft: AssistantDraft): Promise<DiscussionAssistant>
+
+/** Update one profile without overwriting another window's edits.
+ * @param id - Saved assistant identity.
+ * @param revision - Revision shown in the editor.
+ * @param draft - Replacement editable fields.
+ * @returns Committed profile.
+ */
+@Remote updateAssistant(id: AssistantId, revision: number, draft: AssistantDraft): Promise<DiscussionAssistant>
+
+/** Read explicitly saved notes for the settings editor.
+ * @param id - Assistant identity.
+ * @returns Its stored memory entries, including entries currently disabled by policy.
+ */
+@Remote memories(id: AssistantId): AssistantMemory[]
+
+/** Save a memory only after an explicit user action.
+ * @param draft - Confirmed text and scope.
+ * @returns Committed memory entry.
+ */
+@Remote async remember(draft: MemoryDraft): Promise<AssistantMemory>
+
+/** Edit a confirmed note without overwriting another window's change.
+ * @param id - Existing memory identity.
+ * @param revision - Revision displayed in the editor.
+ * @param draft - Replacement text and scope for the same assistant.
+ * @returns Committed memory entry.
+ */
+@Remote updateMemory(id: AssistantMemoryId, revision: number, draft: MemoryDraft): Promise<AssistantMemory>
+
+/** Remove one confirmed note without deleting any conversation.
+ * @param id - Memory identity selected by the user.
+ * @returns Whether an entry was removed.
+ */
+@Remote forget(id: AssistantMemoryId): Promise<boolean>
+
+/** List the small topic index for one parent; transcript messages are loaded separately.
+ * @param parentSessionId - Main conversation identity.
+ * @returns Durable topics, most recently updated first.
+ */
+@Remote topics(parentSessionId: SessionId): DiscussionTopic[]
+
+/** Create an independent, initially read-only native Session, without running a model or copying parent history.
+ * @param draft - Idempotency key, source quotation and selected assistant.
+ * @returns Persisted topic and Session identity.
+ */
+@Remote async createTopic(draft: TopicDraft): Promise<DiscussionTopic>
+
+/** Resolve, archive or reopen a topic without deleting its history.
+ * @param id - Topic identity.
+ * @param revision - Revision the caller displayed.
+ * @param state - New topic visibility state.
+ * @returns Committed metadata.
+ */
+@Remote setTopicState(id: DiscussionId, revision: number, state: 'open' | 'resolved' | 'archived'): Promise<DiscussionTopic>
+```
+
+Types: [SessionId](core.zh.md)
+
+Source: [`packages/api/discussion-controller/src/index.ts`](../../packages/api/discussion-controller/src/index.ts)
+<!-- END GENERATED cordis-surface -->

@@ -1,6 +1,6 @@
 /** Text-selection action scoped to one conversation transcript. */
-import { useEffect, useState } from 'react'
-import { Menu, Modal, annotationSelectionMarkdown } from '@deepseek-ai/dsh-client-ui-primitives'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Menu, InlineCommentEditor, annotationSelectionMarkdown } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ResponseAnnotation } from '@deepseek-ai/dsh-client-ui-primitives'
 import { AnnotationQuote } from './AnnotationQuote.tsx'
 import css from './Annotations.module.css'
@@ -22,12 +22,15 @@ function messageOwner(node: Node | null): Element | null {
  * @param props - Transcript container, source Session, composer action, and copy.
  * @returns A selection-anchored menu when one message owns the complete selection.
  */
-export function SelectionAnnotation({ container, sessionId, addAnnotation, t }: {
+export function SelectionAnnotation({ container, sessionId, addAnnotation, t, renderVoice, openDiscussion }: {
+  openDiscussion?: ((annotation: ResponseAnnotation) => void) | undefined
+  renderVoice?: (value: string, onChange: (value: string) => void) => ReactNode
   container: HTMLDivElement | null
   sessionId: string
   addAnnotation: (annotation: ResponseAnnotation) => boolean
   t: ConversationContentProps['t']
 }) {
+  const anchor = useRef<Range | null>(null)
   const [commenting, setCommenting] = useState<ResponseAnnotation | null>(null)
   const [comment, setComment] = useState('')
   const [drafts, setDrafts] = useState<Record<string, ResponseAnnotation>>({})
@@ -65,24 +68,18 @@ export function SelectionAnnotation({ container, sessionId, addAnnotation, t }: 
       container.removeEventListener('keyup', capture)
     }
   }, [container, sessionId, t])
-  if (commenting !== null) return <Modal open closeOnBackdrop={false} title={t('annotation.create')} closeLabel={t('annotation.close')}
-    onClose={() => { setCommenting(null) }} contentClassName={css.editor ?? ''}
-    onKeyDownCapture={(event) => {
-      if (event.key !== 'Enter' || !event.ctrlKey || event.altKey || event.shiftKey || event.metaKey
-        || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
-      event.preventDefault(); event.stopPropagation()
-      if (!event.repeat) submit()
-    }}
-    footer={<><button type="button" className={css.done} onClick={() => { setCommenting(null) }}>{t('annotation.cancel')} <small aria-hidden="true">Esc</small></button>
-      <button type="button" className={css.done} onClick={submit}>{t('annotation.create')} <small aria-hidden="true">Ctrl+Enter</small></button></>}>
-    <p>{t('annotation.draftHint')}</p>
+  const changeComment = (value: string): void => {
+    setComment(value)
+    if (commenting) setDrafts(current => ({ ...current, [draftKey(commenting)]: { ...commenting, comment: value } }))
+  }
+  if (commenting !== null) return <InlineCommentEditor
+    getAnchorRect={() => anchor.current?.commonAncestorContainer.isConnected ? anchor.current.getBoundingClientRect() : null}
+    title={t('annotation.create')} inputLabel={t('annotation.comment')} value={comment} onChange={changeComment}
+    onClose={() => { setCommenting(null) }} onSubmit={submit}
+    submitLabel={t('annotation.create')} cancelLabel={t('annotation.cancel')}
+    voice={renderVoice?.(comment, changeComment)}>
     <AnnotationQuote text={commenting.text} t={t} />
-    <textarea className={css.comment} data-modal-autofocus value={comment} aria-label={t('annotation.comment')}
-      placeholder={t('annotation.comment')} onChange={(event) => {
-        const value = event.target.value
-        setComment(value); setDrafts(current => ({ ...current, [draftKey(commenting)]: { ...commenting, comment: value } }))
-      }} />
-  </Modal>
+  </InlineCommentEditor>
   return <>
     {Object.entries(drafts).map(([key, draft]) => <div className={css.pendingDraft} key={key}>
       <button type="button" onClick={() => { setCommenting(draft); setComment(draft.comment); setPassage(null) }}>
@@ -92,10 +89,12 @@ export function SelectionAnnotation({ container, sessionId, addAnnotation, t }: 
     </div>)}
     {passage !== null && <Menu open anchor={null} portal compact side="top"
       getAnchorRect={() => passage.range.commonAncestorContainer.isConnected ? passage.range.getBoundingClientRect() : null}
-      items={[{ id: 'add', label: t('annotation.add') }, { id: 'annotate', label: t('annotation.create') }]}
+      items={[{ id: 'add', label: t('annotation.add') }, { id: 'annotate', label: t('annotation.create') },
+        ...(openDiscussion ? [{ id: 'discuss', label: t('annotation.discuss') }] : [])]}
       onClose={() =>{  setPassage(null) }}
       onSelect={(id) => {
-        if (id === 'annotate') { setCommenting(passage.annotation); setComment(drafts[draftKey(passage.annotation)]?.comment ?? ''); setPassage(null); return }
+        if (id === 'discuss') { openDiscussion?.(passage.annotation); setPassage(null); return }
+        if (id === 'annotate') { anchor.current = passage.range; setCommenting(passage.annotation); setComment(drafts[draftKey(passage.annotation)]?.comment ?? ''); setPassage(null); return }
         if (addAnnotation(passage.annotation)) setPassage(null)
       }} />}
   </>

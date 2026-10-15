@@ -40,7 +40,7 @@ export interface SettingsOnboardingStep {
  */
 export type SettingsRootInjected = {
   /** Request the current shell-owned update action. */
-  openDesktopUpdate: () => void
+  openDesktopUpdate: (channel?: 'custom' | 'official') => void
   /** Request a fresh logical generation and physical WebSocket immediately. */
   reconnect: () => void
   hooks: {

@@ -132,6 +132,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Pins OpenSSH targets to local control Sessions and checks live grants before remote command execution.',
   },
   {
+    key: 'discussionController',
+    pkg: 'api-discussion-controller',
+    title: 'Persistent topics and confirmed assistant memory',
+    mode: 'core',
+    consumers: ['client-ui-discussions'],
+    note: 'Retains parent references, assistant profiles and bounded confirmed memory without starting background model turns.',
+  },
+  {
     key: 'cotTranslation',
     pkg: 'experimental-client-ui-cot-translation',
     title: 'Reasoning translation Remote',

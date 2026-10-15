@@ -7,10 +7,10 @@
   height: 28px;
   padding: 0 8px;
   box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--update-color, var(--dsw-alias-brand-primary-new-colorprimary-new-color)) 20%, transparent);
   border-radius: var(--dsw-radius-sm);
-  color: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
-  background: color-mix(in srgb, var(--dsw-alias-brand-primary-new-colorprimary-new-color) 8%, transparent);
+  color: var(--update-color, var(--dsw-alias-brand-primary-new-colorprimary-new-color));
+  background: color-mix(in srgb, var(--update-color, var(--dsw-alias-brand-primary-new-colorprimary-new-color)) 8%, transparent);
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
@@ -35,7 +35,7 @@
   height: 6px;
   border-radius: 50%;
   corner-shape: round;
-  background: var(--dsw-alias-brand-primary-new-colorprimary-new-color);
+  background: var(--update-color, var(--dsw-alias-brand-primary-new-colorprimary-new-color));
 }
 
 .errorDot { background: currentColor; width: 6px; height: 6px; border-radius: 50%; corner-shape: round; }
@@ -46,3 +46,16 @@
 .indicator[aria-disabled="true"] {
   cursor: default;
 }
+
+.channels { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+[data-color="green"] { --update-color: var(--dsw-alias-state-success-primary); }
+[data-color="orange"] { --update-color: var(--dsw-alias-state-warn-label); }
+[data-color="purple"] { --update-color: var(--dsw-alias-brand-primary-new-colorprimary-new-color); filter: hue-rotate(45deg); }
+.officialDot { width: 8px; height: 8px; background: currentColor; border-radius: 2px; }
+.settings { padding: 16px 0; color: var(--dsw-alias-label-primary); }
+.settings p { color: var(--dsw-alias-label-secondary); }
+.settingsRow { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.settingsRow label { flex: 1; }
+.settingsRow select, .settingsRow button { color: inherit; background: var(--dsw-specific-input-major); border: 1px solid var(--dsw-alias-border-l2); padding: 8px; border-radius: var(--dsw-radius-md); font: inherit; }
+
+.officialBadge { inset-inline-end: 13px; border-radius: 1px; }

@@ -202,7 +202,8 @@ export function ConversationContent(props: ConversationContentProps) {
       </div>
       {sessionId !== undefined && props.inputActions !== undefined && inputState?.phase === 'plain' && (
         <SelectionAnnotation key={sessionId} container={body} sessionId={sessionId}
-          addAnnotation={annotation => props.inputActions?.addAnnotation(annotation) ?? false} t={t} />
+          addAnnotation={annotation => props.inputActions?.addAnnotation(annotation) ?? false} t={t} openDiscussion={props.openDiscussion}
+          renderVoice={(value, onChange) => renderSlot('conversation.annotation.voice', { identity: sessionId, value, onChange })} />
       )}
       <WidthControls container={body} phase={phase} />
     </div>

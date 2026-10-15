@@ -27,6 +27,8 @@ import { ResourceGroup } from './document/resource-group.ts'
 
 /** The preview's injected business face, as the body receives it. */
 export interface TextInjected {
+  /** Open a persistent discussion for the selected file passage. */
+  openDiscussion?: (annotation: import('@deepseek-ai/dsh-client-ui-primitives').ResponseAnnotation) => void
   /** Observe one renderer dependency. @param tabId - owning tab. @param address - resource address. @param signal - tab lifetime. */
   readonly addResource: (tabId: TabId, address: string, signal: AbortSignal) => void
   /** Replace dependency membership. @param tabId - owning tab. @param addresses - resource addresses. @param signal - tab lifetime. */

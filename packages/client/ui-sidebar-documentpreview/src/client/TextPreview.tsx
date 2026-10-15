@@ -45,7 +45,7 @@ export interface TextPreviewInjected extends TextInjected {
 /** The body's composed props: the tab, its navigation, the shared store and face, and copy. */
 export type TextPreviewProps =
   & PropsRuntime<'sidebar.right.pane.tab'>
-  & PropsRenderSlots<'sidebar.right.tab.document' | 'sidebar.right.tab.document.action' | 'sidebar.right.tab.document.actions' | 'sidebar.right.tab.document.unpreviewable'>
+  & PropsRenderSlots<'document.annotation.voice' | 'sidebar.right.tab.document' | 'sidebar.right.tab.document.action' | 'sidebar.right.tab.document.actions' | 'sidebar.right.tab.document.unpreviewable'>
   & PropsStore<TextStore>
   & InjectFace<TextPreviewInjected>
   & PropsLocale<'sidebarDocumentPreview'>
@@ -58,7 +58,7 @@ export type TextPreviewProps =
 export function TextPreview({
   useTabInfo, useResource, useStore, actions, loadPage, reloadPages,
   loadAll, reloadAll, prepareRenderer, useDocumentPreviews, renderSlot, t,
-  addResource, setResources, inputActions,
+  addResource, setResources, inputActions, openDiscussion,
 }: TextPreviewProps): ReactNode {
   const { tab } = useTabInfo()
   const { navigation, signal } = tab
@@ -345,13 +345,14 @@ export function TextPreview({
         {mode !== 'renderer' && !hasContent && current?.failure === undefined && (
           <LoadingIndicator label={t('loading')} />
         )}
-        {content !== undefined && <FileSelection key={`${tab.contentId}:${selected.id}`} sourceUrl={tab.contentId} sourceLabel={displayPath} addAnnotation={annotation => inputActions.addAnnotation(annotation)} t={t}>{renderSlot('sidebar.right.tab.document', {
-          resourceAddress: tab.contentId, content, wrap: state.wrap, scrollportRef: bindScrollport,
-          addResource: add, setResources: set,
-        }, {
-          entryKey: selected.id, hookContext: useTabInfo,
-          fallback: <p className={css.statusLine}>{t('rendererUnavailable', { name: selected.title() })}</p>,
-        })}</FileSelection>}
+        {content !== undefined && <FileSelection key={`${tab.contentId}:${selected.id}`} sourceUrl={tab.contentId} sourceLabel={displayPath} addAnnotation={annotation => inputActions.addAnnotation(annotation)} t={t} openDiscussion={openDiscussion}
+          renderVoice={(value, onChange) => renderSlot('document.annotation.voice', { identity: tab.contentId, value, onChange })}>{renderSlot('sidebar.right.tab.document', {
+            resourceAddress: tab.contentId, content, wrap: state.wrap, scrollportRef: bindScrollport,
+            addResource: add, setResources: set,
+          }, {
+            entryKey: selected.id, hookContext: useTabInfo,
+            fallback: <p className={css.statusLine}>{t('rendererUnavailable', { name: selected.title() })}</p>,
+          })}</FileSelection>}
         {current?.failure !== undefined && (hasContent
           ? (
             <p className={css.statusLine} data-textpreview-failed={current.failure.code}>

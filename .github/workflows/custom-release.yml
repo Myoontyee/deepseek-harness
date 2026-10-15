@@ -167,4 +167,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.validate.outputs.tag }}
-        run: gh release create "$RELEASE_TAG" .custom-release/*.exe .custom-release/*.dmg .custom-release/*-android-universal-unsigned.apk .custom-release/SHA256SUMS.txt --verify-tag --draft --prerelease --title "$RELEASE_TAG" --generate-notes
+        run: gh release create "$RELEASE_TAG" .custom-release/*.exe .custom-release/*.dmg .custom-release/*-android-universal-unsigned.apk .custom-release/SHA256SUMS.txt .custom-release/UPDATE-PAYLOAD.json --verify-tag --draft --prerelease --title "$RELEASE_TAG" --generate-notes

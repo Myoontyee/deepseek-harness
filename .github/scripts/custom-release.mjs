@@ -67,7 +67,7 @@ function main(command) {
       writeFileSync(settings, 'DSH_DESKTOP_APP_ID=com.deepseek.dsh\nDSH_DESKTOP_AUTO_UPDATE_ENV=production\nDSH_DESKTOP_MANDATORY_UPDATE_PROD_ORIGIN=https://harness.deepseek.com\nDSH_DESKTOP_MANDATORY_UPDATE_CONFIG={}\n')
     }
     try {
-      run('pnpm', ['--dir', 'apps/desktop', 'exec', 'tsx', 'scripts/package-target.ts', target, '--unsigned', '--build-version', buildVersion])
+      run('pnpm', ['--dir', 'apps/desktop', 'exec', 'tsx', 'scripts/package-target.ts', target, '--unsigned', '--build-version', buildVersion], root, { ...process.env, DSH_CUSTOM_UPDATES: '1' })
       const dir = join(desktop, '.desktop-build/targets', target, 'unsigned-artifacts')
       const expectedName = `deepseek-harness-${buildVersion}-${target}-unsigned.${process.platform === 'win32' ? 'exe' : 'dmg'}`
       retain(join(dir, expectedName), expectedName)
@@ -88,10 +88,21 @@ function main(command) {
     const required = ['win-x64-unsigned.exe', 'mac-arm64-unsigned.dmg', 'mac-x64-unsigned.dmg', 'android-universal.apk']
       .map(suffix => `deepseek-harness-${buildVersion}-${suffix}`)
     if (command === 'desktop-manifest') required[3] = `deepseek-harness-${buildVersion}-android-universal-unsigned.apk`
-    const files = readdirSync(output).filter(name => name !== 'SHA256SUMS.txt').sort()
+    const files = readdirSync(output).filter(name => name !== 'SHA256SUMS.txt' && name !== 'UPDATE-PAYLOAD.json').sort()
     if (files.length !== required.length || required.some(name => !files.includes(name))) throw new Error('Release assets are incomplete or include unexpected files')
     const hashes = files.map(name => `${createHash('sha256').update(readFileSync(join(output, name))).digest('hex')}  ${name}`).join('\n')
     writeFileSync(join(output, 'SHA256SUMS.txt'), `${hashes}\n`)
+    if (command === 'desktop-manifest') {
+      const source = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
+      const assets = required.map(name => {
+        const bytes = readFileSync(join(output, name))
+        const target = name.includes('-android-') ? 'android-universal'
+          : name.includes('-win-') ? 'win-x64' : name.includes('-mac-arm64-') ? 'mac-arm64' : 'mac-x64'
+        return { target, name, size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'),
+          sha512: createHash('sha512').update(bytes).digest('base64') }
+      })
+      writeFileSync(join(output, 'UPDATE-PAYLOAD.json'), JSON.stringify({ schemaVersion: 1, version: buildVersion, source, assets }))
+    }
     return
   }
   throw new Error('Unknown release operation')

@@ -1109,6 +1109,73 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'discussionController',
+    summary: 'Metadata lives in a storage domain; messages and attachments use native Session storage.',
+    description: 'Metadata lives in a storage domain; messages and attachments use native Session storage.',
+    methods: [
+      {
+        signature: '@Remote assistants(): DiscussionAssistant[]',
+        description: 'List saved identities without starting any model process.',
+        parameters: [],
+        returns: 'Saved assistant profiles, including archived ones.',
+      },
+      {
+        signature: '@Remote async createAssistant(draft: AssistantDraft): Promise<DiscussionAssistant>',
+        description: 'Save a user-defined assistant without creating a conversation.',
+        parameters: [{ name: 'draft', description: 'Explicit identity and memory policy.' }],
+        returns: 'Durably stored assistant.',
+      },
+      {
+        signature: '@Remote updateAssistant(id: AssistantId, revision: number, draft: AssistantDraft): Promise<DiscussionAssistant>',
+        description: 'Update one profile without overwriting another window\'s edits.',
+        parameters: [{ name: 'id', description: 'Saved assistant identity.' }, { name: 'revision', description: 'Revision shown in the editor.' }, { name: 'draft', description: 'Replacement editable fields.' }],
+        returns: 'Committed profile.',
+      },
+      {
+        signature: '@Remote memories(id: AssistantId): AssistantMemory[]',
+        description: 'Read explicitly saved notes for the settings editor.',
+        parameters: [{ name: 'id', description: 'Assistant identity.' }],
+        returns: 'Its stored memory entries, including entries currently disabled by policy.',
+      },
+      {
+        signature: '@Remote async remember(draft: MemoryDraft): Promise<AssistantMemory>',
+        description: 'Save a memory only after an explicit user action.',
+        parameters: [{ name: 'draft', description: 'Confirmed text and scope.' }],
+        returns: 'Committed memory entry.',
+      },
+      {
+        signature: '@Remote updateMemory(id: AssistantMemoryId, revision: number, draft: MemoryDraft): Promise<AssistantMemory>',
+        description: 'Edit a confirmed note without overwriting another window\'s change.',
+        parameters: [{ name: 'id', description: 'Existing memory identity.' }, { name: 'revision', description: 'Revision displayed in the editor.' }, { name: 'draft', description: 'Replacement text and scope for the same assistant.' }],
+        returns: 'Committed memory entry.',
+      },
+      {
+        signature: '@Remote forget(id: AssistantMemoryId): Promise<boolean>',
+        description: 'Remove one confirmed note without deleting any conversation.',
+        parameters: [{ name: 'id', description: 'Memory identity selected by the user.' }],
+        returns: 'Whether an entry was removed.',
+      },
+      {
+        signature: '@Remote topics(parentSessionId: SessionId): DiscussionTopic[]',
+        description: 'List the small topic index for one parent; transcript messages are loaded separately.',
+        parameters: [{ name: 'parentSessionId', description: 'Main conversation identity.' }],
+        returns: 'Durable topics, most recently updated first.',
+      },
+      {
+        signature: '@Remote async createTopic(draft: TopicDraft): Promise<DiscussionTopic>',
+        description: 'Create an independent, initially read-only native Session, without running a model or copying parent history.',
+        parameters: [{ name: 'draft', description: 'Idempotency key, source quotation and selected assistant.' }],
+        returns: 'Persisted topic and Session identity.',
+      },
+      {
+        signature: '@Remote setTopicState(id: DiscussionId, revision: number, state: \'open\' | \'resolved\' | \'archived\'): Promise<DiscussionTopic>',
+        description: 'Resolve, archive or reopen a topic without deleting its history.',
+        parameters: [{ name: 'id', description: 'Topic identity.' }, { name: 'revision', description: 'Revision the caller displayed.' }, { name: 'state', description: 'New topic visibility state.' }],
+        returns: 'Committed metadata.',
+      },
+    ],
+  },
+  {
     key: 'fileReferences',
     summary: 'Host capability for cancellable file-reference discovery.',
     description: 'Host capability for cancellable file-reference discovery.',
@@ -5109,6 +5176,26 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface AssembledSection {\n    name: string;\n    text: string;\n    interpolate?: boolean;\n}',
   },
   {
+    name: 'AssistantDraft',
+    declaration: 'export interface AssistantDraft {\n    name: string;\n    instructions: string;\n    template: AssistantTemplate;\n    memoryMode: AssistantMemoryMode;\n}',
+  },
+  {
+    name: 'AssistantId',
+    declaration: 'export type AssistantId = Branded<\'DiscussionAssistantId\'>;',
+  },
+  {
+    name: 'AssistantMemory',
+    declaration: 'export interface AssistantMemory {\n    id: AssistantMemoryId;\n    assistantId: AssistantId;\n    revision: number;\n    scope: \'project\' | \'assistant\';\n    project: string;\n    text: string;\n    createdAt: number;\n    updatedAt: number;\n}',
+  },
+  {
+    name: 'AssistantMemoryId',
+    declaration: 'export type AssistantMemoryId = Branded<\'AssistantMemoryId\'>;',
+  },
+  {
+    name: 'AssistantMemoryMode',
+    declaration: 'export type AssistantMemoryMode = \'off\' | \'project\' | \'assistant\';',
+  },
+  {
     name: 'AssistantMessage',
     declaration: 'export interface AssistantMessage extends MessageBase {\n    readonly role: \'assistant\';\n    readonly source: ModelMessageSource;\n}',
   },
@@ -5123,6 +5210,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AssistantStreamRecord',
     declaration: 'export type AssistantStreamRecord = {\n    readonly type: \'text-chunks\';\n    readonly time0: number;\n    readonly index: number;\n    readonly dt: readonly number[];\n    readonly texts: readonly string[];\n} | {\n    readonly type: \'reasoning-chunks\';\n    readonly time0: number;\n    readonly index: number;\n    readonly dt: readonly number[];\n    readonly texts: readonly string[];\n} | {\n    readonly type: \'tool-call-chunks\';\n    readonly time0: number;\n    readonly index: number;\n    readonly dt: readonly number[];\n    readonly id: ToolCallId;\n    readonly name?: string;\n    readonly args: readonly string[];\n} | {\n    readonly type: \'chunk\';\n    readonly time: number;\n    readonly chunk: StreamChunk;\n};',
+  },
+  {
+    name: 'AssistantTemplate',
+    declaration: 'export type AssistantTemplate = \'temporary\' | \'project\' | \'resident\';',
   },
   {
     name: 'AtInput',
@@ -5627,6 +5718,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'DirectoryRegistrationHandle',
     declaration: 'export interface DirectoryRegistrationHandle {\n    (): void;\n    replace(entries: readonly LlmConfigurableProvider[]): void;\n}',
+  },
+  {
+    name: 'DiscussionAssistant',
+    declaration: 'export interface DiscussionAssistant {\n    id: AssistantId;\n    revision: number;\n    name: string;\n    instructions: string;\n    template: AssistantTemplate;\n    memoryMode: AssistantMemoryMode;\n    archived: boolean;\n    createdAt: number;\n    updatedAt: number;\n}',
+  },
+  {
+    name: 'DiscussionId',
+    declaration: 'export type DiscussionId = Branded<\'DiscussionId\'>;',
+  },
+  {
+    name: 'DiscussionTopic',
+    declaration: 'export interface DiscussionTopic {\n    id: DiscussionId;\n    parentSessionId: SessionId;\n    sessionId: SessionId;\n    assistantId: AssistantId;\n    revision: number;\n    title: string;\n    quote: string;\n    sourceUrl: string;\n    sourceMessage: string;\n    project: string;\n    state: \'open\' | \'resolved\' | \'archived\';\n    createdAt: number;\n    updatedAt: number;\n}',
   },
   {
     name: 'Domain',
@@ -6363,6 +6466,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'McpResourceRequest',
     declaration: 'export type McpResourceRequest = {\n    method: \'resources/list\' | \'resources/templates/list\';\n    cursor?: string;\n} | {\n    method: \'resources/read\';\n    uri: string;\n};',
+  },
+  {
+    name: 'MemoryDraft',
+    declaration: 'export interface MemoryDraft {\n    assistantId: AssistantId;\n    scope: \'project\' | \'assistant\';\n    project: string;\n    text: string;\n}',
   },
   {
     name: 'Message',
@@ -8643,6 +8750,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ToolUseSummary',
     declaration: 'export interface ToolUseSummary {\n    tool_use_id: string;\n    tool: string;\n    input: Record<string, unknown>;\n}',
+  },
+  {
+    name: 'TopicDraft',
+    declaration: 'export interface TopicDraft {\n    requestId: string;\n    parentSessionId: SessionId;\n    assistantId: AssistantId;\n    title: string;\n    quote: string;\n    sourceUrl: string;\n    sourceMessage: string;\n}',
   },
   {
     name: 'Transcript',

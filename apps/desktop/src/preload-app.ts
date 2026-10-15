@@ -82,7 +82,7 @@ function createProductApi(): DshDesktopProductApi {
     },
     updates: {
       status: () => ipcRenderer.invoke(DESKTOP_IPC.updatesStatus) as Promise<DesktopUpdatePresentation>,
-      open: () => ipcRenderer.invoke(DESKTOP_IPC.updatesOpen) as Promise<void>,
+      open: channel => ipcRenderer.invoke(DESKTOP_IPC.updatesOpen, channel) as Promise<void>,
       subscribe(listener) {
         const handle = (_event: Electron.IpcRendererEvent, state: DesktopUpdatePresentation): void => { listener(state) }
         ipcRenderer.on(DESKTOP_IPC.updatesPresentation, handle)

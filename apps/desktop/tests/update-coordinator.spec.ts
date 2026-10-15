@@ -47,7 +47,7 @@ describe('desktop release metadata', () => {
 const coordinators: InstanceType<typeof DesktopUpdateCoordinator>[] = []
 afterEach(() => { for (const item of coordinators.splice(0)) item.dispose() })
 
-function fixture(channel: 'nightly' | 'latest' = 'nightly', version = '1.1.0-alpha.1') {
+function fixture(channel: 'nightly' | 'latest' = 'nightly', version = '1.1.0-alpha.1', automatic = false) {
   const events = new EventEmitter()
   const checkForUpdates = vi.fn(async () => ({
     isUpdateAvailable: true,
@@ -66,7 +66,7 @@ function fixture(channel: 'nightly' | 'latest' = 'nightly', version = '1.1.0-alp
   const updater = Object.assign(events, { checkForUpdates, downloadUpdate, quitAndInstall }) as unknown as AppUpdater
   const coordinator = new DesktopUpdateCoordinator(
     (state) => { states.push(state); return state },
-    beforeRestart, updater, () => true, () => version, downloadResult, channel,
+    beforeRestart, updater, () => true, () => version, downloadResult, channel, automatic,
   )
   coordinators.push(coordinator)
   return { coordinator, updater, events, states, checkForUpdates, downloadUpdate, quitAndInstall, beforeRestart, downloadResult }
@@ -256,4 +256,17 @@ it('keeps a stable-version nightly installation on nightly and rejects prereleas
   expect(latest.updater.allowDowngrade).toBe(false)
   expect((await latest.coordinator.check()).phase).toBe('error')
   expect(latest.downloadUpdate).not.toHaveBeenCalled()
+})
+
+it('downloads a checked custom update automatically but never quits without separate installation consent', async () => {
+  const f = fixture('nightly', '1.1.0-alpha.1', true)
+  expect(await f.coordinator.check()).toMatchObject({ phase: 'ready', version: '1.1.0-rc.2' })
+  expect(f.downloadUpdate).toHaveBeenCalledTimes(1)
+  expect(f.beforeRestart).not.toHaveBeenCalled()
+  expect(f.quitAndInstall).not.toHaveBeenCalled()
+  await f.coordinator.check()
+  expect(f.downloadUpdate).toHaveBeenCalledTimes(1)
+  f.beforeRestart.mockResolvedValue(false)
+  expect(await f.coordinator.install('1.1.0-rc.2')).toMatchObject({ phase: 'ready' })
+  expect(f.quitAndInstall).not.toHaveBeenCalled()
 })

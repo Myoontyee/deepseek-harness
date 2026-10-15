@@ -1,3 +1,5 @@
+import discussionsRemote from '@deepseek-ai/dsh-api-discussion-controller/remote'
+export type {} from '@deepseek-ai/dsh-api-discussion-controller/remote'
 /** Platform-neutral assembly of generated Host Remote contributions. */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -187,7 +189,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
   try {
     for (const contribution of [
       productAnalyticsRemote, agentPresetsRemote, commandsRemote, settingsControllerRemote, accountRemote,
-      gitRemote, codeReviewRemote, connectionsRemote,
+      gitRemote, codeReviewRemote, connectionsRemote, discussionsRemote,
       goalsRemote, llmRemote, dynamicRemote, scheduleRemote,
       pluginInventoryRemote, pluginManagerRemote, pluginRegistryProbeRemote, messageFeedbackRemote, sessionFeedbackRemote,
       fileUploadsRemote, sessionReferencesRemote,

@@ -121,6 +121,9 @@
     },
     {
       "path": "../connection-controller"
+    },
+    {
+      "path": "../discussion-controller"
     }
   ]
 }

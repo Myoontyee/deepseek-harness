@@ -268,6 +268,23 @@ export interface SshProfile {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-api-connection-controller -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-api-discussion-controller -->
+<a id="deepseek-aidsh-api-discussion-controller"></a>
+
+## `@deepseek-ai/dsh-api-discussion-controller`
+
+- `inject`: `typert` · `storageDomain` · `sessionController` · `systemPrompt` · `permissionPresets` · `agents`
+- `source`: [`packages/api/discussion-controller/src/index.ts:19`](../packages/api/discussion-controller/src/index.ts)
+
+```ts config-catalog
+/** Configurable upper bound on confirmed notes included in a model request. */
+export interface Config {
+  /** Maximum characters of complete confirmed memories included per model request; zero disables injection. */
+  maxMemoryChars: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-api-discussion-controller -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-api-gateway -->
 <a id="deepseek-aidsh-api-gateway"></a>
 
@@ -4712,6 +4729,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-client-ui-deliverables` | `systemPrompt` · `connection` · `sessionQuery` · `sessionController` · `workspaceFiles` · `fs` · `sandboxPolicy` · `workspaceChanges` | [`packages/client/ui-deliverables/src/index.ts`](../packages/client/ui-deliverables/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-directory-picker-browse` | — | [`packages/client/ui-directory-picker-browse/src/index.ts`](../packages/client/ui-directory-picker-browse/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-directory-picker-native` | — | [`packages/client/ui-directory-picker-native/src/index.ts`](../packages/client/ui-directory-picker-native/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-discussions` | — | [`packages/client/ui-discussions/src/index.ts`](../packages/client/ui-discussions/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-goal` | — | [`packages/client/ui-goal/src/index.ts`](../packages/client/ui-goal/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-input-trigger` | — | [`packages/client/ui-input-trigger/src/index.ts`](../packages/client/ui-input-trigger/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-jobs` | — | [`packages/client/ui-jobs/src/index.ts`](../packages/client/ui-jobs/src/index.ts) |

@@ -1,0 +1,14 @@
+.settings, .board { color: var(--dsw-alias-label-primary); padding: 16px; min-height: 0; overflow: auto; }
+.settings label, .board label { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.settings fieldset { border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md); margin: 12px 0; }
+.settings input, .settings textarea, .settings select, .board input, .board textarea, .board select { box-sizing: border-box; width: 100%; padding: 8px; font: inherit; color: inherit; background: var(--dsw-specific-input-major); border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md); }
+.settings textarea, .board textarea { min-height: 90px; resize: vertical; }
+.settings button, .board button, .trigger { cursor: pointer; color: var(--dsw-alias-label-primary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md); padding: 6px 10px; font: inherit; }
+.list, .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.topic { padding: 10px 0; border-bottom: 1px solid var(--dsw-alias-border-l2); }
+.chat { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.conversation { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.return { padding: 8px; border-top: 1px solid var(--dsw-alias-border-l2); }
+.settings article { white-space: pre-wrap; overflow-wrap: anywhere; padding: 8px 0; }
+.quote { max-height: 180px; overflow: auto; padding: 8px; overflow-wrap: anywhere; }
+.board fieldset { border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md); padding: 12px; margin-top: 12px; }

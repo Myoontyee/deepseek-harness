@@ -58,25 +58,36 @@ export function DesktopUpdateIndicator({ wide, hidden, t, view, onOpen }: {
   hidden: boolean
   t: SettingsTranslate
   view: DesktopUpdateView
-  onOpen: () => void
+  onOpen: (channel?: 'custom' | 'official') => void
 }) {
   const { presentation: state, failed, opening } = view
-  if (!wide || hidden || (!failed && (state === undefined || state.phase === 'idle'))) return null
+  if (!wide || hidden) return null
+  const colors = view.colors ?? { custom: 'blue', official: 'green' }
+  const showCustom = failed || (state !== undefined && state.phase !== 'idle')
+  const official = state?.official
+  const showOfficial = official !== undefined && official.phase !== 'idle'
+  if (!showCustom && !showOfficial) return null
   const retryLabel = t('desktop.update.retry')
   const copy = state === undefined ? { label: retryLabel, detail: retryLabel } : updateCopy(state, t)
   const label = failed ? retryLabel : copy.label
   const error = failed || state?.phase === 'error'
   const busy = opening || (state !== undefined && BUSY_PHASES.has(state.phase))
-  return <Tooltip label={failed ? retryLabel : copy.detail} side="top">
-    <button type="button" className={css.indicator}
-      aria-label={label} aria-disabled={busy} onClick={() => { if (!busy) onOpen() }}>
-      <span className={css.icon} aria-hidden="true">
-        {error ? <span className={css.errorDot} />
-          : busy ? <IconLoadingOutlineRegular className={css.spinner} size={14} /> : <IconDownloadOutlineRegular size={14} />}
-      </span>
-      <span>{label}</span>
-    </button>
-  </Tooltip>
+  return <span className={css.channels}>
+    {showOfficial && <Tooltip label={`${t('desktop.channel.official')}: ${official.version ?? t(official.phase === 'error' ? 'desktop.update.checkFailed' : 'desktop.update.checking')}`} side="top">
+      <button type="button" className={css.indicator} data-color={colors.official} onClick={() => { onOpen('official') }} aria-label={t('desktop.channel.official')}>
+        <span className={css.officialDot} aria-hidden="true" />{t('desktop.channel.official')}{official.version ? ` ${official.version}` : ''}
+      </button></Tooltip>}
+    {showCustom && <Tooltip label={failed ? retryLabel : copy.detail} side="top">
+      <button type="button" className={css.indicator} data-color={colors.custom}
+        aria-label={label} aria-disabled={busy} onClick={() => { if (!busy) onOpen() }}>
+        <span className={css.icon} aria-hidden="true">
+          {error ? <span className={css.errorDot} />
+            : busy ? <IconLoadingOutlineRegular className={css.spinner} size={14} /> : <IconDownloadOutlineRegular size={14} />}
+        </span>
+        <span>{state?.custom ? `${t('desktop.channel.custom')} · ` : ''}{label}</span>
+      </button>
+    </Tooltip>}
+  </span>
 }
 
 type BadgeProps = PropsRuntime<'sidebar.toggle.badge'> & PropsLocale<'settings'>
@@ -87,14 +98,15 @@ type BadgeProps = PropsRuntime<'sidebar.toggle.badge'> & PropsLocale<'settings'>
  * @returns A non-interactive brand-blue notification on the sidebar expand button.
  */
 export function DesktopUpdateBadge({ useDesktopUpdate, useConnectionState, t }: BadgeProps) {
-  const { presentation: state, failed } = useDesktopUpdate(value => value)
+  const { presentation: state, failed, colors = { custom: 'blue', official: 'green' } } = useDesktopUpdate(value => value)
   const connection = useConnectionState(value => value)
-  if (((connection === 'disconnected' || connection === 'connecting') && state?.phase !== 'installing')
-    || (!failed && (state === undefined || state.phase === 'idle'))) return null
-  const retryLabel = t('desktop.update.retry')
-  const copy = state === undefined ? { label: retryLabel, detail: retryLabel } : updateCopy(state, t)
-  const label = failed ? retryLabel : copy.label
-  return <Tooltip label={failed ? label : copy.detail} side="right">
-    <span role="img" aria-label={label} className={css.badge} />
-  </Tooltip>
+  if ((connection === 'disconnected' || connection === 'connecting') && state?.phase !== 'installing') return null
+  const custom = failed || (state !== undefined && state.phase !== 'idle')
+  const official = state?.official !== undefined && state.official.phase !== 'idle'
+  return <>
+    {custom && <Tooltip label={t('desktop.channel.custom')} side="right"><span role="img" aria-label={t('desktop.channel.custom')}
+      className={css.badge} data-color={colors.custom} /></Tooltip>}
+    {official && <Tooltip label={t('desktop.channel.official')} side="right"><span role="img" aria-label={t('desktop.channel.official')}
+      className={`${css.badge} ${css.officialBadge}`} data-color={colors.official} /></Tooltip>}
+  </>
 }

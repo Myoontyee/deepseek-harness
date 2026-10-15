@@ -5,6 +5,8 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { releaseIdentity } from './custom-release.mjs'
+import { signCustomUpdate, publishCustomUpdate } from './custom-update-channel.mjs'
+import { verifyCustomUpdate } from '../../apps/desktop/src/custom-update-manifest.ts'
 
 if (process.env.GITHUB_ACTIONS) throw new Error('Android signing is local only')
 if (process.platform !== 'win32') throw new Error('This signing adapter requires the configured Windows Android SDK')
@@ -21,12 +23,14 @@ const release = () => {
   const value = JSON.parse(gh(['api', `repos/${repository}/releases/${metadata.databaseId}`]))
   return { isDraft: value.draft, assets: value.assets }
 }
-if (!release().isDraft) throw new Error('Only an unpublished draft may be completed; published releases are immutable')
+const initiallyDraft = release().isDraft
 const run = JSON.parse(gh(['run', 'view', runId, '--repo', repository, '--json', 'headSha,conclusion,workflowName']))
 const remoteCommit = JSON.parse(gh(['api', `repos/${repository}/commits/${tag}`])).sha
 const localCommit = execFileSync('git', ['rev-parse', '--verify', `${tag}^{commit}`], { cwd: root, encoding: 'utf8' }).trim()
 if (run.conclusion !== 'success' || run.workflowName !== 'Custom multiplatform release'
   || run.headSha !== remoteCommit || localCommit !== remoteCommit) throw new Error('Cloud build, local tag, and remote tag must identify the same successful source')
+const updateKey = process.env.DSH_CUSTOM_UPDATE_PRIVATE_KEY
+if (!updateKey) throw new Error('Configure the local custom-update signing key')
 const keystore = process.env.DSH_ANDROID_KEYSTORE
 const passwordFile = process.env.DSH_ANDROID_PASSWORD_FILE
 const sdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT
@@ -34,11 +38,27 @@ if (!keystore || !passwordFile || !sdk) throw new Error('Configure local keystor
 const artifacts = join(root, '.artifacts')
 mkdirSync(artifacts, { recursive: true })
 const staging = mkdtempSync(join(artifacts, 'local-signed-release-'))
+if (!initiallyDraft) {
+  // Recover a network interruption after publication without modifying immutable installers.
+  gh(['release', 'download', tag, '--repo', repository, '--dir', staging, '--pattern', 'update.json'])
+  const manifest = join(staging, 'update.json'), raw = readFileSync(manifest, 'utf8')
+  const assets = release().assets
+  for (const target of ['win-x64', 'mac-arm64', 'mac-x64', 'android-universal']) {
+    const checked = verifyCustomUpdate(raw, target)
+    const asset = assets.find(item => item.name === checked.asset.name)
+    if (checked.version !== version || checked.source !== remoteCommit || !asset
+      || asset.digest !== `sha256:${checked.asset.sha256}` || asset.size !== checked.asset.size) throw new Error('Published update identity differs')
+  }
+  publishCustomUpdate({ gh, repository, tag, source: remoteCommit, version, staging, manifest })
+  console.log(JSON.stringify({ version, directory: staging, source: remoteCommit, recoveredChannel: true }))
+  process.exit(0)
+}
 const unsignedDirectory = join(staging, 'unsigned')
 mkdirSync(unsignedDirectory)
 const unsignedName = `deepseek-harness-${version}-android-universal-unsigned.apk`
 gh(['release', 'download', tag, '--repo', repository, '--dir', unsignedDirectory, '--pattern', unsignedName])
 gh(['release', 'download', tag, '--repo', repository, '--dir', staging, '--pattern', 'SHA256SUMS.txt'])
+gh(['release', 'download', tag, '--repo', repository, '--dir', staging, '--pattern', 'UPDATE-PAYLOAD.json'])
 const filename = `deepseek-harness-${version}-android-universal.apk`
 const aligned = join(unsignedDirectory, 'aligned.apk')
 const unsigned = join(unsignedDirectory, unsignedName)
@@ -89,15 +109,32 @@ const names = ['win-x64-unsigned.exe', 'mac-arm64-unsigned.dmg', 'mac-x64-unsign
 const sums = names.map(name => `${name === filename
   ? createHash('sha256').update(readFileSync(join(staging, name))).digest('hex')
   : expectedHashes.get(name)}  ${name}`).join('\n')
+const updatePayload = JSON.parse(readFileSync(join(staging, 'UPDATE-PAYLOAD.json'), 'utf8'))
+if (updatePayload.schemaVersion !== 1 || updatePayload.source !== remoteCommit || updatePayload.version !== version
+  || !Array.isArray(updatePayload.assets) || updatePayload.assets.length !== 4) throw new Error('Update payload differs from verified source')
+for (const asset of updatePayload.assets) {
+  if (asset.sha256 !== expectedHashes.get(asset.name)) throw new Error('Update payload differs from installer checksums')
+}
+const apkBytes = readFileSync(join(staging, filename))
+const androidAsset = updatePayload.assets.find(asset => asset.target === 'android-universal')
+if (!androidAsset || androidAsset.name !== unsignedName) throw new Error('Android update payload identity differs')
+Object.assign(androidAsset, { name: filename, size: apkBytes.length, sha256: createHash('sha256').update(apkBytes).digest('hex'),
+  sha512: createHash('sha512').update(apkBytes).digest('base64') })
+const updateManifest = join(staging, 'update.json')
+const signedUpdate = signCustomUpdate(updatePayload, readFileSync(updateKey))
+for (const target of ['win-x64', 'mac-arm64', 'mac-x64', 'android-universal']) verifyCustomUpdate(signedUpdate, target)
+writeFileSync(updateManifest, signedUpdate)
 const manifest = join(staging, 'SHA256SUMS.txt')
 writeFileSync(manifest, `${sums}\n`)
 if (!release().isDraft) throw new Error('Release was published by another actor; do not replace its assets')
-gh(['release', 'upload', tag, join(staging, filename), '--repo', repository])
+gh(['release', 'upload', tag, join(staging, filename), updateManifest, '--repo', repository])
 // The checksum file is replaced only while the release remains an unpublished draft.
 gh(['release', 'upload', tag, manifest, '--clobber', '--repo', repository])
 gh(['release', 'delete-asset', tag, unsignedName, '--yes', '--repo', repository])
+gh(['release', 'delete-asset', tag, 'UPDATE-PAYLOAD.json', '--yes', '--repo', repository])
 const completed = release()
-if (!completed.isDraft || completed.assets.length !== 5
-  || ![...names, 'SHA256SUMS.txt'].every(name => completed.assets.some(asset => asset.name === name))) throw new Error('Final release assets differ from the verified set')
+if (!completed.isDraft || completed.assets.length !== 6
+  || ![...names, 'SHA256SUMS.txt', 'update.json'].every(name => completed.assets.some(asset => asset.name === name))) throw new Error('Final release assets differ from the verified set')
 gh(['release', 'edit', tag, '--repo', repository, '--draft=false'])
+publishCustomUpdate({ gh, repository, tag, source: remoteCommit, version, staging, manifest: updateManifest })
 console.log(JSON.stringify({ version, directory: staging, source: remoteCommit, url: `https://github.com/${repository}/releases/tag/${tag}` }))

@@ -1,0 +1,4 @@
+provider: generic
+url: https://github.com/Myoontyee/deepseek-harness/releases/download/custom-updates/
+channel: nightly
+updaterCacheDirName: deepseek-harness-custom-updater

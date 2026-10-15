@@ -54,6 +54,8 @@ async function fixture(fail = false) {
   ctx.provide('locale', new LocaleRuntime(ctx))
   await ctx.plugin(SlotRegistry)
   ctx.slots.register({ name: 'root', children: {
+    'conversation.annotation.voice': { kind: 'single', scope: 'root' },
+    'document.annotation.voice': { kind: 'single', scope: 'root' },
     'conversation.input.activity': { kind: 'single', scope: 'session' },
     'plugins.bundle.activation': { kind: 'keyed', scope: 'root' },
     'plugins.bundle.config': { kind: 'keyed', scope: 'root' },
@@ -106,6 +108,8 @@ it('withdraws its Remote, localized slot and microphone captures on disposal', a
     await fiber.dispose()
     expect(dispose).toHaveBeenCalledOnce()
     expect(b.ctx.slots.entries('conversation.input.activity')).toHaveLength(0)
+    expect(b.ctx.slots.entries('conversation.annotation.voice')).toHaveLength(0)
+    expect(b.ctx.slots.entries('document.annotation.voice')).toHaveLength(0)
     expect(b.ctx.slots.entries('plugins.bundle.activation')).toHaveLength(0)
     expect(b.unmount).toHaveBeenCalledOnce()
   } finally { await b.ctx.fiber.dispose() }

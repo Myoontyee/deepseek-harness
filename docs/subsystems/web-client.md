@@ -6,6 +6,15 @@ The Web Client is a browser-side Cordis application assembled from independently
 
 [Keyboard shortcuts](../../packages/client/shortcuts/README.md) owns window-local command registration and physical-key dispatch; [the shortcut reference](../../packages/client/ui-shortcuts/README.md) presents available commands and local input actions. Command owners declare each runtime/platform default and share their existing actions with mouse controls. The shared modal primitive arbitrates top-layer Escape and restores focus.
 
+## Persistent discussions and assistants
+
+The [discussion service](../../packages/api/discussion-controller/README.md) owns topic metadata and explicitly confirmed memories; [the discussion UI](../../packages/client/ui-discussions/README.md) opens one board per parent conversation. Native Sessions retain the messages and attachments. Closing or archiving a topic does not delete history, and returning a conclusion only updates the parent draft.
+
+`DiscussionAssistant` and `AssistantDraft` describe saved identity, responsibilities and memory policy. `AssistantMemory` and `MemoryDraft` describe confirmed notes with assistant or exact-project scope. `DiscussionTopic` and `TopicDraft` link an independent Session to its original quotation and parent. `AssistantId`, `AssistantMemoryId` and `DiscussionId` are opaque identities; `AssistantTemplate` and `AssistantMemoryMode` select the starter policy and its current memory visibility. Complete field definitions live in [types.ts](../../packages/api/discussion-controller/src/types.ts).
+
+Memory is read only when a topic prepares context. No background model loop or automatic fact extraction runs. Selected notes are bounded by the configured character budget; disabling memory leaves saved notes and conversation history intact.
+
+
 ## Layers and ownership
 
 | Layer | Main owners | Responsibility |
@@ -98,3 +107,89 @@ Use the four detailed references according to the extension being added:
 - [API Gateway](../api-gateway.md) for Host methods, generated Remote contributions, streams, and forwarded events.
 - [Web Client Slots](slots.md) for components, hooks, stores, injection, and placement.
 - [Conversation](conversation.md) for durable event correlation, target snapshots, and Chat or Trajectory view contributions.
+
+<!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
+
+<a id="cordis-surface"></a>
+
+## Cordis API
+
+Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+
+<a id="ctxdiscussioncontroller--discussioncontroller"></a>
+
+### `ctx.discussionController` — `DiscussionController`
+
+Metadata lives in a storage domain; messages and attachments use native Session storage.
+
+```ts cordis-catalog
+/** List saved identities without starting any model process.
+ * @returns Saved assistant profiles, including archived ones.
+ */
+@Remote assistants(): DiscussionAssistant[]
+
+/** Save a user-defined assistant without creating a conversation.
+ * @param draft - Explicit identity and memory policy.
+ * @returns Durably stored assistant.
+ */
+@Remote async createAssistant(draft: AssistantDraft): Promise<DiscussionAssistant>
+
+/** Update one profile without overwriting another window's edits.
+ * @param id - Saved assistant identity.
+ * @param revision - Revision shown in the editor.
+ * @param draft - Replacement editable fields.
+ * @returns Committed profile.
+ */
+@Remote updateAssistant(id: AssistantId, revision: number, draft: AssistantDraft): Promise<DiscussionAssistant>
+
+/** Read explicitly saved notes for the settings editor.
+ * @param id - Assistant identity.
+ * @returns Its stored memory entries, including entries currently disabled by policy.
+ */
+@Remote memories(id: AssistantId): AssistantMemory[]
+
+/** Save a memory only after an explicit user action.
+ * @param draft - Confirmed text and scope.
+ * @returns Committed memory entry.
+ */
+@Remote async remember(draft: MemoryDraft): Promise<AssistantMemory>
+
+/** Edit a confirmed note without overwriting another window's change.
+ * @param id - Existing memory identity.
+ * @param revision - Revision displayed in the editor.
+ * @param draft - Replacement text and scope for the same assistant.
+ * @returns Committed memory entry.
+ */
+@Remote updateMemory(id: AssistantMemoryId, revision: number, draft: MemoryDraft): Promise<AssistantMemory>
+
+/** Remove one confirmed note without deleting any conversation.
+ * @param id - Memory identity selected by the user.
+ * @returns Whether an entry was removed.
+ */
+@Remote forget(id: AssistantMemoryId): Promise<boolean>
+
+/** List the small topic index for one parent; transcript messages are loaded separately.
+ * @param parentSessionId - Main conversation identity.
+ * @returns Durable topics, most recently updated first.
+ */
+@Remote topics(parentSessionId: SessionId): DiscussionTopic[]
+
+/** Create an independent, initially read-only native Session, without running a model or copying parent history.
+ * @param draft - Idempotency key, source quotation and selected assistant.
+ * @returns Persisted topic and Session identity.
+ */
+@Remote async createTopic(draft: TopicDraft): Promise<DiscussionTopic>
+
+/** Resolve, archive or reopen a topic without deleting its history.
+ * @param id - Topic identity.
+ * @param revision - Revision the caller displayed.
+ * @param state - New topic visibility state.
+ * @returns Committed metadata.
+ */
+@Remote setTopicState(id: DiscussionId, revision: number, state: 'open' | 'resolved' | 'archived'): Promise<DiscussionTopic>
+```
+
+Types: [SessionId](core.md)
+
+Source: [`packages/api/discussion-controller/src/index.ts`](../../packages/api/discussion-controller/src/index.ts)
+<!-- END GENERATED cordis-surface -->

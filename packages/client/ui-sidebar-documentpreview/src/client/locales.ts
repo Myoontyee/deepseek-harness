@@ -10,6 +10,7 @@
 export const zh = {
   'selection.add': '添加到对话',
   'selection.comment': '添加注释',
+  'selection.discuss': '在侧边讨论',
   'selection.resume': '继续编辑暂存注释',
   'selection.discardDraft': '删除暂存',
   'selection.draftHint': '取消或关闭后可继续编辑暂存备注；当前页面关闭前请先添加到对话。',
@@ -51,6 +52,7 @@ export type SidebarDocumentPreviewKey = keyof typeof zh
 export const en = {
   'selection.add': 'Add to conversation',
   'selection.comment': 'Add annotation',
+  'selection.discuss': 'Discuss in sidebar',
   'selection.resume': 'Resume annotation draft',
   'selection.discardDraft': 'Discard draft',
   'selection.draftHint': 'Cancel or close to resume this draft later. Add it to the conversation before leaving this page.',

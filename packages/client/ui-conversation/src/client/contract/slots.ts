@@ -260,6 +260,10 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.composer': { kind: 'chain'; scope: 'session'; owner: ComposerChainProps }
     /** Workspace picker shown by the blank-session Hero. */
     'conversation.hero.workspace': { kind: 'single'; scope: 'root'; owner: EmptyWorkspaceOwnerProps }
+    /** Optional dictation control receiving a comment value and replacement callback; absence leaves typing available. */
+    'conversation.annotation.voice': { kind: 'single'; scope: 'root'; owner: AnnotationVoiceOwnerProps }
+    /** Optional file-comment dictation control; it receives the same draft-owned value and callback as transcript comments. */
+    'document.annotation.voice': { kind: 'single'; scope: 'root'; owner: AnnotationVoiceOwnerProps }
     /** Brand mark shown before the blank-session headline. */
     'conversation.hero.brand.mark': { kind: 'single'; scope: 'root'; owner: HeroBrandMarkOwnerProps }
     /** Agent-preset control staged for a New Session. */
@@ -308,6 +312,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
         'conversation.composer': { kind: 'chain'; scope: 'session' }
         'conversation.composer.bar': { kind: 'single'; scope: 'session-maybe' }
         'conversation.input.dock': { kind: 'list'; scope: 'session' }
+        'conversation.annotation.voice': { kind: 'single'; scope: 'root' }
         'conversation.hero.brand.mark': { kind: 'single'; scope: 'root' }
         'conversation.hero.workspace': { kind: 'single'; scope: 'root' }
         'conversation.hero.agentPreset': { kind: 'single'; scope: 'session-maybe' }
@@ -402,7 +407,17 @@ export interface ConvViewOwnerProps {
 export type ConvViewProps = PropsRuntime<'conversation.view'>
 
 /** Business callbacks injected into the resident Conversation shell. */
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    /** Navigate to a persistent discussion for a user-selected passage. */
+    discussionNavigation: { open(parent: SessionId, quote?: import('@deepseek-ai/dsh-client-ui-primitives').ResponseAnnotation): void }
+  }
+}
+
+/** Business callbacks injected into the resident Conversation shell. */
 export interface ConversationInjected {
+  /** Open a sidebar discussion without submitting a model request. */
+  openDiscussion?: (annotation: import('@deepseek-ai/dsh-client-ui-primitives').ResponseAnnotation) => void
   /** Connect and open a blank Session in the selected Workspace. */
   selectWorkspace: (workspaceId: WorkspaceId) => Promise<void>
   /** Session-addressed composer block source, or the stable absent source. */
@@ -596,4 +611,11 @@ export interface EmptyWorkspaceOwnerProps {
   selectedId?: WorkspaceId | undefined
   onPick: (workspaceId: WorkspaceId) => void
   onClose: () => void
+}
+
+/** Optional dictation writes only to the owning comment draft. */
+export interface AnnotationVoiceOwnerProps {
+  identity: string
+  value: string
+  onChange: (value: string) => void
 }

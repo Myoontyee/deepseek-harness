@@ -1,3 +1,8 @@
+import electronCustomUpdater from 'electron-updater'
+import { newerOfficialVersion } from './official-update-check.ts'
+import type { DesktopUpdatePresentation } from './ipc.ts'
+import { CustomUpdateProvider } from './custom-update-provider.ts'
+import { CustomMacUpdater } from './custom-mac-updater.ts'
 import { PairedDevices } from './paired-devices.ts'
 import { openPeerWindow } from './peer-window.ts'
 import { DesktopSessionReader } from './session-reader-control.ts'
@@ -438,7 +443,8 @@ async function main(): Promise<void> {
   // chrome and its content never mix languages.
   const showAbout = async (): Promise<void> => {
     await ordinaryMessageBox({ type: 'info', title: locale.messages.aboutMenu, message: locale.messages.aboutProduct,
-      detail: formatDesktopMessage(locale.messages.aboutVersion, { version: app.getVersion() }),
+      detail: formatDesktopMessage(locale.messages.aboutVersion, { version: app.getVersion() })
+        + (customUpdates ? `\n${locale.messages.customUpdateChannelName}` : ''),
       buttons: [locale.messages.updateAcknowledge], cancelId: 0 })
   }
   const commandManager = new DesktopCommandManager({
@@ -606,12 +612,18 @@ async function main(): Promise<void> {
     }
     return shown
   }
+  let officialUpdate: DesktopUpdatePresentation['official']
+  let isCustomUpdateChannel = false
+  const updatePresentation = (): DesktopUpdatePresentation => ({ ...presentDesktopUpdate(updateState),
+    ...(isCustomUpdateChannel ? { custom: true, ...(officialUpdate === undefined ? {} : { official: officialUpdate }) } : {}) })
+  let offerCustomUpdate = (): void => { /* Installed after the update prompt owner is initialized. */ }
   const publishUpdate = (state: DesktopUpdateState): DesktopUpdateState => {
     updateJournal?.state(state)
     updateState = state
+    if (state.phase === 'ready') offerCustomUpdate()
     mandatoryUI?.sync()
     for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send(DESKTOP_IPC.updatesPresentation, presentDesktopUpdate(state))
+      window.webContents.send(DESKTOP_IPC.updatesPresentation, updatePresentation())
     }
     if (state.phase === 'error' && state.failedOperation !== 'check') {
       const restoreHost = state.failedOperation === 'install' && updateStoppedHost && !quitting
@@ -664,9 +676,45 @@ async function main(): Promise<void> {
 
   const manifest: unknown = JSON.parse(await readFile(join(app.getAppPath(), 'package.json'), 'utf8'))
   const updateChannel = desktopUpdateChannel(manifest)
+  const customUpdates = app.isPackaged && typeof manifest === 'object' && manifest !== null
+    && 'dshCustomUpdates' in manifest && manifest.dshCustomUpdates === true
+  isCustomUpdateChannel = customUpdates
+  let officialCheck: Promise<void> | undefined
+  const checkOfficialUpdate = (): Promise<void> => {
+    if (officialCheck) return officialCheck
+    officialCheck = (async () => {
+      officialUpdate = { phase: 'checking' }; publishUpdate(updateState)
+      try {
+        const response = await net.fetch('https://api.github.com/repos/deepseek-ai/deepseek-harness/releases?per_page=30', { signal: AbortSignal.timeout(15000) })
+        if (!response.ok) throw new Error(`Official release check failed (${response.status})`)
+        const version = newerOfficialVersion(await response.json(), app.getVersion())
+        officialUpdate = version === undefined ? { phase: 'idle' } : { phase: 'available', version }
+      } catch (_error) { officialUpdate = { phase: 'error' } }
+      publishUpdate(updateState)
+    })().finally(() => { officialCheck = undefined })
+    return officialCheck
+  }
+  if (customUpdates) {
+    const initial = setTimeout(() => { void checkOfficialUpdate() }, 15000)
+    const periodic = setInterval(() => { void checkOfficialUpdate() }, 30 * 60 * 1000)
+    app.once('will-quit', () => { clearTimeout(initial); clearInterval(periodic) })
+  }
+  const customMac = customUpdates && process.platform === 'darwin' ? new CustomMacUpdater() : undefined
+  const customWindows = customUpdates && process.platform === 'win32'
+    ? new electronCustomUpdater.NsisUpdater({ provider: 'custom', updateProvider: CustomUpdateProvider }) : undefined
+  if (customWindows) customWindows.disableDifferentialDownload = true
+  const customEngine = customWindows ?? customMac
+
   const updates = new DesktopUpdateCoordinator(
     publishUpdate,
     async () => {
+      if (customMac !== undefined) {
+        const choice = await ordinaryMessageBox({ type: 'info', title: locale.messages.updateTitle,
+          message: locale.messages.customMacUpdateReady, detail: locale.messages.customMacUpdateDetail,
+          buttons: [locale.messages.customMacUpdateOpen, locale.messages.updateLater], cancelId: 1 })
+        if (choice.response === 0) await customMac.openDownloaded()
+        return false
+      }
       await commandManager.idle()
       await workspaceRecovery
       await startup?.catch(() => undefined)
@@ -677,8 +725,9 @@ async function main(): Promise<void> {
       const confirmation: Electron.MessageBoxOptions = {
         type: active ? 'warning' : 'info', title: locale.messages.updateTitle,
         message: active ? locale.messages.updateActiveTasks : ready.message,
-        detail: active ? locale.messages.updateActiveTasksDetail : ready.detail,
-        buttons: active ? [locale.messages.updateStopTasks, locale.messages.updateLater] : [locale.messages.installAndRestart],
+        detail: active ? locale.messages.updateActiveTasksDetail : `${ready.detail}${customUpdates ? `\n\n${locale.messages.customUpdateDraftNotice}` : ''}`,
+        buttons: active ? [locale.messages.updateStopTasks, locale.messages.updateLater]
+          : customUpdates ? [locale.messages.installAndRestart, locale.messages.updateLater] : [locale.messages.installAndRestart],
         defaultId: 1, cancelId: 1,
       }
       if (isMandatory()) {
@@ -715,9 +764,9 @@ async function main(): Promise<void> {
       }
       return true
     },
-    undefined, undefined, undefined,
+    customEngine, customUpdates ? () => customEngine !== undefined : undefined, undefined,
     (success, reason) => { void track('desktop_upgrade_download_result', { is_success: success, ...reason === undefined ? {} : { error_reason: reason } }) },
-    updateChannel,
+    updateChannel, customUpdates,
   )
 
   const updateSchedule = new DesktopUpdateSchedule(updates, resolveDesktopUpdateScheduleConfig(process.env))
@@ -847,7 +896,7 @@ async function main(): Promise<void> {
   })
   ipcMain.handle(DESKTOP_IPC.updatesStatus, (event) => {
     assertProductSender(event)
-    return presentDesktopUpdate(updates.state)
+    return updatePresentation()
   })
   ipcMain.handle(DESKTOP_IPC.deviceInfo, (event) => {
     assertProductSender(event)
@@ -868,9 +917,18 @@ async function main(): Promise<void> {
       if (width < 960) window.setSize(960, height)
     }
   })
-  ipcMain.handle(DESKTOP_IPC.updatesOpen, async (event) => {
+  ipcMain.handle(DESKTOP_IPC.updatesOpen, async (event, channel: unknown) => {
     assertProductSender(event)
-    await openUpdatePrompt()
+    if (channel === 'official' && customUpdates) {
+      await checkOfficialUpdate()
+      const choice = await ordinaryMessageBox({ type: 'info', title: locale.messages.officialUpdateTitle,
+        message: officialUpdate?.version ?? locale.messages.officialUpdateTitle, detail: locale.messages.officialUpdateSwitchWarning,
+        buttons: [locale.messages.officialUpdateView, locale.messages.updateLater], cancelId: 1 })
+      if (choice.response === 0) await shell.openExternal('https://github.com/deepseek-ai/deepseek-harness/releases')
+      return
+    }
+    if (channel !== undefined && channel !== 'custom') throw new Error('Unknown update channel')
+    await openUpdatePrompt(channel === 'custom')
   })
 
   let promptOperation: Promise<void> | undefined
@@ -913,6 +971,7 @@ async function main(): Promise<void> {
           return
         }
         if (state.phase === 'ready' || (state.phase === 'error' && state.failedOperation === 'install')) {
+          controller?.abort()
           if (state.version !== undefined) {
             failedOperation = 'install'
             await showUpdateFailure(await updates.install(state.version))
@@ -942,6 +1001,27 @@ async function main(): Promise<void> {
       .finally(() => { promptOperation = undefined; flushQueuedPolicyAuthentication() })
     return promptOperation
   }
+
+  let customOfferTimer: ReturnType<typeof setTimeout> | undefined
+  let offeredCustomVersion: string | undefined
+  offerCustomUpdate = () => {
+    if (!customUpdates || quitting || customOfferTimer !== undefined || updates.state.phase !== 'ready'
+      || updates.state.version === offeredCustomVersion) return
+    customOfferTimer = setTimeout(() => {
+      customOfferTimer = undefined
+      void (async () => {
+        const window = currentDialogWindow(), host = backend.host
+        if (quitting || updates.state.phase !== 'ready') return
+        if (window === undefined || !window.isVisible() || window.isMinimized() || host === undefined
+          || promptOperation !== undefined || ordinaryDialogs.size > 0 || await host.updateTasks('inspect')) {
+          offerCustomUpdate(); return
+        }
+        offeredCustomVersion = updates.state.version
+        await openUpdatePrompt()
+      })().catch((error: unknown) => { console.error(error); offerCustomUpdate() })
+    }, 30_000)
+  }
+  app.on('will-quit', () => { clearTimeout(customOfferTimer) })
 
   let authenticationOperation: Promise<DesktopPolicyState | undefined> | undefined
   const authenticatePolicy = () => {

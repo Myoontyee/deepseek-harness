@@ -6,6 +6,7 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol'
+import { AnnotationVoiceInput } from './AnnotationVoiceInput.tsx'
 import { VoiceInput, type VoiceInputInjected } from './VoiceInput.tsx'
 import { Recording } from './audio.ts'
 import { createMicrophoneDeviceStore } from './microphone-device.ts'
@@ -45,6 +46,12 @@ function registerUi(ctx: Context): void {
   ctx.slots.inject('conversation.input.activity', () => ctx.slots.register({
     name: 'conversation.input.activity', locale: NS, inject: () => actions,
   }, VoiceInput))
+  ctx.slots.inject('conversation.annotation.voice', () => ctx.slots.register({
+    name: 'conversation.annotation.voice', locale: NS, inject: () => actions,
+  }, AnnotationVoiceInput))
+  ctx.slots.inject('document.annotation.voice', () => ctx.slots.register({
+    name: 'document.annotation.voice', locale: NS, inject: () => actions,
+  }, AnnotationVoiceInput))
   ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({ name: 'plugins.bundle.config',
     key: '@deepseek-ai/dsh-experimental-voice-input-bundle', locale: NS, inject: () => actions,
   }, VoicePreparation))

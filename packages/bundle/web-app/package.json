@@ -196,7 +196,9 @@
     "@deepseek-ai/dsh-api-code-review-controller": "workspace:*",
     "@deepseek-ai/dsh-api-connection-controller": "workspace:*",
     "@deepseek-ai/dsh-client-ui-settings-connections": "workspace:*",
-    "@deepseek-ai/dsh-harness-dev-context": "workspace:*"
+    "@deepseek-ai/dsh-harness-dev-context": "workspace:*",
+    "@deepseek-ai/dsh-api-discussion-controller": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-discussions": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~",

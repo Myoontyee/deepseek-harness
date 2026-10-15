@@ -130,6 +130,8 @@
     - id: code-review-controller
       name: '@deepseek-ai/dsh-api-code-review-controller'
 
+    - id: discussion-controller
+      name: '@deepseek-ai/dsh-api-discussion-controller'
     - id: connection-controller
       name: '@deepseek-ai/dsh-api-connection-controller'
 
@@ -447,6 +449,8 @@
     - id: ui-settings-agent-loop
       name: '@deepseek-ai/dsh-client-ui-settings-agent-loop'
 
+    - id: ui-discussions
+      name: '@deepseek-ai/dsh-client-ui-discussions'
     - id: ui-settings-connections
       name: '@deepseek-ai/dsh-client-ui-settings-connections'
 

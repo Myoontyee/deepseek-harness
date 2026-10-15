@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-10-15-persistent-discussions.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-15-persistent-discussions.md
+/agent-note-persistent-discussions-and-explicit-assistant-memory:
+  en: 59412b5f2cdec5a1
+  zh: d90e97e127256c2a
+/agent-note-persistent-discussions-and-explicit-assistant-memory/problem:
+  en: 30f6b2c335c41ff5
+  zh: 0fc5e42f03abea3e
+/agent-note-persistent-discussions-and-explicit-assistant-memory/decision:
+  en: d9be2410de79d290
+  zh: a8ac4aad0b032a49
+/agent-note-persistent-discussions-and-explicit-assistant-memory/alternatives-considered:
+  en: 1e2cd1fdb7e6b889
+  zh: 2dfd461e1b3c4678
+/agent-note-persistent-discussions-and-explicit-assistant-memory/consequences:
+  en: bdf47e8b4169cdda
+  zh: 83b24e8bc06246eb

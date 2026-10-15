@@ -1,6 +1,14 @@
 /** Typed English and Chinese copy owned by the Electron shell. */
 
 export const en = {
+  officialUpdateTitle: 'Official releases',
+  officialUpdateSwitchWarning: 'Installing an official build may remove custom features. Checking does not replace this custom build. Choose an installer on the official release page.',
+  officialUpdateView: 'View official releases',
+  customUpdateChannelName: 'Custom updates · Myoontyee',
+  customUpdateDraftNotice: 'Save unsent messages and annotation drafts before restarting. Your saved conversations and settings are retained.',
+  customMacUpdateReady: 'Custom update downloaded and verified',
+  customMacUpdateDetail: 'This Mac build is unsigned. Open the DMG, save your drafts, quit DSH and replace the app in Applications.',
+  customMacUpdateOpen: 'Open downloaded installer',
   readerMenu: 'Session reading interface…',
   readerEnabled: 'Local session reader is enabled',
   readerDisabled: 'Local session reader is disabled',
@@ -183,6 +191,14 @@ export const en = {
 export type DesktopMessages = { readonly [Key in keyof typeof en]: string }
 
 export const zh = {
+  officialUpdateTitle: '官方原版更新',
+  officialUpdateSwitchWarning: '安装官方原版可能不再提供定制功能。检查更新不会替换当前定制版；你可以在官方发布页选择安装包。',
+  officialUpdateView: '查看官方发布页',
+  customUpdateChannelName: '定制版更新渠道 · Myoontyee',
+  customUpdateDraftNotice: '重启前请保存未发送的消息和注释草稿。已保存的对话及设置会保留。',
+  customMacUpdateReady: '定制版更新已下载并通过校验',
+  customMacUpdateDetail: '当前 Mac 版本未签名。打开安装包后，请先保存草稿、退出 DSH，再将新版替换到应用程序文件夹。',
+  customMacUpdateOpen: '打开已下载的安装包',
   readerMenu: '会话读取接口…',
   readerEnabled: '本机会话读取接口已启用',
   readerDisabled: '本机会话读取接口未启用',

@@ -10,6 +10,14 @@ import { DesktopUpdateHttpExecutor } from './update-http-executor.ts'
 import { DesktopUpdatePreparationError } from './update-error.ts'
 
 const { autoUpdater } = electronUpdater
+/** Update transport contract shared with guided unsigned macOS downloads. */
+export type DesktopUpdateEngine = Pick<AppUpdater, 'autoDownload' | 'autoInstallOnAppQuit' | 'channel' | 'allowPrerelease'
+  | 'allowDowngrade' | 'quitAndInstall'> & {
+    on(...args: Parameters<AppUpdater['on']>): unknown
+    off(...args: Parameters<AppUpdater['off']>): unknown
+    checkForUpdates(): Promise<{ updateInfo: { version: string }; isUpdateAvailable: boolean } | null>
+    downloadUpdate(): Promise<unknown>
+  }
 
 /** Owns one updater target until its download and installation settle. */
 export class DesktopUpdateCoordinator {
@@ -46,16 +54,18 @@ export class DesktopUpdateCoordinator {
    * @param enabled - Whether this process has a packaged update source.
    * @param currentVersion - Actual installed application version.
    * @param channel - Installed package channel; omitted test/local callers retain nightly.
+   * @param automaticDownload - Download custom updates in the background; installation stays separately confirmed.
    * @param downloadResult - Once per completed download attempt, including platform preparation failures.
    */
   constructor(
     private readonly publish: (state: DesktopUpdateState) => DesktopUpdateState,
     private readonly beforeRestart: () => Promise<boolean>,
-    private readonly updater: AppUpdater = autoUpdater,
+    private readonly updater: DesktopUpdateEngine = autoUpdater,
     private readonly enabled: () => boolean = () => app.isPackaged && existsSync(join(process.resourcesPath, 'app-update.yml')),
     private readonly currentVersion: () => string = () => app.getVersion(),
     private readonly downloadResult?: (success: boolean, reason?: string) => void,
     private readonly channel: 'nightly' | 'latest' = 'nightly',
+    private readonly automaticDownload = false,
   ) {
     if (updater === autoUpdater) {
       // electron-updater omits this internal transport property from its public declarations.
@@ -63,7 +73,7 @@ export class DesktopUpdateCoordinator {
       const transportOwner = updater as AppUpdater & { httpExecutor: DesktopUpdateHttpExecutor }
       transportOwner.httpExecutor = new DesktopUpdateHttpExecutor(
         Number(process.env.DSH_DESKTOP_UPDATE_HTTP_IDLE_TIMEOUT_MS ?? 60_000),
-        (authInfo, callback) => { updater.emit('login', authInfo, callback) },
+        (authInfo, callback) => { autoUpdater.emit('login', authInfo, callback) },
       )
     }
     this.updater.autoDownload = false
@@ -93,6 +103,7 @@ export class DesktopUpdateCoordinator {
       .finally(() => { this.checkOperation = undefined })
     const result = await this.checkOperation
     if (manual && result.phase === 'error') this.setState(result)
+    if (this.automaticDownload && result.phase === 'available' && result.version !== undefined) return this.download(result.version)
     return result
   }
 

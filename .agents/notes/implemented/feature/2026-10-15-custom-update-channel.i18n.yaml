@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-10-15-custom-update-channel.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-15-custom-update-channel.md
+/agent-note-signed-custom-application-update-channel:
+  en: 8e3a063280b47f56
+  zh: a283a63ba5bc63d0
+/agent-note-signed-custom-application-update-channel/problem:
+  en: b4859c8e39bbcbc8
+  zh: 165c9a41b2af6e40
+/agent-note-signed-custom-application-update-channel/decision:
+  en: 77cb06e7e753ee59
+  zh: 6772f4c4d04f4895
+/agent-note-signed-custom-application-update-channel/alternatives-considered:
+  en: 6e0d5ae73b556e8a
+  zh: 00737051cc6dbf0d
+/agent-note-signed-custom-application-update-channel/consequences:
+  en: 94db22d3e0898314
+  zh: 6ce710cf1cb077bf

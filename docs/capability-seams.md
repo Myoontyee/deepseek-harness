@@ -15,6 +15,9 @@ flowchart LR
   pkg_api_connection_controller["api-connection-controller"]
   svc_connectionController["ctx.connectionController<br/>Saved SSH targets and remote commands"]
   pkg_client_ui_settings_connections["client-ui-settings-connections"]
+  pkg_api_discussion_controller["api-discussion-controller"]
+  svc_discussionController["ctx.discussionController<br/>Persistent topics and confirmed assistant memory"]
+  pkg_client_ui_discussions["client-ui-discussions"]
   pkg_experimental_client_ui_cot_translation["experimental-client-ui-cot-translation"]
   svc_cotTranslation["ctx.cotTranslation<br/>Reasoning translation Remote"]
   pkg_experimental_translator["experimental-translator"]
@@ -304,6 +307,7 @@ flowchart LR
   pkg_agent_preset_registry --> svc_agentPresets
   pkg_api_code_review_controller --> svc_codeReviewController
   pkg_api_connection_controller --> svc_connectionController
+  pkg_api_discussion_controller --> svc_discussionController
   pkg_api_gateway --> svc_typertGateway
   pkg_api_git_controller --> svc_gitController
   pkg_api_job_controller --> svc_jobController
@@ -493,6 +497,7 @@ flowchart LR
   svc_deepseekAccount --> pkg_llm_deepseek
   svc_deepseekLlmApiExtensions --> pkg_llm_deepseek
   svc_directoryPicker --> pkg_api_workspace_controller
+  svc_discussionController --> pkg_client_ui_discussions
   svc_dynamicCordisRunner --> pkg_tool_cordis
   svc_fileReferences --> pkg_api_session_controller
   svc_fileUploads --> pkg_api_session_controller
@@ -621,6 +626,7 @@ flowchart LR
 | `ctx.gitController` | `core` | [`api-git-controller`](../packages/api/git-controller) | - | [`api-code-review-controller`](../packages/api/code-review-controller), [`client-ui-settings-git`](../packages/client/ui-settings-git) | - | Resolves registered workspaces, fences Git mutations and delegates credential handling to Git and GitHub CLI. |
 | `ctx.codeReviewController` | `core` | [`api-code-review-controller`](../packages/api/code-review-controller) | - | [`client-ui-settings-git`](../packages/client/ui-settings-git) | - | Persists bounded source context and admits dedicated review Sessions without changing ordinary model defaults. |
 | `ctx.connectionController` | `core` | [`api-connection-controller`](../packages/api/connection-controller) | - | [`client-ui-settings-connections`](../packages/client/ui-settings-connections) | - | Pins OpenSSH targets to local control Sessions and checks live grants before remote command execution. |
+| `ctx.discussionController` | `core` | [`api-discussion-controller`](../packages/api/discussion-controller) | - | [`client-ui-discussions`](../packages/client/ui-discussions) | - | Retains parent references, assistant profiles and bounded confirmed memory without starting background model turns. |
 | `ctx.cotTranslation` | `service` | [`experimental-client-ui-cot-translation`](../packages/experimental/client-ui-cot-translation) | - | - | - | Serves reasoning translations, reuses saved results, and joins ordinary Session activation for uncached inactive Sessions. |
 | `ctx.translator` | `service` | [`experimental-translator`](../packages/experimental/translator) | - | [`experimental-client-ui-cot-translation`](../packages/experimental/client-ui-cot-translation) | - | Resolves Google or Bing requests and retains shared experimental records through the active Session writer. |
 | `ctx.hmr` | `core` | [`hmr`](../packages/boot/hmr) | - | [`app-boot`](../packages/boot/app-boot) | - | Owns module and exact configuration watchers; application mutations share its queue and automatic reloads await the application file lock. |

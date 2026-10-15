@@ -36,11 +36,22 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build the native host module required by session persistence tests
         run: pnpm run build:native-system
-      - run: node --test .github/scripts/custom-release.test.mjs
+      - run: node --test .github/scripts/custom-release.test.mjs .github/scripts/custom-update-channel.test.mjs
       - run: pnpm run typecheck
       - name: Verify retained custom interactions
         run: >-
           pnpm exec vitest run
+          apps/desktop/tests/official-update-check.spec.ts
+          packages/api/discussion-controller/tests/policy.spec.ts
+          packages/api/discussion-controller/tests/persistence.spec.ts
+          packages/client/ui-discussions/tests/assistant-settings.client.spec.tsx
+          packages/client/ui-settings-general/tests/desktop-update.client.spec.tsx
+          packages/experimental/client-ui-voice-input/tests/voice-input.client.spec.tsx
+          packages/experimental/client-ui-voice-input/tests/mount.client.spec.ts
+          apps/desktop/tests/custom-update-manifest.spec.ts
+          apps/desktop/tests/custom-mac-updater.spec.ts
+          apps/desktop/tests/update-coordinator.spec.ts
+          apps/desktop/tests/update-schedule.spec.ts
           packages/client/ui-settings-connections/tests/devices.client.spec.ts
           packages/client/ui-sidebar-documentpreview/tests/file-selection.client.spec.tsx
           packages/client/ui-conversation/tests/annotations.client.spec.tsx

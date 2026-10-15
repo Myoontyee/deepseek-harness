@@ -1,0 +1,46 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/api/discussion-controller/README.md
+/:
+  en: dae42804cf57a836
+  zh: 7623a082508cf4c8
+/deepseek-ai-dsh-api-discussion-controller:
+  en: 2f464ee4feb9f0db
+  zh: 2c5de130e421d5c2
+/deepseek-ai-dsh-api-discussion-controller/summary:
+  en: 7c9b52e16816c974
+  zh: f346c2168a830d71
+/deepseek-ai-dsh-api-discussion-controller/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 1db86285abf6c499
+/deepseek-ai-dsh-api-discussion-controller/use-this-package:
+  en: 94e2ecb5b09153e0
+  zh: 34deec1eae02ee56
+/deepseek-ai-dsh-api-discussion-controller/understand-the-implementation:
+  en: becb6a808c99449b
+  zh: 2927ec4875989c2e
+/deepseek-ai-dsh-api-discussion-controller/further-exploration:
+  en: 013538d2e69b012f
+  zh: 362089df32f6fbc8
+/deepseek-ai-dsh-api-discussion-controller/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-api-discussion-controller/model-experience/discussion-context:
+  en: 41cd7818deaab2fa
+  zh: b853a3e26e54e496
+/deepseek-ai-dsh-api-discussion-controller/model-experience/discussion-context/what-the-model-sees:
+  en: d36c2cb8a3c66f72
+  zh: 71b3e6bc49647f89
+/deepseek-ai-dsh-api-discussion-controller/model-experience/discussion-context/token-effect:
+  en: 7b131fd6df297955
+  zh: 11b8944776eb7a1f
+/deepseek-ai-dsh-api-discussion-controller/model-experience/discussion-context/kv-cache-effect:
+  en: 5df504d4f486dabb
+  zh: 361c33e739016ae8
+/deepseek-ai-dsh-api-discussion-controller/known-limitations-and-deferred-work:
+  en: c150e4650a71a084
+  zh: 28efff0ac6a9218e
+/deepseek-ai-dsh-api-discussion-controller/known-limitations-and-deferred-work/dev-note:
+  en: 0225ba087c5266f3
+  zh: 709b692e280b394c

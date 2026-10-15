@@ -15,6 +15,8 @@ New submissions include model-visible guidance connecting the selected passages 
 
 Use `dsh-client-ui-primitives` to build web-client controls and render agent output with shared React UI. It includes standard controls, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. The renderers handle untrusted model output by dropping raw HTML, restricting links, and parsing ANSI escape sequences. The components import no Cordis runtime; callers supply localized labels, and theme-facing colors use `--dsw-*` design tokens.
 
+InlineCommentEditor is a non-modal selection-anchored editor shared by conversation and file comments. Callers own draft storage and dictation; the editor owns viewport clamping, focus, scrolling and Ctrl+Enter/Escape gestures.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

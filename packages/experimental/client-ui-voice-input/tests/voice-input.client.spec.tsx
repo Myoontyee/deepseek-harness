@@ -8,6 +8,7 @@ import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SpeechPreparationState, SpeechProviderId, Transcript } from '@deepseek-ai/dsh-experimental-speech-to-text/types'
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+import { AnnotationVoiceInput } from '../src/client/AnnotationVoiceInput.tsx'
 import { VoiceInput, type VoiceInputProps } from '../src/client/VoiceInput.tsx'
 import { RecordingError, Recording } from '../src/client/audio.ts'
 import type { SpeechReadiness } from '../src/client/readiness.ts'
@@ -382,4 +383,26 @@ it.each(['later', 'escape', 'ready', 'session'])('dismisses unavailable recognit
     open()
     expect(screen.getByRole('dialog')).toBeTruthy()
   }
+})
+
+it('dictates into a comment without touching or submitting the conversation draft', async () => {
+  const b = fixture(); b.view.unmount()
+  const onChange = vi.fn()
+  render(<AnnotationVoiceInput {...b.props} identity="comment-1" value="My note" onChange={onChange} />)
+  await start(); stop()
+  await waitFor(() => { expect(onChange).toHaveBeenCalledWith('My note 检查 TypeScript 类型') })
+  expect(b.inputActions.insertText).not.toHaveBeenCalled()
+  expect(b.inputActions.submit).not.toHaveBeenCalled()
+})
+
+it('preserves edits made while a comment recording is active and offers explicit insertion', async () => {
+  const b = fixture(); b.view.unmount()
+  const onChange = vi.fn()
+  const view = render(<AnnotationVoiceInput {...b.props} identity="comment-1" value="Old" onChange={onChange} />)
+  await start()
+  view.rerender(<AnnotationVoiceInput {...b.props} identity="comment-1" value="Edited" onChange={onChange} />)
+  stop()
+  fireEvent.click(await screen.findByRole('button', { name: zh.insert }))
+  expect(onChange).toHaveBeenCalledWith('Edited 检查 TypeScript 类型')
+  expect(b.inputActions.insertText).not.toHaveBeenCalled()
 })

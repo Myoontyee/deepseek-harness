@@ -2,6 +2,15 @@
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
+  'desktop.channel.official': '官方原版',
+  'desktop.channel.custom': '定制开发版',
+  'desktop.channel.settings': '更新渠道指示灯',
+  'desktop.channel.hint': '两个渠道分别提示，可同时显示。官方原版可能不包含定制功能。',
+  'desktop.channel.check': '检查更新',
+  'desktop.channel.blue': '蓝色',
+  'desktop.channel.green': '绿色',
+  'desktop.channel.orange': '橙色',
+  'desktop.channel.purple': '紫色',
   'trigger': '设置',
   'shortcut.open': '打开设置',
   'desktop.update.available': '新版本',
@@ -43,6 +52,15 @@ export type SettingsKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
+  'desktop.channel.official': 'Official',
+  'desktop.channel.custom': 'Custom development',
+  'desktop.channel.settings': 'Update channel indicators',
+  'desktop.channel.hint': 'Both channels can notify independently. Official builds may omit custom features.',
+  'desktop.channel.check': 'Check for updates',
+  'desktop.channel.blue': 'Blue',
+  'desktop.channel.green': 'Green',
+  'desktop.channel.orange': 'Orange',
+  'desktop.channel.purple': 'Purple',
   'trigger': 'Settings',
   'shortcut.open': 'Open settings',
   'desktop.update.available': 'Update',

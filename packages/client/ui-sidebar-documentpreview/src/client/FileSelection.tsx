@@ -1,19 +1,22 @@
 /** File quotations enter the existing composer annotation draft. */
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { annotationSelectionMarkdown, MarkdownText, Menu, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { annotationSelectionMarkdown, MarkdownText, Menu, InlineCommentEditor } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ResponseAnnotation } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TextPreviewProps } from './TextPreview.tsx'
 import css from './FileSelection.module.css'
 
 /** @param props - Displayed file, composer action and selectable document body. @returns File selection actions. */
-export function FileSelection({ children, sourceUrl, sourceLabel, addAnnotation, t }: {
+export function FileSelection({ children, sourceUrl, sourceLabel, addAnnotation, t, renderVoice, openDiscussion }: {
+  openDiscussion?: ((annotation: ResponseAnnotation) => void) | undefined
+  renderVoice?: (value: string, onChange: (value: string) => void) => ReactNode
   children: ReactNode
   sourceUrl: string
   sourceLabel: string
   addAnnotation: (annotation: ResponseAnnotation) => boolean
   t: TextPreviewProps['t']
 }) {
+  const anchor = useRef<Range | null>(null)
   const [selection, setSelection] = useState<{ range: Range; annotation: ResponseAnnotation } | null>(null)
   const [editing, setEditing] = useState<ResponseAnnotation | null>(null)
   const [comment, setComment] = useState('')
@@ -38,6 +41,10 @@ export function FileSelection({ children, sourceUrl, sourceLabel, addAnnotation,
     if (addAnnotation(annotation)) { forget(annotation); setSelection(null); setEditing(null); setFailed(false) }
     else setFailed(true)
   }
+  const changeComment = (value: string): void => {
+    setComment(value)
+    if (editing) setDrafts(current => ({ ...current, [draftKey(editing)]: { ...editing, comment: value } }))
+  }
   return <>
     <div className={css.contents} onPointerDown={() => { setSelection(null) }}
       onPointerUp={(event) => { capture(event.currentTarget) }} onKeyUp={(event) => { capture(event.currentTarget) }}>
@@ -45,9 +52,11 @@ export function FileSelection({ children, sourceUrl, sourceLabel, addAnnotation,
     </div>
     {selection !== null && editing === null && <Menu open anchor={null} portal compact side="top"
       getAnchorRect={() => selection.range.commonAncestorContainer.isConnected ? selection.range.getBoundingClientRect() : null}
-      items={[{ id: 'add', label: t('selection.add') }, { id: 'comment', label: t('selection.comment') }]}
+      items={[{ id: 'add', label: t('selection.add') }, { id: 'comment', label: t('selection.comment') },
+        ...(openDiscussion ? [{ id: 'discuss', label: t('selection.discuss') }] : [])]}
       onClose={() => { setSelection(null) }} onSelect={(id) => {
-        if (id === 'comment') { setEditing(selection.annotation); setComment(drafts[draftKey(selection.annotation)]?.comment ?? ''); setSelection(null) }
+        if (id === 'discuss') { openDiscussion?.(selection.annotation); setSelection(null); return }
+        if (id === 'comment') { anchor.current = selection.range; setEditing(selection.annotation); setComment(drafts[draftKey(selection.annotation)]?.comment ?? ''); setSelection(null) }
         else add(selection.annotation)
       }} />}
     {editing === null && Object.entries(drafts).map(([key, draft]) => <div className={css.pendingDraft} key={key}>
@@ -57,23 +66,14 @@ export function FileSelection({ children, sourceUrl, sourceLabel, addAnnotation,
       <button type="button" onClick={() => { forget(draft) }}>{t('selection.discardDraft')}</button>
     </div>)}
     {failed && <p role="alert">{t('selection.busy')}</p>}
-    {editing !== null && <Modal open closeOnBackdrop={false} title={t('selection.comment')} closeLabel={t('selection.close')}
-      contentClassName={css.editor ?? ''} onClose={() => { setEditing(null); setFailed(false) }}
-      onKeyDownCapture={(event) => {
-        if (event.key !== 'Enter' || !event.ctrlKey || event.altKey || event.shiftKey || event.metaKey
-          || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
-        event.preventDefault(); event.stopPropagation()
-        if (!event.repeat) add({ ...editing, comment })
-      }}
-      footer={<button type="button" onClick={() => { add({ ...editing, comment }) }}>{t('selection.add')} <small aria-hidden="true">Ctrl+Enter</small></button>}>
-      <p>{t('selection.draftHint')}</p>
+    {editing !== null && <InlineCommentEditor
+      getAnchorRect={() => anchor.current?.commonAncestorContainer.isConnected ? anchor.current.getBoundingClientRect() : null}
+      title={t('selection.comment')} inputLabel={t('selection.remark')} value={comment} onChange={changeComment}
+      onClose={() => { setEditing(null); setFailed(false) }} onSubmit={() => { add({ ...editing, comment }) }}
+      submitLabel={t('selection.add')} cancelLabel={t('selection.close')}
+      voice={renderVoice?.(comment, changeComment)}>
       <p>{sourceLabel}</p>
       <MarkdownText text={editing.text} variant="compact" labels={{ code: { copyLabel: t('selection.copy'), copiedLabel: t('selection.copied') }, footnotes: t('selection.footnotes') }} />
-      <textarea className={css.comment} data-modal-autofocus aria-label={t('selection.remark')}
-        placeholder={t('selection.remark')} value={comment} onChange={(event) => {
-          const value = event.target.value
-          setComment(value); setDrafts(current => ({ ...current, [draftKey(editing)]: { ...editing, comment: value } }))
-        }} />
-    </Modal>}
+    </InlineCommentEditor>}
   </>
 }

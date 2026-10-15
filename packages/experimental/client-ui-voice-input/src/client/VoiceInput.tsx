@@ -35,14 +35,15 @@ export interface VoiceInputInjected extends VoiceInputActions {
 }
 
 /** Composer-owned expansion and draft actions; preferences stay in plugin settings. */
-export type VoiceInputProps = Pick<PropsRuntime<'conversation.input.activity'>, 'sessionId' | 'inputActions' | 'locked' | 'onActiveChange'>
+export type VoiceInputProps<Span = TokenSpan> = Pick<PropsRuntime<'conversation.input.activity'>, 'locked' | 'onActiveChange'>
+  & { sessionId: string; inputActions: { captureInsertion(): Span; insertText(text: string, span: Span): boolean } }
   & PropsLocale<typeof NS> & InjectFace<VoiceInputInjected>
 
 type Phase = 'idle' | 'requesting' | 'recording' | 'transcribing' | 'feedback'
-interface ActiveRecording {
+interface ActiveRecording<Span> {
   readonly capture: Recording
   readonly abort: AbortController
-  readonly span: TokenSpan
+  readonly span: Span
   readonly selection: SpeechSelection
   readonly maxDurationSeconds: number
   readonly maxAudioBytes: number
@@ -57,8 +58,8 @@ async function disposeRecording(capture: Recording): Promise<void> {
 }
 
 /** Render a compact microphone or an expanded capture, transcription, or retry row. */
-export function VoiceInput({ sessionId, inputActions, locked, onActiveChange,
-  createRecording, transcribe, openSettings, useSpeechReadiness, t }: VoiceInputProps) {
+export function VoiceInput<Span = TokenSpan>({ sessionId, inputActions, locked, onActiveChange,
+  createRecording, transcribe, openSettings, useSpeechReadiness, t }: VoiceInputProps<Span>) {
   const readiness = useSpeechReadiness(value => value), catalog = readiness.catalog
   const provider = catalog?.providers.find(item => item.id === catalog.selection.providerId)
   const usable = readiness.connected && (provider?.preparation.phase === 'ready' || provider?.preparation.phase === 'standby'
@@ -66,7 +67,7 @@ export function VoiceInput({ sessionId, inputActions, locked, onActiveChange,
   const [phase, setPhase] = useState<Phase>('idle'), [message, setMessage] = useState(''), [pending, setPending] = useState('')
   const [setupOpen, setSetupOpen] = useState(false)
   useEffect(() => { if (usable) setSetupOpen(false) }, [usable])
-  const current = useRef<ActiveRecording>(), generation = useRef(0)
+  const current = useRef<ActiveRecording<Span>>(), generation = useRef(0)
   const expanded = phase !== 'idle'
   useLayoutEffect(() => { onActiveChange(expanded); return () => { onActiveChange(false) } }, [expanded, onActiveChange])
 
@@ -123,7 +124,7 @@ export function VoiceInput({ sessionId, inputActions, locked, onActiveChange,
   const start = async (): Promise<void> => {
     if (!catalog || !usable || locked || current.current) return
     const run = ++generation.current
-    const active: ActiveRecording = { capture: createRecording(), abort: new AbortController(),
+    const active: ActiveRecording<Span> = { capture: createRecording(), abort: new AbortController(),
       span: inputActions.captureInsertion(), selection: catalog.selection,
       maxDurationSeconds: catalog.maxDurationSeconds, maxAudioBytes: catalog.maxAudioBytes, phase: 'requesting' }
     current.current = active

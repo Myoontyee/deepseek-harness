@@ -11,6 +11,7 @@ const PLAN_NEXT_ACTION_EN = 'describe your task to generate plan'
 export const zh = {
   'annotation.add': '添加到对话',
   'annotation.create': '添加注释',
+  'annotation.discuss': '在侧边讨论',
   'annotation.resume': '继续编辑暂存注释',
   'annotation.discardDraft': '删除暂存',
   'annotation.draftHint': '取消或关闭后可继续编辑暂存备注；当前页面关闭前请先添加到对话。',
@@ -410,6 +411,7 @@ export type ConversationKey = keyof typeof zh
 export const en = {
   'annotation.add': 'Add to conversation',
   'annotation.create': 'Add annotation',
+  'annotation.discuss': 'Discuss in sidebar',
   'annotation.resume': 'Resume annotation draft',
   'annotation.discardDraft': 'Discard draft',
   'annotation.draftHint': 'Cancel or close to resume this draft later. Add it to the conversation before leaving this page.',

@@ -76,6 +76,8 @@ export type DesktopUpdateFailureKind =
 
 /** Semantic status content; actions open main-process confirmation dialogs only. */
 export interface DesktopUpdatePresentation {
+  readonly custom?: boolean
+  readonly official?: { readonly phase: 'idle' | 'checking' | 'available' | 'error'; readonly version?: string }
   readonly phase: DesktopUpdateState['phase']
   readonly version?: string
   readonly percent?: number
@@ -117,7 +119,7 @@ export interface DshDesktopProductApi {
   deviceInfo(): Promise<string>
   readonly updates: {
     status(): Promise<DesktopUpdatePresentation>
-    open(): Promise<void>
+    open(channel?: 'custom' | 'official'): Promise<void>
     subscribe(listener: (state: DesktopUpdatePresentation) => void): () => void
   }
 }

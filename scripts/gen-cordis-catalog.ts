@@ -53,6 +53,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   gitController: 'developer-workflows.md',
   codeReviewController: 'developer-workflows.md',
   connectionController: 'developer-workflows.md',
+  discussionController: 'web-client.md',
   translator: 'translation.md',
   cotTranslation: 'translation.md',
   speechToText: 'voice-input.md',
@@ -172,6 +173,7 @@ export const SERVICE_PAGE: Record<string, string> = {
  * to a model as `cordis_runtime_inspect what:"client"`).
  */
 export const SERVICE_WALK_EXEMPTIONS: Record<string, string> = {
+  discussionNavigation: 'client-side discussion navigation - packages/client/ui-discussions/README.md owns the API',
   invocation: 'not a service: per-call accessor (RemoteInvocation | undefined) the Gateway derives for each Remote call — packages/api/gateway/README.md owns the contract',
   webTerminals: 'client-side terminal view models — packages/api/terminal-controller/README.md owns the API',
   appReady: 'not a service: launcher-provided successful-startup signal — packages/boot/cmdline/README.md owns the launcher contract',
@@ -286,6 +288,18 @@ export const EVENT_WALK_EXEMPTIONS: Record<string, string> = {
  * appear on more than one page.
  */
 export const LINK_MAP: Readonly<Record<string, string>> = {
+  AssistantId: 'web-client.md',
+  AssistantMemoryId: 'web-client.md',
+  DiscussionId: 'web-client.md',
+  AssistantTemplate: 'web-client.md',
+  AssistantMemoryMode: 'web-client.md',
+  DiscussionAssistant: 'web-client.md',
+  AssistantMemory: 'web-client.md',
+  DiscussionTopic: 'web-client.md',
+  AssistantDraft: 'web-client.md',
+  MemoryDraft: 'web-client.md',
+  TopicDraft: 'web-client.md',
+
   GitWorkspace: 'developer-workflows.md',
   GitChange: 'developer-workflows.md',
   GitStatus: 'developer-workflows.md',

@@ -104,6 +104,7 @@ export function apply(ctx: ClientContext): void {
     {
       name: 'sidebar.right.pane.tab', key: TEXTPREVIEW_ID, locale: NS, store,
       children: {
+        'document.annotation.voice': { kind: 'single', scope: 'root' },
         'sidebar.right.tab.document': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: documentTabInfoFactory } } },
         'sidebar.right.tab.document.actions': { kind: 'list', scope: 'session' },
         'sidebar.right.tab.document.unpreviewable': { kind: 'list', scope: 'session' },
@@ -111,6 +112,7 @@ export function apply(ctx: ClientContext): void {
       },
       inject: (sessionId, actions): TextPreviewInjected => ({
         ...face(sessionId, actions),
+        openDiscussion: (annotation) => { ctx.get('discussionNavigation')?.open(sessionId, annotation) },
         hooks: { documentPreviews: source },
       }),
     },

@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 Preview files in the right Sidebar and choose among registered renderers. Markdown and code support paged text; PDF, HTML, common images, and spreadsheets receive complete bytes; unknown extensions use plain text. Word and PowerPoint documents convert locally to PDF; spreadsheets open in the browser. The tab provides file status, renderer selection, wrap, and automatic or manual reload. Plugins can add local opening controls to the header and unsupported-preview empty state.
 
+File selections use the same anchored comment editor as conversations, with resumable drafts and optional dictation.
+
 ## Table of Contents
 
 - [What it registers](#what-it-registers)
