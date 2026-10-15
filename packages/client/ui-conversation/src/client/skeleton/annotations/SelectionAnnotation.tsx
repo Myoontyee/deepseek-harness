@@ -59,10 +59,16 @@ export function SelectionAnnotation({ container, sessionId, addAnnotation, t }: 
   }, [container, sessionId, t])
   if (commenting !== null) return <Modal open title={t('annotation.create')} closeLabel={t('annotation.close')}
     onClose={() => { setCommenting(null) }} contentClassName={css.editor ?? ''}
-    footer={<><button type="button" className={css.done} onClick={() => { setCommenting(null) }}>{t('annotation.cancel')}</button>
+    onKeyDownCapture={(event) => {
+      if (event.key !== 'Enter' || !event.ctrlKey || event.altKey || event.shiftKey || event.metaKey
+        || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
+      event.preventDefault(); event.stopPropagation()
+      if (!event.repeat && addAnnotation({ ...commenting, comment })) setCommenting(null)
+    }}
+    footer={<><button type="button" className={css.done} onClick={() => { setCommenting(null) }}>{t('annotation.cancel')} <small aria-hidden="true">Esc</small></button>
       <button type="button" className={css.done} onClick={() => {
         if (addAnnotation({ ...commenting, comment })) setCommenting(null)
-      }}>{t('annotation.create')}</button></>}>
+      }}>{t('annotation.create')} <small aria-hidden="true">Ctrl+Enter</small></button></>}>
     <AnnotationQuote text={commenting.text} t={t} />
     <textarea className={css.comment} data-modal-autofocus value={comment} aria-label={t('annotation.comment')}
       placeholder={t('annotation.comment')} onChange={(event) => { setComment(event.target.value) }} />

@@ -1,4 +1,4 @@
-/** Windows Desktop composition: review, visual Git, persisted SSH settings and interactive remote terminals. */
+/** Exercise clipboard links and both paste modes in an isolated Desktop profile. */
 import assert from 'node:assert/strict'
 import { spawn, execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -127,8 +127,25 @@ try {
   await page.waitForFunction(value=>document.querySelector('[contenteditable="true"]').textContent===value,payload)
   await paste(true)
   await page.waitForFunction(()=>document.querySelector('[contenteditable="true"]').textContent==='Guide μ_D')
+  const openAnnotation = async () => {
+    await page.getByText('File quote fixture',{exact:true}).first().evaluate(element => {
+      const range = document.createRange();range.selectNodeContents(element)
+      const selection = window.getSelection();selection.removeAllRanges();selection.addRange(range)
+      element.dispatchEvent(new PointerEvent('pointerup',{bubbles:true}))
+    })
+    await page.getByRole('menuitem',{name:'添加注释',exact:true}).click()
+    return page.getByRole('textbox',{name:'补充评论（可选）',exact:true})
+  }
+  let remark = await openAnnotation()
+  await remark.press('Escape')
+  await page.getByRole('dialog').waitFor({state:'detached'})
+  remark = await openAnnotation()
+  await remark.fill('Keyboard annotation fixture')
+  await remark.press('Control+Enter')
+  await page.getByRole('dialog').waitFor({state:'detached'})
+  await page.locator('[data-draft-annotations]').getByRole('button',{name:'1 条注释',exact:true}).waitFor()
   await page.screenshot({path:join(root,'clipboard-links-plain-paste.png')})
-  const result={passed:true,root,selectedFileLink:true,wholeMessageLink:true,normalPastePreservesMarkdown:true,plainPasteRemovesLinkMarkup:true,systemClipboardUntouched:true}
+  const result={passed:true,root,selectedFileLink:true,wholeMessageLink:true,normalPastePreservesMarkdown:true,plainPasteRemovesLinkMarkup:true,systemClipboardUntouched:true,annotationKeyboardShortcuts:true}
   await writeFile(join(repo,'.artifacts/clipboard-links-smoke-result.json'),JSON.stringify(result,null,2))
   console.log(JSON.stringify(result))
 } finally {

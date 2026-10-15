@@ -21,3 +21,5 @@ Rich HTML clipboard payloads can reintroduce font styling and duplicated formula
 ## Consequences
 
 Markdown-aware destinations can reconstruct links from pasted text. Other editors receive literal Markdown link text. Existing selection, full-message, formula, table, masking and plain-paste tests cover the distinct paths.
+
+Annotation creation dialogs accept Ctrl+Enter and cancel with Escape. Plain Enter keeps its newline behavior; composing input and repeated keydown events cannot submit. Rejected draft admission keeps the remark available for retry.

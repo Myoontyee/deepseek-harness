@@ -156,7 +156,7 @@ it('allows reading annotations while submission has locked edits', () => {
   input.dispose()
 })
 
-it('adds a direct comment paired with its selected Markdown quotation and original formula', () => {
+it.each(['button', 'keyboard', 'escape'])('adds a direct comment with preserved quotation using %s', (method) => {
   const container = document.createElement('div')
   container.innerHTML = '<div data-chat-node-key="math1"><strong>引用</strong><span data-copy-math="CNR &lt; 1"><span>C</span><span>N</span><span>R</span><span aria-hidden="true">CNR</span></span></div>'
   document.body.append(container)
@@ -172,8 +172,20 @@ it('adds a direct comment paired with its selected Markdown quotation and origin
   fireEvent.pointerUp(container.firstElementChild!)
   fireEvent.click(view.getByText('添加注释'))
   expect(addAnnotation).not.toHaveBeenCalled()
+  if (method === 'escape') {
+    fireEvent.keyDown(view.getByRole('textbox', { name: '补充评论（可选）' }), { key: 'Escape' })
+    expect(view.queryByRole('dialog')).toBeNull()
+    expect(addAnnotation).not.toHaveBeenCalled()
+    return
+  }
   fireEvent.change(view.getByRole('textbox', { name: '补充评论（可选）' }), { target: { value: '这是我的备注' } })
-  fireEvent.click(view.getByRole('button', { name: '添加注释' }))
+  const editor = view.getByRole('textbox', { name: '补充评论（可选）' })
+  fireEvent.keyDown(editor, { key: 'Enter' })
+  fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true, isComposing: true })
+  fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true, repeat: true })
+  expect(addAnnotation).not.toHaveBeenCalled()
+  if (method === 'keyboard') fireEvent.keyDown(editor, { key: 'Enter', ctrlKey: true })
+  else fireEvent.click(view.getByRole('button', { name: '添加注释' }))
   expect(addAnnotation).toHaveBeenCalledWith(expect.objectContaining({
     text: '**引用**$CNR < 1$', comment: '这是我的备注', sourceMessage: 'math1',
   }))

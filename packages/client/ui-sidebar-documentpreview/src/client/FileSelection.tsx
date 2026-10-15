@@ -48,7 +48,13 @@ export function FileSelection({ children, sourceUrl, sourceLabel, addAnnotation,
     {failed && <p role="alert">{t('selection.busy')}</p>}
     {editing !== null && <Modal open title={t('selection.comment')} closeLabel={t('selection.close')}
       contentClassName={css.editor ?? ''} onClose={() => { setEditing(null); setFailed(false) }}
-      footer={<button type="button" onClick={() => { add({ ...editing, comment }) }}>{t('selection.add')}</button>}>
+      onKeyDownCapture={(event) => {
+        if (event.key !== 'Enter' || !event.ctrlKey || event.altKey || event.shiftKey || event.metaKey
+          || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
+        event.preventDefault(); event.stopPropagation()
+        if (!event.repeat) add({ ...editing, comment })
+      }}
+      footer={<button type="button" onClick={() => { add({ ...editing, comment }) }}>{t('selection.add')} <small aria-hidden="true">Ctrl+Enter</small></button>}>
       <p>{sourceLabel}</p>
       <MarkdownText text={editing.text} variant="compact" labels={{ code: { copyLabel: t('selection.copy'), copiedLabel: t('selection.copied') }, footnotes: t('selection.footnotes') }} />
       <textarea className={css.comment} data-modal-autofocus aria-label={t('selection.remark')}
