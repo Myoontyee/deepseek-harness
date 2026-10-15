@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createServer } from 'node:http'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { MobileServer, mobileAddresses } from '../src/mobile-server.ts'
 import { pairingOrigin, peerJson } from '../src/peer-transport.ts'
@@ -21,6 +21,7 @@ test('discovery exposes only safe device fields and never grants access', () => 
 test('wrong certificate sends no pairing secret; valid grant reads remote session RPC', { timeout: 30000 }, async () => {
   const address = mobileAddresses()[0]
   assert.ok(address, 'This transport smoke requires one local private network interface')
+  await mkdir(resolve('.artifacts'), {recursive:true})
   const root = await mkdtemp(join(resolve('.artifacts'), 'paired-transport-'))
   let approvals = 0, calls = 0
   const host = createServer((req, res) => {
