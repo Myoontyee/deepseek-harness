@@ -14,7 +14,10 @@ const { version, androidCode } = releaseIdentity(tag ?? '', JSON.parse(readFileS
 if (!/^\d+$/u.test(runId ?? '')) throw new Error('Supply the successful cloud release run ID')
 const repository = 'Myoontyee/deepseek-harness'
 const gh = args => execFileSync(process.env.GH_BIN ?? 'gh', args, { encoding: 'utf8' }).trim()
-const release = () => JSON.parse(gh(['release', 'view', tag, '--repo', repository, '--json', 'isDraft,assets']))
+const release = () => {
+  const value = JSON.parse(gh(['api', `repos/${repository}/releases/tags/${tag}`]))
+  return { isDraft: value.draft, assets: value.assets }
+}
 if (!release().isDraft) throw new Error('Only an unpublished draft may be completed; published releases are immutable')
 const run = JSON.parse(gh(['run', 'view', runId, '--repo', repository, '--json', 'headSha,conclusion,workflowName']))
 const remoteCommit = JSON.parse(gh(['api', `repos/${repository}/commits/${tag}`])).sha
@@ -32,7 +35,7 @@ const unsignedDirectory = join(staging, 'unsigned')
 mkdirSync(unsignedDirectory)
 const unsignedName = `deepseek-harness-${version}-android-universal-unsigned.apk`
 gh(['release', 'download', tag, '--repo', repository, '--dir', unsignedDirectory, '--pattern', unsignedName])
-gh(['release', 'download', tag, '--repo', repository, '--dir', staging, '--pattern', '*.exe', '--pattern', '*.dmg', '--pattern', 'SHA256SUMS.txt'])
+gh(['release', 'download', tag, '--repo', repository, '--dir', staging, '--pattern', 'SHA256SUMS.txt'])
 const filename = `deepseek-harness-${version}-android-universal.apk`
 const aligned = join(unsignedDirectory, 'aligned.apk')
 const unsigned = join(unsignedDirectory, unsignedName)
@@ -43,10 +46,21 @@ const expectedHashes = new Map(readFileSync(join(staging, 'SHA256SUMS.txt'), 'ut
   if (!match) throw new Error('Invalid draft checksum entry')
   return [match[2], match[1]]
 }))
-for (const name of [...desktopNames, unsignedName]) {
-  const file = name === unsignedName ? unsigned : join(staging, name)
+if (expectedHashes.size !== 4 || ![...desktopNames, unsignedName].every(name => expectedHashes.has(name))) throw new Error('Draft checksums do not describe the expected four builds')
+const draftAssets = release().assets
+for (const name of desktopNames) {
+  const asset = draftAssets.find(item => item.name === name)
+  if (!asset) throw new Error(`Missing desktop draft asset: ${name}`)
+  if (asset.digest != null) {
+    if (asset.digest !== `sha256:${expectedHashes.get(name)}`) throw new Error(`Desktop asset digest mismatch: ${name}`)
+    continue
+  }
+  // Older GitHub servers may omit asset digests; only that asset needs a local download.
+  gh(['release', 'download', tag, '--repo', repository, '--dir', staging, '--pattern', name])
+  const file = join(staging, name)
   if (createHash('sha256').update(readFileSync(file)).digest('hex') !== expectedHashes.get(name)) throw new Error(`Download checksum mismatch: ${name}`)
 }
+if (createHash('sha256').update(readFileSync(unsigned)).digest('hex') !== expectedHashes.get(unsignedName)) throw new Error('Unsigned APK download checksum mismatch')
 const badging = execFileSync(join(sdk, 'build-tools/35.0.0/aapt.exe'), ['dump', 'badging', unsigned], { encoding: 'utf8' })
 if (!badging.includes(`package: name='io.jadegate.dsh.companion' versionCode='${androidCode}' versionName='${version}'`)) throw new Error('Unsigned APK identity or version differs from the release')
 execFileSync(join(sdk, 'build-tools/35.0.0/zipalign.exe'), ['-p', '-f', '4', unsigned, aligned])
@@ -69,7 +83,9 @@ if (process.env.DSH_ANDROID_BASELINE_APK) {
 }
 const names = ['win-x64-unsigned.exe', 'mac-arm64-unsigned.dmg', 'mac-x64-unsigned.dmg', 'android-universal.apk']
   .map(suffix => `deepseek-harness-${version}-${suffix}`)
-const sums = names.map(name => `${createHash('sha256').update(readFileSync(join(staging, name))).digest('hex')}  ${name}`).join('\n')
+const sums = names.map(name => `${name === filename
+  ? createHash('sha256').update(readFileSync(join(staging, name))).digest('hex')
+  : expectedHashes.get(name)}  ${name}`).join('\n')
 const manifest = join(staging, 'SHA256SUMS.txt')
 writeFileSync(manifest, `${sums}\n`)
 if (!release().isDraft) throw new Error('Release was published by another actor; do not replace its assets')
