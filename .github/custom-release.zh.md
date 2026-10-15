@@ -8,7 +8,7 @@
 
 将选定的官方 `dsh-v` 发布版合并到定制分支，适配定制功能，并通过对应检查及正常推送钩子。保留官方标签与定制提交历史。基座为预发布版时，对验证后的提交打 `custom-v<基座>.YYYYMMDD.序号` 标签；稳定基座使用 `custom-v<基座>-test.YYYYMMDD.序号`。日期使用北京时间的实际发布日期，序号为 1 至 99。推送标签启动工作流，也可手动选择已有标签重跑。工作流检查标签是否对应当前提交，以及是否包含官方发布版祖先。
 
-Android 显示相同版本号，内部使用递增的 `YYYYMMDDxx` 版本代码。云端不接收签名凭据，仅保留未签名 APK 工作流产物。在所有者的 Windows 本机设置 `DSH_ANDROID_KEYSTORE`、`DSH_ANDROID_PASSWORD_FILE`、`ANDROID_HOME` 和 `JAVA_HOME` 后，运行 `node .github/scripts/custom-sign-android.mjs <标签> <运行编号>`。脚本核对源码身份，使用原有 `dsh-companion` 身份签名、验证 APK，上传签名 APK 和最终校验文件后公开发布草稿。凭据始终留在本机；更换签名身份将无法覆盖升级。
+Android 显示相同版本号，内部使用递增的 `YYYYMMDDxx` 版本代码。云端不接收签名凭据，仅将未签名 APK 保留为工作流产物及非公开发布草稿附件。在所有者的 Windows 本机设置 `DSH_ANDROID_KEYSTORE`、`DSH_ANDROID_PASSWORD_FILE`、`ANDROID_HOME` 和 `JAVA_HOME` 后，运行 `node .github/scripts/custom-sign-android.mjs <标签> <运行编号>`。脚本核对源码身份、下载校验值及 APK 元数据，使用原有 `dsh-companion` 身份签名、验证 APK，上传签名 APK 和最终校验文件、移除未签名草稿附件后公开发布。可将 `DSH_ANDROID_BASELINE_APK` 设置为旧安装包路径，以核对覆盖升级所需的签名连续性。凭据始终留在本机；更换签名身份将无法覆盖升级。
 
 ## 下载与更新
 

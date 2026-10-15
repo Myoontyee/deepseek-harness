@@ -87,9 +87,8 @@ function main(command) {
   if (command === 'manifest' || command === 'desktop-manifest') {
     const required = ['win-x64-unsigned.exe', 'mac-arm64-unsigned.dmg', 'mac-x64-unsigned.dmg', 'android-universal.apk']
       .map(suffix => `deepseek-harness-${buildVersion}-${suffix}`)
-    if (command === 'desktop-manifest') required.pop()
-    const files = readdirSync(output).filter(name => name !== 'SHA256SUMS.txt'
-      && !(command === 'desktop-manifest' && name === `deepseek-harness-${buildVersion}-android-universal-unsigned.apk`)).sort()
+    if (command === 'desktop-manifest') required[3] = `deepseek-harness-${buildVersion}-android-universal-unsigned.apk`
+    const files = readdirSync(output).filter(name => name !== 'SHA256SUMS.txt').sort()
     if (files.length !== required.length || required.some(name => !files.includes(name))) throw new Error('Release assets are incomplete or include unexpected files')
     const hashes = files.map(name => `${createHash('sha256').update(readFileSync(join(output, name))).digest('hex')}  ${name}`).join('\n')
     writeFileSync(join(output, 'SHA256SUMS.txt'), `${hashes}\n`)
