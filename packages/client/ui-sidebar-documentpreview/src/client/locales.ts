@@ -8,6 +8,15 @@
 
 /** Simplified Chinese dictionary and key-set source of truth. */
 export const zh = {
+  'selection.add': '添加到对话',
+  'selection.comment': '添加注释',
+  'selection.close': '关闭',
+  'selection.busy': '当前对话暂时无法添加注释，请稍后重试',
+  'selection.remark': '输入备注',
+  'selection.copy': '复制',
+  'selection.copied': '已复制',
+  'selection.footnotes': '脚注',
+
   loading: '文档渲染中...',
   loadMore: '加载更多',
   changed: '文件已更新，当前显示为旧内容',
@@ -37,6 +46,15 @@ export type SidebarDocumentPreviewKey = keyof typeof zh
 
 /** English dictionary, checked against the Chinese key set. */
 export const en = {
+  'selection.add': 'Add to conversation',
+  'selection.comment': 'Add annotation',
+  'selection.close': 'Close',
+  'selection.busy': 'The conversation cannot accept annotations right now. Try again shortly.',
+  'selection.remark': 'Write a remark',
+  'selection.copy': 'Copy',
+  'selection.copied': 'Copied',
+  'selection.footnotes': 'Footnotes',
+
   loading: 'Rendering document...',
   loadMore: 'Load more',
   changed: 'The file has changed, showing the previous content.',

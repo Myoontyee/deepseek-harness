@@ -18,11 +18,12 @@ export async function apply(ctx) {
       await writeFile(join(root, 'last-model-input.json'), JSON.stringify({text: options.messages.filter(message => message.role === 'user').flatMap(message => message.content.filter(block => block.type === 'text').map(block => block.text)).join('\n\n')}))
       const feedback = text.startsWith('Feedback from session ')
       const incoming = text.startsWith('Message from session ')
-      const answer = feedback
+      let answer = feedback
         ? 'A 已收到 B 的反馈。\n\n这是通过真实会话队列自动返回的消息；本演示使用本地固定回复，不调用在线模型。\n\n' + text
         : incoming
           ? 'B 已收到并处理这条会话消息。\n\n演示结果：消息来源、原请求和自动反馈链路正常。你可以回到 A 会话查看反馈。\n\n' + text.split('\n\n')[0]
           : '这是会话互通体验版（本地固定回复）。\n\n右键「协作 B · 接收与处理」→「发送会话消息…」，选择「协作 A · 请求与反馈」作为来源，填写消息并发送。B 的回复会自动回到 A。\n\n安装后的正式会话使用你配置的模型，AI 可调用 list_sessions 和 send_session_message。'
+      if (process.env.DSH_FILE_QUOTE_SMOKE === '1') answer += '\n\n[File quote fixture](<' + join(root, 'workspace', 'quote-fixture.md').replaceAll('\\', '/') + '>)'
       await new Promise(resolve=>setTimeout(resolve,1200))
       yield {type:'block-start',index:0,blockType:'text'}
       yield {type:'text-delta',index:0,text:answer}

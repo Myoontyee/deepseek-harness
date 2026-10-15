@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for 2026-10-15-file-quotes-paired-devices.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-15-file-quotes-paired-devices.md
+/agent-note-file-quotations-and-paired-device-conversations:
+  en: 99f1b5f1f91aaf34
+  zh: 85537339d24c1cba
+/agent-note-file-quotations-and-paired-device-conversations/problem:
+  en: 63bda4f7f9ce3d3b
+  zh: 0363ec194eb84a55
+/agent-note-file-quotations-and-paired-device-conversations/decision:
+  en: fa218f7c41017585
+  zh: 342ad6997ddf5a9c
+/agent-note-file-quotations-and-paired-device-conversations/verification:
+  en: 5a74993680d7fca0
+  zh: e40638fd4e9d931c
+/agent-note-file-quotations-and-paired-device-conversations/alternatives-considered:
+  en: cfc943ca07da3cf1
+  zh: cbf76255e637a523
+/agent-note-file-quotations-and-paired-device-conversations/consequences:
+  en: fe21794c46ec036c
+  zh: 61f6303237029e32

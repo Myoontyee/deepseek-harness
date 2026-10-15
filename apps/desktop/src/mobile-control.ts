@@ -1,5 +1,6 @@
 /** Native phone-pairing controls; the authenticated Host URL never enters the dialog. */
 import { app, clipboard, dialog, safeStorage } from 'electron'
+import { showPairingQr } from './pairing-qr.ts'
 import { join } from 'node:path'
 import { MobileServer, mobileAddresses } from './mobile-server.ts'
 
@@ -67,7 +68,7 @@ export class DesktopMobileControl {
   private async panel(): Promise<void> {
     const server = await this.gateway()
     if (!server.enabled) {
-      const addresses = mobileAddresses().slice(0, 8)
+      const addresses = mobileAddresses().sort((a, b) => Number(b.startsWith('100.')) - Number(a.startsWith('100.'))).slice(0, 8)
       if (addresses.length === 0) {
         await dialog.showMessageBox({
           title: 'DSH 手机控制',
@@ -82,7 +83,7 @@ export class DesktopMobileControl {
         message: '选择手机可以访问的电脑地址',
         detail:
           '此入口默认关闭。手机和电脑需在同一网络，或通过 Tailscale 等私有网络连通。电脑和 DSH 必须保持运行；首次连接时，Windows 可能询问是否允许此应用通过防火墙。',
-        buttons: [...addresses.map(address => `启用 ${address}`), '取消'],
+        buttons: [...addresses.map(address => `${address.startsWith('100.') ? 'Tailscale 私有网络（推荐外出使用）' : '本地网络（同一 Wi-Fi）'} · ${address}`), '取消'],
         defaultId: addresses.length,
         cancelId: addresses.length,
         noLink: true,
@@ -107,12 +108,13 @@ export class DesktopMobileControl {
         title: '配对 Android 手机',
         message: '在手机 DSH 中粘贴配对码',
         detail: '配对码 5 分钟内有效，只能使用一次。粘贴到手机后，还需要在本电脑确认设备名称。\n\n请勿将配对码发给他人。',
-        buttons: ['复制配对码', '取消'],
-        defaultId: 1,
-        cancelId: 1,
+        buttons: ['显示二维码', '复制配对码', '取消'],
+        defaultId: 0,
+        cancelId: 2,
         noLink: true,
       })
-      if (choice.response === 0) await clipboard.writeText(code)
+      if (choice.response === 0) await showPairingQr(code)
+      if (choice.response === 1) await clipboard.writeText(code)
     } else if (result.response === 1) {
       const devices = server.devices
       if (devices.length === 0) {

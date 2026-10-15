@@ -110,7 +110,8 @@ export function apply(ctx: ClientContext): void {
         'sidebar.right.tab.document.action': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: documentTabInfoFactory } } },
       },
       inject: (sessionId, actions): TextPreviewInjected => ({
-        ...face(sessionId, actions), hooks: { documentPreviews: source },
+        ...face(sessionId, actions),
+        hooks: { documentPreviews: source },
       }),
     },
     TextPreview,

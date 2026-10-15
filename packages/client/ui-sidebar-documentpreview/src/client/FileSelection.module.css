@@ -1,0 +1,3 @@
+.contents { display: contents; }
+.editor { max-height: min(60vh, 560px); overflow: auto; }
+.comment { box-sizing: border-box; width: 100%; min-height: 100px; margin-top: 12px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md); background: var(--dsw-specific-input-major); color: var(--dsw-alias-label-primary); font: inherit; resize: vertical; }

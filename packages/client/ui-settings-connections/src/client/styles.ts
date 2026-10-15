@@ -1,5 +1,8 @@
 /** Theme-aware saved-server settings layout. */
 export const connectionStyles = `
+.dsh-device-hub { padding: 28px; overflow: auto; height: 100%; box-sizing: border-box; }
+.dsh-device-session { display: flex; justify-content: space-between; gap: 12px; text-align: left; }
+.dsh-connections textarea { min-height: 90px; width: 100%; box-sizing: border-box; }
 .dsh-connections { display:flex; flex-direction:column; gap:16px; color:var(--dsw-alias-label-primary); min-width:0; }
 .dsh-connections h2 { font-weight:500; margin:0; }
 .dsh-connections p { margin:0; color:var(--dsw-alias-label-secondary); line-height:1.6; }

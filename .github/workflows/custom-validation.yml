@@ -41,6 +41,8 @@ jobs:
       - name: Verify retained custom interactions
         run: >-
           pnpm exec vitest run
+          packages/client/ui-settings-connections/tests/devices.client.spec.ts
+          packages/client/ui-sidebar-documentpreview/tests/file-selection.client.spec.tsx
           packages/client/ui-primitives/tests/hover-card.client.spec.tsx
           packages/client/ui-primitives/tests/markdown-copy-links.client.spec.tsx
           packages/client/ui-chat/tests/message-copy.client.spec.tsx
@@ -51,3 +53,6 @@ jobs:
           packages/api/session-controller/tests/edit-message.host.spec.ts
           packages/fs/tool-fs/tests/tools.spec.ts
           --maxWorkers=2
+
+      - name: Verify first-time pairing and pinned remote transport
+        run: pnpm exec tsx --test apps/desktop/tests/paired-transport-smoke.mjs

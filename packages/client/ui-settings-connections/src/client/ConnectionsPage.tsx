@@ -14,6 +14,8 @@ import type {
 } from '@deepseek-ai/dsh-api-connection-controller/types'
 /** Page callbacks and framework-owned live preferences. */
 export interface ConnectionActions {
+  devicesAvailable: boolean
+  openDevices: () => void
   hooks: { preferences: ObservableSnapshot<ReturnType<ConfigForm<ConnectionPreferences>['getSnapshot']>> }
   list: () => Promise<SshConnectionList>
   save: (id: SshConnectionId, profile: SshProfile | undefined) => Promise<boolean>
@@ -30,7 +32,9 @@ export type ConnectionProps = PropsRuntime<'settings.section'> &
  * @param props - localized settings, remote callbacks and panel close action.
  * @returns connection settings page.
  */
-export function ConnectionsPage({ t, usePreferences, list, save, test, start, open, close }: ConnectionProps) {
+export function ConnectionsPage({
+  t, usePreferences, list, save, test, start, open, close, devicesAvailable, openDevices,
+}: ConnectionProps) {
   const settings = usePreferences(value => value)
   const [data, setData] = useState<SshConnectionList>({ connections: [], warnings: [] })
   const [id, setId] = useState<SshConnectionId>()
@@ -118,6 +122,7 @@ export function ConnectionsPage({ t, usePreferences, list, save, test, start, op
   }
   return (
     <section className="dsh-connections">
+      {devicesAvailable && <button onClick={() => { close(); openDevices() }}>{t('devices.manage')}</button>}
       <h2>{t('title')}</h2>
       <p>{t('description')}</p>
       <fieldset disabled={busy || settings.status !== 'ready'}>

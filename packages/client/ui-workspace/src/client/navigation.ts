@@ -411,6 +411,10 @@ class UiWorkspaceService extends Service implements UiWorkspace {
   private watchNavigation(): () => void {
     let initial: 'waiting' | 'connecting' | 'done' = 'waiting'
     let pendingSessionLink: string | undefined
+    // Paired-device windows carry only the target identity in the URL fragment.
+    if (typeof location !== 'undefined' && location.hash.startsWith('#dsh-session=')) {
+      try { pendingSessionLink = decodeURIComponent(location.hash.slice(13)) } catch { /* Invalid fragments do not select a session. */ }
+    }
     const reconcile = (): void => {
       if (this.lifetime.signal.aborted) return
       const workspace = this.workspaces.list.getSnapshot()

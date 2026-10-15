@@ -1,3 +1,5 @@
+import { PairedDevices } from './paired-devices.ts'
+import { openPeerWindow } from './peer-window.ts'
 import { DesktopSessionReader } from './session-reader-control.ts'
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
 import { DesktopMobileControl } from './mobile-control.ts'
@@ -1144,6 +1146,31 @@ async function main(): Promise<void> {
       window.hide()
     }
   }
+  let pairedDevices: PairedDevices | undefined
+  const peerWindows = new Map<string, Set<BrowserWindow>>()
+  ipcMain.handle(DESKTOP_IPC.devices, async (event, action: unknown, args: unknown) => {
+    assertProductSender(event)
+    const devices = pairedDevices ??= new PairedDevices()
+    const data = args && typeof args === 'object' ? args as Record<string, unknown> : {}
+    const id = typeof data.id === 'string' ? data.id : ''
+    if (action === 'list') return devices.list()
+    if (action === 'detect' && typeof data.enabled === 'boolean') { devices.detect(data.enabled); return devices.list() }
+    if (action === 'invitation') { await mobileControl.show(); return }
+    if (action === 'pair' && typeof data.code === 'string' && typeof data.name === 'string') { await devices.pair(data.code, data.name); return devices.list() }
+    if (action === 'conversations') return devices.conversations(id)
+    if (action === 'forget') {
+      for (const window of peerWindows.get(id) ?? []) if (!window.isDestroyed()) window.close()
+      devices.forget(id); return devices.list()
+    }
+    if (action === 'open' && typeof data.sessionId === 'string' && data.sessionId.length <= 512) {
+      const window = await openPeerWindow(devices.grant(id), data.sessionId)
+      const windows = peerWindows.get(id) ?? new Set<BrowserWindow>()
+      windows.add(window); peerWindows.set(id, windows)
+      window.once('closed', () => { windows.delete(window); if (!windows.size) peerWindows.delete(id) })
+      return
+    }
+    throw new Error('Invalid device operation')
+  })
   ipcMain.handle(DESKTOP_IPC.completionSnapshot, (event) => {
     assertProductSender(event)
     return completionBadge.unreadIds

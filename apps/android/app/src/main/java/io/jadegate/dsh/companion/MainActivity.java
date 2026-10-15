@@ -1,6 +1,8 @@
 package io.jadegate.dsh.companion;
 
 import android.app.Activity;
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Color;
@@ -24,6 +26,7 @@ public final class MainActivity extends Activity {
  private final ExecutorService worker = Executors.newSingleThreadExecutor();
  private SecureStore store;
  private WebView web;
+ private EditText pairingInput;
  private Pairing connected;
  private TextView status;
  private boolean disposed;
@@ -59,6 +62,9 @@ public final class MainActivity extends Activity {
   TextView instructions = text("电脑和 DSH 需要保持运行。\n在电脑的“应用 → 手机控制”生成配对码，粘贴到这里。手机可以查看对话、发送任务并处理确认。\n\n同一 Wi-Fi 或已连通的私有网络均可；请勿把配对码发给其他人。",16);
   instructions.setPadding(0,dp(18),0,dp(18)); content.addView(instructions);
   EditText code = new EditText(this); code.setHint("粘贴电脑生成的配对码"); code.setMinLines(3); code.setMaxLines(6); code.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); content.addView(code);
+  pairingInput = code;
+  Button scan = button("扫描电脑上的二维码"); content.addView(scan);
+  scan.setOnClickListener(v -> new IntentIntegrator(this).setDesiredBarcodeFormats(IntentIntegrator.QR_CODE).setPrompt("扫描电脑 DSH 的配对二维码").setBeepEnabled(false).initiateScan());
   Button pair = button("配对并连接"); content.addView(pair);
   status = text(notice,14); content.addView(status);
   int current = generation;
@@ -81,7 +87,7 @@ public final class MainActivity extends Activity {
  }
  @android.annotation.SuppressLint("SetJavaScriptEnabled")
  private void showConnection(Pairing pairing) {
-  generation++; connected = pairing;
+  generation++; connected = pairing; pairingInput = null;
   LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(0,dp(8),0,0);
   LinearLayout toolbar = new LinearLayout(this); toolbar.setGravity(android.view.Gravity.CENTER_VERTICAL);
   status = text("DSH · 正在连接电脑",14); status.setPadding(dp(12),0,0,0); toolbar.addView(status,new LinearLayout.LayoutParams(0,dp(48),1));
@@ -153,6 +159,14 @@ public final class MainActivity extends Activity {
   showPairing("本机保存的授权已清除。需要立即撤销所有活动连接时，请在电脑的“手机控制”中移除设备。");
  }
  @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
+  IntentResult scan = IntentIntegrator.parseActivityResult(requestCode,resultCode,data);
+  if (scan != null) {
+   if (scan.getContents() != null && pairingInput != null) {
+    try { Pairing.decode(scan.getContents()); pairingInput.setText(scan.getContents()); status.setText("已读取二维码，请点击配对并连接，并在电脑确认授权。"); }
+    catch (Exception error) { status.setText("这不是有效的 DSH 配对二维码"); }
+   }
+   return;
+  }
   super.onActivityResult(requestCode,resultCode,data);
   if (requestCode==FILE_REQUEST && fileCallback!=null) { fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode,data)); fileCallback=null; }
  }

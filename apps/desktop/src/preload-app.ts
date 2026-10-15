@@ -31,6 +31,7 @@ function createProductApi(): DshDesktopProductApi {
     },
     browser: createDesktopBrowserBridge(),
     deviceInfo: () => ipcRenderer.invoke(DESKTOP_IPC.deviceInfo) as Promise<string>,
+    devices: { invoke: (action, args) => ipcRenderer.invoke(DESKTOP_IPC.devices, action, args) as Promise<unknown> },
     sessions: {
       openWindow: sessionId => ipcRenderer.invoke(DESKTOP_IPC.openSessionWindow, sessionId) as Promise<void>,
       subscribe(listener) {

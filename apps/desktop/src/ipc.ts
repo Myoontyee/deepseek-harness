@@ -13,6 +13,7 @@ export interface CompletionReport {
 
 /** IPC channel names kept private to the desktop application bundle. */
 export const DESKTOP_IPC = {
+  devices: 'dsh-desktop:devices',
   shortcutsInput: 'dsh-desktop:shortcuts-input',
   shortcutsCloseWindow: 'dsh-desktop:shortcuts-close-window',
   shortcutsGet: 'dsh-desktop:shortcuts-get',
@@ -83,6 +84,8 @@ export interface DesktopUpdatePresentation {
 
 /** Product documents cannot supply update versions, package URLs, or installation authorization. */
 export interface DshDesktopProductApi {
+  /** Local device management; credentials never cross the preload. */
+  readonly devices: { invoke(action: string, args?: Record<string, unknown>): Promise<unknown> }
   readonly protocolVersion: 1
   /** Report observed conversation state to the native unread badge. */
   readonly completion: {
