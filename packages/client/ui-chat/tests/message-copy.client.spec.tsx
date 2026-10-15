@@ -25,7 +25,7 @@ it('copies an entire Markdown reply as text with TeX and a plain-cell Markdown t
   const text = '# 标题\n\n**重点** $\\mu_D$\n\n| **A** | B |\n|---|---|\n| [内容](https://example.com) | 2 |'
   const view = render(<MessageIconActions text={text} markdown clock="end" t={t} />)
   fireEvent.click(view.getByRole('button', { name: '复制' }))
-  expect(writeText).toHaveBeenCalledExactlyOnceWith('标题\n\n重点 $\\mu_D$\n\n| A | B |\n| --- | --- |\n| 内容 | 2 |')
+  expect(writeText).toHaveBeenCalledExactlyOnceWith('标题\n\n重点 $\\mu_D$\n\n| A | B |\n| --- | --- |\n| [内容](<https://example.com>) | 2 |')
   await waitFor(() => { expect(view.getByRole('button', { name: '复制成功' })).toBeTruthy() })
 })
 it('preserves symbols that are literal content in an unformatted user bubble', async () => {

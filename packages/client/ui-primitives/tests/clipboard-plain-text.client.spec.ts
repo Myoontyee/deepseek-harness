@@ -18,3 +18,10 @@ it('retains unknown formula content instead of losing it', () => {
 it('converts literal display environments and omits invisible equation labels', () => {
   expect(clipboardPlainText(String.raw`before \begin{equation} c=\frac{\mu_D}{\mu_B} \label{eq:contrast} \end{equation} after`)).toBe('before c=(μ_D)/(μ_B) after')
 })
+
+
+it('removes retained links for explicit plain-text paste', () => {
+  const copied = markdownClipboardText('**Read** [the guide](https://example.com/guide)')
+  expect(copied).toBe('Read [the guide](<https://example.com/guide>)')
+  expect(clipboardPlainText(copied)).toBe('Read the guide')
+})

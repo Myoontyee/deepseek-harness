@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-10-15-link-preserving-clipboard.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-15-link-preserving-clipboard.md
+/agent-note-link-preserving-content-copying:
+  en: 626eb778897c150c
+  zh: 5ccd95076851f58f
+/agent-note-link-preserving-content-copying/problem:
+  en: 0949d7e70bb0e0a7
+  zh: da3835cb187703e7
+/agent-note-link-preserving-content-copying/decision:
+  en: 49ad96a1d04545d0
+  zh: 68271fc1b8d581a0
+/agent-note-link-preserving-content-copying/alternatives-considered:
+  en: 961decf8de21964a
+  zh: 4bda92242d9b0267
+/agent-note-link-preserving-content-copying/consequences:
+  en: f9ab4efdd4305860
+  zh: 47c7958aad7d6c1c

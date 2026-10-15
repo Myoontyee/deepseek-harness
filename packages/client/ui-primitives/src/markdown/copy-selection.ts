@@ -1,5 +1,5 @@
-/** Serialize selected content as plain text, retaining TeX and Markdown tables. */
-import { clipboardMath, clipboardTable } from './clipboard-text.ts'
+/** Serialize selected content as plain text, retaining links, TeX and Markdown tables. */
+import { clipboardLink, clipboardMath, clipboardTable } from './clipboard-text.ts'
 
 const BLOCKS = new Set(['P', 'DIV', 'SECTION', 'BLOCKQUOTE'])
 const MATH = '[data-copy-math]'
@@ -47,6 +47,8 @@ function selectedText(node: Node, markdown = false): string {
   if (node.tagName === 'BR') return '\n'
   if (node.tagName === 'HR') return '\n\n'
   const body = childrenText(node, markdown)
+  const link = node.getAttribute('data-copy-file-link') ?? (node.tagName === 'A' ? node.getAttribute('href') : null)
+  if (!markdown && link !== null) return clipboardLink(body, link)
   if (markdown) {
     const destination = node.getAttribute('data-copy-file-link') ?? node.getAttribute('href')
     if (destination !== null) return '[' + body + '](<' + destination.replaceAll('<', '%3C').replaceAll('>', '%3E') + '>)'
@@ -67,7 +69,7 @@ function childrenText(node: Node, markdown = false): string {
 function elementOf(node: Node): Element | null { return node instanceof Element ? node : node.parentElement }
 
 /**
- * Copy selected visible content as plain text, preserving formula source and table structure.
+ * Copy selected visible content as plain text, preserving links, formula source and table structure.
  * Formula boundaries are atomic: selecting a subscript copies its complete formula once.
  * @param root - Markdown root containing the complete selection.
  * @param event - Native copy gesture.

@@ -28,7 +28,7 @@ function copy(element: Element, range: Range): Map<string, string> {
   return data
 }
 
-it('copies headings and file-link labels without presentation markers or destinations', () => {
+it('copies headings and file-link labels without presentation markers while retaining destinations', () => {
   const view = render(<MarkdownDelegateProvider openFile={vi.fn()} resolveFileLink={path => `D:/Project/${path}`}>
     <MarkdownText text={'# Handoff\n\n[handoff.md](notes/handoff.md#L12) (250 lines)'} />
   </MarkdownDelegateProvider>)
@@ -36,7 +36,7 @@ it('copies headings and file-link labels without presentation markers or destina
   const range = document.createRange()
   range.selectNodeContents(root)
   const data = copy(root, range)
-  expect(data.get('text/plain')).toBe('Handoff\n\nhandoff.md (250 lines)')
+  expect(data.get('text/plain')).toBe('Handoff\n\n[handoff.md](<D:/Project/notes/handoff.md#L12>) (250 lines)')
   expect(data.has('text/markdown')).toBe(false)
   expect(data.has('text/html')).toBe(false)
 })
@@ -51,7 +51,7 @@ it('copies only the selected part of a file label', () => {
   const range = document.createRange()
   range.setStart(text, 0); range.setEnd(text, 7)
   const data = copy(link, range)
-  expect(data.get('text/plain')).toBe('handoff')
+  expect(data.get('text/plain')).toBe('[handoff](<D:/Folder/My%20Note.md>)')
   expect(data.get('text/plain')).not.toContain('unselected')
   expect(root.contains(link)).toBe(true)
 })
@@ -61,7 +61,7 @@ it('copies link labels and plain content while leaving empty selections alone', 
   const root = view.container.firstElementChild!
   const range = document.createRange()
   range.selectNodeContents(view.getByRole('link', { name: 'docs' }))
-  expect(copy(root, range).get('text/plain')).toBe('docs')
+  expect(copy(root, range).get('text/plain')).toBe('[docs](<https://example.com/docs?q=a%20b>)')
   range.selectNodeContents(view.getByText('plain text'))
   expect(copy(root, range).get('text/plain')).toBe('plain text')
   range.collapse()
@@ -83,7 +83,7 @@ it('copies a selected response link even while an outside text input owns the co
   input.focus()
   const range = document.createRange()
   range.selectNodeContents(view.getByRole('link'))
-  expect(copy(input, range).get('text/plain')).toBe('docs')
+  expect(copy(input, range).get('text/plain')).toBe('[docs](<https://example.com>)')
 })
 
 
@@ -163,7 +163,7 @@ it('preserves TeX delimiters and subscripts before a streamed formula is rendere
 it.each([
   [
     '# 标题\n\n**重点** 与 *强调*、~~删除线~~、[链接](https://example.com)。',
-    '标题\n\n重点 与 强调、删除线、链接。',
+    '标题\n\n重点 与 强调、删除线、[链接](<https://example.com>)。',
   ],
   [
     '> 引用\n\n- 第一项\n- 第二项\n\n---\n\n尾部',
@@ -183,7 +183,7 @@ it.each([
   ],
   [
     '| **名称** | 值 |\n|---|---|\n| [平均](https://example.com) | $\\mu_D$ |',
-    '| 名称 | 值 |\n| --- | --- |\n| 平均 | $\\mu_D$ |',
+    '| 名称 | 值 |\n| --- | --- |\n| [平均](<https://example.com>) | $\\mu_D$ |',
   ],
   [
     '\\*字面星号\\* 与 `a_b`',
@@ -314,4 +314,15 @@ it('preserves annotation Markdown and original TeX while ordinary copy stays con
   const character = math.querySelector('.katex-html')!
   range.selectNodeContents(character)
   expect(annotationSelectionMarkdown(root, range)).toBe('$\\mu_D$')
+})
+
+
+it('retains reference links and strips styling from link labels', () => {
+  expect(markdownClipboardText('**before** [**Docs**][ref]\n\n[ref]: https://example.com/a_(b)')).toBe('before [Docs](<https://example.com/a_(b)>)')
+  expect(markdownClipboardText('[safe label](javascript:alert)')).toBe('safe label')
+})
+
+it('escapes literal brackets in labels without losing their text', () => {
+  const result = markdownClipboardText('[a\\[b\\]](https://example.com/a%20b)')
+  expect(result).toBe('[a\\[b\\]](<https://example.com/a%20b>)')
 })

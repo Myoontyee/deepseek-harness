@@ -1,4 +1,4 @@
-/** Content-only clipboard projection, retaining TeX and Markdown table structure. */
+/** Content-only clipboard projection, retaining Markdown links, TeX and table structure. */
 import katex from 'katex'
 import { parseGfmWithMath } from './parse.ts'
 
@@ -8,6 +8,7 @@ interface CopyNode {
   alt?: string | null | undefined
   lang?: string | null | undefined
   identifier?: string | undefined
+  url?: string | undefined
   children?: CopyNode[] | undefined
 }
 
@@ -35,8 +36,37 @@ export function clipboardTable(rows: readonly (readonly string[])[]): string {
   return lines.join('\n')
 }
 
-function content(node: CopyNode, plain = false): string {
-  const children = (): string[] => node.children?.map(child => content(child, plain)) ?? []
+/**
+ * Preserve a link as portable Markdown without styling its label.
+ * @param label - Visible, unstyled link text.
+ * @param destination - Link destination, including local file paths.
+ * @returns Markdown link text, or only the label for an unsafe scheme.
+ */
+export function clipboardLink(label: string, destination: string): string {
+  const target = destination.trim()
+  const scheme = /^([a-z][a-z\d+.-]*):/iu.exec(target)?.[1]?.toLowerCase()
+  if (!target || /[\u0000-\u001f\u007f]/u.test(target)
+    || (scheme !== undefined && !['http', 'https', 'mailto', 'file'].includes(scheme) && !/^[a-z]:[\\/]/iu.test(target))) return label
+  const escaped = label.replace(/[\\`*_[\]<>]/gu, '\\$&')
+  const url = target.replaceAll('\\', '/').replaceAll('<', '%3C').replaceAll('>', '%3E').replaceAll(' ', '%20')
+  return `[${escaped}](<${url}>)`
+}
+
+function linkDefinitions(root: CopyNode): ReadonlyMap<string, string> {
+  const definitions = new Map<string, string>()
+  const visit = (node: CopyNode): void => {
+    if (node.type === 'definition' && node.identifier !== undefined && node.url !== undefined) {
+      const id = node.identifier.toUpperCase()
+      if (!definitions.has(id)) definitions.set(id, node.url)
+    }
+    node.children?.forEach(visit)
+  }
+  visit(root)
+  return definitions
+}
+
+function content(node: CopyNode, plain = false, definitions?: ReadonlyMap<string, string>): string {
+  const children = (): string[] => node.children?.map(child => content(child, plain, definitions)) ?? []
   switch (node.type) {
     case 'root':
     case 'blockquote':
@@ -49,6 +79,12 @@ function content(node: CopyNode, plain = false): string {
     case 'code': return node.lang?.match(/^[\w-]+/u)?.[0] === 'math' ? (plain ? plainMath(node.value ?? '') : clipboardMath(node.value ?? '', true)) : node.value ?? ''
     case 'math': return (plain ? plainMath(node.value ?? '') : clipboardMath(node.value ?? '', true))
     case 'inlineMath': return (plain ? plainMath(node.value ?? '') : clipboardMath(node.value ?? '', false))
+    case 'link':
+    case 'linkReference': {
+      const label = children().join('')
+      const destination = node.url ?? definitions?.get(node.identifier?.toUpperCase() ?? '')
+      return plain || destination === undefined ? label : clipboardLink(label, destination)
+    }
     case 'image':
     case 'imageReference': return node.alt ?? ''
     case 'footnoteReference': return node.identifier ?? ''
@@ -56,19 +92,19 @@ function content(node: CopyNode, plain = false): string {
     case 'definition':
     case 'thematicBreak': return ''
     case 'table': {
-      const rows = (node.children ?? []).map(row => (row.children ?? []).map(cell => content(cell, plain)))
+      const rows = (node.children ?? []).map(row => (row.children ?? []).map(cell => content(cell, plain, definitions)))
       return plain ? rows.map(row => row.join('\t')).join('\n') : clipboardTable(rows)
     }
-    // Formatting and link wrappers contribute only their visible children.
+    // Styling wrappers contribute only their visible children.
     default: return children().join('')
   }
 }
 
 /**
- * Copy rendered message content without presentation markers or link destinations.
+ * Copy rendered message content without styling markers, retaining Markdown links.
  * TeX, tables, code whitespace and literal HTML remain text; no rich clipboard payload is produced.
  * @param source - Complete Markdown message source, independent of collapsed or virtualized DOM.
- * @returns Plain clipboard text with TeX and Markdown tables retained.
+ * @returns Plain clipboard text with links, TeX and Markdown tables retained.
  */
 export function markdownClipboardText(source: string): string {
   // Literal equation environments are also copied intact when not rendered by KaTeX.
@@ -80,7 +116,8 @@ export function markdownClipboardText(source: string): string {
     equations.push(equation)
     return token
   })
-  let text = content(parseGfmWithMath(protectedSource))
+  const root = parseGfmWithMath(protectedSource)
+  let text = content(root, false, linkDefinitions(root))
   equations.forEach((equation, index) => { text = text.replaceAll(`${prefix}${index}\uE001`, equation) })
   return text
 }
