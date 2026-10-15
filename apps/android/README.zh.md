@@ -20,7 +20,7 @@
 
 ## 构建
 
-使用 JDK 17、Android SDK 35、Build Tools 35.0.0 和 Gradle 8.11.1。在不提交的 `local.properties` 中配置 SDK。设置 `DSH_ANDROID_KEYSTORE` 和 `DSH_ANDROID_STORE_PASSWORD`，指定私有且长期保存的签名库，别名为 `dsh-companion`，再运行 `gradle :app:assembleRelease`。禁止提交密钥或密码。后续升级应使用同一签名密钥。分发前运行 `apksigner verify` 验证 APK。
+使用 JDK 17、Android SDK 35、Build Tools 35.0.0 和 Gradle 8.11.1。在不提交的 `local.properties` 中配置 SDK。设置 `DSH_ANDROID_KEYSTORE` 和 `DSH_ANDROID_STORE_PASSWORD`，指定私有且长期保存的签名库，别名为 `dsh-companion`，再运行 `gradle :app:assembleRelease`。禁止提交密钥或密码。后续升级应使用同一签名密钥。分发前运行 `apksigner verify` 验证 APK。 未设置 `DSH_ANDROID_KEYSTORE` 时，发布任务生成未签名 APK，不配置签名身份。`DSH_ANDROID_VERSION_NAME` 和 `DSH_ANDROID_VERSION_CODE` 分别指定显示版本号及递增的 Android 版本代码。
 
 ## 验证与限制
 

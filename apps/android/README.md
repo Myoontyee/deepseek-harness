@@ -20,7 +20,7 @@ Desktop stores its TLS key and hashed per-device grants with Electron OS-backed 
 
 ## Build
 
-Use JDK 17, Android SDK 35, Build Tools 35.0.0 and Gradle 8.11.1. Configure the SDK in an untracked `local.properties`. Set `DSH_ANDROID_KEYSTORE` and `DSH_ANDROID_STORE_PASSWORD` to a private persistent signing keystore, alias `dsh-companion`, before running `gradle :app:assembleRelease`. Never commit keys or passwords. Keep the same signing key for upgrades. Verify the APK with `apksigner verify` before distribution.
+Use JDK 17, Android SDK 35, Build Tools 35.0.0 and Gradle 8.11.1. Configure the SDK in an untracked `local.properties`. Set `DSH_ANDROID_KEYSTORE` and `DSH_ANDROID_STORE_PASSWORD` to a private persistent signing keystore, alias `dsh-companion`, before running `gradle :app:assembleRelease`. Never commit keys or passwords. Keep the same signing key for upgrades. Verify the APK with `apksigner verify` before distribution. Without `DSH_ANDROID_KEYSTORE`, the release task produces an unsigned APK without configuring a signing identity. `DSH_ANDROID_VERSION_NAME` and `DSH_ANDROID_VERSION_CODE` select the displayed release version and its monotonically increasing Android code.
 
 ## Validation and limits
 

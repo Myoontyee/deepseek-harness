@@ -2,8 +2,16 @@ plugins { id 'com.android.application' }
 android {
  namespace 'io.jadegate.dsh.companion'
  compileSdk 35
- defaultConfig { applicationId 'io.jadegate.dsh.companion'; minSdk 26; targetSdk 35; versionCode (System.getenv('DSH_ANDROID_VERSION_CODE') ?: '2026100803').toInteger(); versionName System.getenv('DSH_ANDROID_VERSION_NAME') ?: '0.2.1-alpha.1.20261008.3' }
- signingConfigs { release { if (System.getenv('DSH_ANDROID_KEYSTORE')) storeFile file(System.getenv('DSH_ANDROID_KEYSTORE')); storePassword System.getenv('DSH_ANDROID_STORE_PASSWORD'); keyAlias 'dsh-companion'; keyPassword System.getenv('DSH_ANDROID_STORE_PASSWORD') } }
+ defaultConfig {
+  applicationId = 'io.jadegate.dsh.companion'
+  minSdk = 26
+  targetSdk = 35
+  versionCode = (System.getenv('DSH_ANDROID_VERSION_CODE') ?: '2026100803').toInteger()
+  versionName = System.getenv('DSH_ANDROID_VERSION_NAME') ?: '0.2.1-alpha.1.20261008.3'
+ }
+ if (System.getenv('DSH_ANDROID_KEYSTORE')) {
+  signingConfigs { release { storeFile file(System.getenv('DSH_ANDROID_KEYSTORE')); storePassword System.getenv('DSH_ANDROID_STORE_PASSWORD'); keyAlias 'dsh-companion'; keyPassword System.getenv('DSH_ANDROID_STORE_PASSWORD') } }
+ }
  buildTypes { release { if (System.getenv('DSH_ANDROID_KEYSTORE')) signingConfig signingConfigs.release; minifyEnabled false } }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
