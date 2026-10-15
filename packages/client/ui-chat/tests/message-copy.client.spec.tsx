@@ -9,6 +9,16 @@ import { MessageIconActions } from '../src/client/chat/MessageIconActions.tsx'
 
 const t = makeTranslate(zh, common)
 afterEach(cleanup)
+it('resolves the visible copy value at click time instead of copying a hidden original', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+  const getCopyText = vi.fn(() => 'masked value')
+  const view = render(<MessageIconActions text="original value" getCopyText={getCopyText} clock="start" t={t} />)
+  fireEvent.click(view.getByRole('button', { name: '复制' }))
+  expect(getCopyText).toHaveBeenCalledOnce()
+  expect(writeText).toHaveBeenCalledExactlyOnceWith('masked value')
+  await waitFor(() => { expect(view.getByRole('button', { name: '复制成功' })).toBeTruthy() })
+})
 it('copies an entire Markdown reply as text with TeX and a plain-cell Markdown table', async () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })

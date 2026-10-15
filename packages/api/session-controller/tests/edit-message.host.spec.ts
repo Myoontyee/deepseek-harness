@@ -4,7 +4,7 @@ import { MockAdapter, textResponse } from '../../../core/agent-loop/tests/mock-a
 import { cp, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
-import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import { createDeveloperMessage, createUserMessage } from '@deepseek-ai/dsh-llm'

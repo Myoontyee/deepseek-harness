@@ -9,3 +9,4 @@
   - separator
   - menuitem "Copy working directory"
   - menuitem "Open working directory"
+  - menuitem "Copy Session ID"

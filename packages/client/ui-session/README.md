@@ -14,6 +14,7 @@ Running status comes from Host list baselines or status events. Subagent catalog
 
 ## Table of Contents
 
+- [Access Hooks](#access-hooks)
 - [Model Experience](#model-experience)
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
 - [Dev Note](#dev-note)
@@ -23,6 +24,11 @@ Running status comes from Host list baselines or status events. Subagent catalog
 ## Native completion reports
 
 The optional Desktop bridge reports existing Session status, selection and catalog observations. The native shell owns unread counts, deduplication and acknowledgement. Desktop also broadcasts authoritative unread identities to every product window, including an initial snapshot for newly opened windows. Acknowledging a completion in a focused window clears every sidebar. Browser-only clients retain their local completion policy.
+
+<a id="access-hooks"></a>
+## Access Hooks
+
+The package injects the Client `remoteAccess` service and publishes Session access Hooks over its `source()`: the root `useSessionAccess(sessionId, action)` answers on one Session resource, and the Session-scope `useAccess(action)` answers on the bound Session's resource; the `global` resource's answer is a different Hook, `useRemoteAccess(action)`, so neither shadows the other. The SessionMaybe-scope `useAccess(action)` returns `undefined` while no Session is bound, which callers treat as not allowed; a decision on the `global` resource reads `useRemoteAccess` instead. Snapshot semantics belong to [`dsh-api-remote-access`](../../api/remote-access/README.md#client-face).
 
 <a id="model-experience"></a>
 ## Model Experience

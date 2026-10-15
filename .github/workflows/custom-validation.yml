@@ -1,0 +1,50 @@
+name: Custom compatibility checks
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+  workflow_dispatch:
+  pull_request:
+    branches: ['custom/content-only-copy']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custom-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+      DSH_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v5.0.0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - run: pnpm install --frozen-lockfile
+      - run: node --test .github/scripts/custom-release.test.mjs
+      - run: pnpm run typecheck
+      - name: Verify retained custom interactions
+        run: >-
+          pnpm exec vitest run
+          packages/client/ui-primitives/tests/hover-card.client.spec.tsx
+          packages/client/ui-primitives/tests/markdown-copy-links.client.spec.tsx
+          packages/client/ui-chat/tests/message-copy.client.spec.tsx
+          packages/client/ui-chat/tests/message-editor.client.spec.tsx
+          packages/client/ui-workspace/tests/apply.client.spec.ts
+          packages/client/ui-workspace/tests/session-actions.client.spec.tsx
+          packages/api/session-controller/tests/edit-message.host.spec.ts
+          packages/fs/tool-fs/tests/tools.spec.ts
+          --maxWorkers=2

@@ -1,0 +1,165 @@
+name: Custom multiplatform release
+
+on:
+  push:
+    tags: ['custom-v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing custom-v tag to build (never a branch)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custom-release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'Myoontyee/deepseek-harness'
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      commit: ${{ steps.version.outputs.commit }}
+      android_code: ${{ steps.version.outputs.android_code }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - id: version
+        env:
+          CUSTOM_RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: node .github/scripts/custom-release.mjs validate
+      - name: Validate release naming rules
+        run: node --test .github/scripts/custom-release.test.mjs
+
+  compatibility:
+    needs: validate
+    uses: ./.github/workflows/custom-validation.yml
+    with:
+      ref: ${{ needs.validate.outputs.commit }}
+
+  desktop:
+    needs: [validate, compatibility]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            target: win-x64
+          - runner: macos-15
+            target: mac-arm64
+          - runner: macos-15-intel
+            target: mac-x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+      DSH_TELEMETRY_DISABLED: '1'
+      CUSTOM_RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+      CUSTOM_RELEASE_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v5.0.0
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - name: Install dependencies on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: pnpm install --frozen-lockfile
+      - name: Install dependencies on macOS
+        if: runner.os == 'macOS'
+        run: pnpm install --frozen-lockfile
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: node .github/scripts/custom-release.mjs desktop
+      - name: Package macOS
+        if: runner.os == 'macOS'
+        run: node .github/scripts/custom-release.mjs desktop
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: custom-${{ matrix.target }}
+          path: .custom-release/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7.0.1
+        if: failure()
+        with:
+          name: logs-${{ matrix.target }}
+          path: apps/desktop/.desktop-build/packaging-runs/
+          include-hidden-files: true
+          retention-days: 14
+
+  android:
+    needs: [validate, compatibility]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CUSTOM_RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+      DSH_ANDROID_VERSION_CODE: ${{ needs.validate.outputs.android_code }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android build tools
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Build unsigned Android payload for local signing
+        run: node .github/scripts/custom-release.mjs android
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: custom-android
+          path: .custom-release/*
+          if-no-files-found: error
+
+  publish:
+    needs: [validate, desktop, android]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: custom-*
+          path: .custom-release
+          merge-multiple: true
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - name: Verify desktop set for a draft release
+        env:
+          CUSTOM_RELEASE_VERSION: ${{ needs.validate.outputs.version }}
+        run: node .github/scripts/custom-release.mjs desktop-manifest
+      - name: Retain draft until Android is signed locally
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+        run: gh release create "$RELEASE_TAG" .custom-release/*.exe .custom-release/*.dmg .custom-release/SHA256SUMS.txt --verify-tag --draft --prerelease --title "$RELEASE_TAG" --generate-notes

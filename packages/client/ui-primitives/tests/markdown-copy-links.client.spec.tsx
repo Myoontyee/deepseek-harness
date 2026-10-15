@@ -2,13 +2,20 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { useEffect, useRef } from 'react'
-import { registerLiteralCopy, annotationSelectionMarkdown } from '../src/markdown/copy-selection.ts'
+import { registerLiteralCopy, annotationSelectionMarkdown, renderedClipboardText } from '../src/markdown/copy-selection.ts'
 import { MarkdownDelegateProvider } from '../src/markdown/MarkdownDelegate.tsx'
 import { writeClipboard } from '../src/clipboard.ts'
 import { markdownClipboardText } from '../src/markdown/clipboard-text.ts'
 import { MarkdownText } from './markdown-test-components.tsx'
 
 afterEach(() => { window.getSelection()?.removeAllRanges(); cleanup() })
+it('copies the current visible secret spelling without copying reveal controls', () => {
+  const root = document.createElement('div')
+  root.innerHTML = '<span data-secret><span>prefix********</span><button>Reveal</button></span>'
+  expect(renderedClipboardText(root)).toBe('prefix********')
+  root.querySelector('[data-secret] > span')!.textContent = 'revealed-value'
+  expect(renderedClipboardText(root)).toBe('revealed-value')
+})
 function copy(element: Element, range: Range): Map<string, string> {
   const selection = window.getSelection()
   selection?.removeAllRanges()

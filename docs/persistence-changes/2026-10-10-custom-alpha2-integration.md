@@ -9,7 +9,7 @@ English | [中文](2026-10-10-custom-alpha2-integration.zh.md)
 
 ## Summary
 
-Integrates ordinary Session relay attribution and queued same-Session editing on the official alpha.2 persistence history.
+Integrates custom Session relay attribution and queued same-Session editing with the official alpha.3 persistence history.
 
 ## Table of Contents
 
@@ -27,32 +27,32 @@ id: 2026-10-10-custom-alpha2-integration
 baseline: false
 changes:
   - root: "event:agent/inbox/spliced"
-    previous: "2026-10-05-working-directory-attribution"
-    after: "e445af34ea6ca9b80f031c1f53351db9295f98c0d7dd8204fc14d4f8ed9aaf6f"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "48682fb0438da203bc928c4a8964fa8eee4d54640de78160ed1ee2807c2d9628"
     decision: same-version
   - root: "event:developer/message"
-    previous: "2026-10-05-working-directory-attribution"
-    after: "ec815e4603d44195802820df434f499c777f88b4c66ca65d4f53a6ddefb79758"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "db570388df700b34e2d7330e2114fb6b67513f64b915e83b104a83a46d0ba2e6"
     decision: same-version
   - root: "event:session/title-llm-request"
-    previous: "2026-10-07-title-reasoning-effort"
-    after: "f3449ee7306ee3d3c5d5af935b2db922516c499ec7b1a6bc20342b6a1637aae7"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "69207758da6350ec4bc96014d039f17f47c12442e12ff621c95010b71e3573f8"
     decision: same-version
   - root: "event:user/message"
-    previous: "2026-10-05-working-directory-attribution"
-    after: "578be6c12e868f1beb6f427b61b1a7b9146d2626f040267c478a2bdbeff6f5fc"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "2d7a591baca42163e83c4b895d23258ed7bfd3e01537d4f31d503ce4c5b50a49"
     decision: same-version
 ```
 
 <a id="compatibility"></a>
 ## Compatibility
 
-Official accepted records and released V4 readers are unchanged. The three earlier custom alpha.1 declarations and complete schema snapshots are retained byte-for-byte under custom-alpha1 as branch history. This successor records the combined current schema after the official working-directory attribution update. Existing message sources and records without optional edit fields remain readable. Session-relay metadata is attributed message data, not a replay command. The optional user-rpc edit range is applied by the next legal open step; physical log history is retained. Older controllers do not execute a pending edit intent, so downgrading with a queued edit is unsupported. No user session files are rewritten by this documentation integration.
+The custom metadata remains optional and preserves the official user-rpc principal attribution. Existing alpha.2 custom records without principal continue to identify the owner. The edit discriminator identifies queued revisions; admitted replacements remain ordinary persisted surface replacements. Readers without the custom attribution may display its audit rows but must use the persisted replacements for model replay. This record is outside the finalized checkpoint and is refreshed against the accepted upstream history; no Session generation or finalized schema is rewritten.
 
 <a id="verification"></a>
 ## Verification
 
-On the alpha.2 integration, edit-message.host.spec.ts passes completed and queued compressed-log shutdown/reopen and rejected-admission cases. session-relay.host.spec.ts passes delivery, single feedback and no-bounce cases. The seven focused suites pass 298 tests (one platform skip).
+Focused edit-message Host tests passed in the alpha.3 integration run. Host and Client typechecks passed. The real Desktop annotation scenario passed, including exact annotation delivery to the model and synchronized completion markers.
 
 <a id="dev-note"></a>
 ## Dev Note

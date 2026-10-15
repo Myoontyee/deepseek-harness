@@ -1,0 +1,36 @@
+name: Propose official base updates
+
+on:
+  schedule:
+    - cron: '20 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+concurrency:
+  group: custom-upstream-proposal
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    if: github.repository == 'Myoontyee/deepseek-harness'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ vars.CUSTOM_RELEASE_BRANCH || github.event.repository.default_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - name: Propose, never automatically merge or release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CUSTOM_BASE_BRANCH: ${{ vars.CUSTOM_RELEASE_BRANCH || github.event.repository.default_branch }}
+        run: node .github/scripts/custom-upstream.mjs

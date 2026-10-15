@@ -9,7 +9,7 @@ kind: persistence-change
 
 ## 概述
 
-将普通会话消息归因及同会话排队编辑整合到官方 alpha.2 持久化历史上。
+将定制会话互通来源和同会话排队编辑接入官方 alpha.3 持久化历史。
 
 ## 目录
 
@@ -27,32 +27,32 @@ id: 2026-10-10-custom-alpha2-integration
 baseline: false
 changes:
   - root: "event:agent/inbox/spliced"
-    previous: "2026-10-05-working-directory-attribution"
-    after: "e445af34ea6ca9b80f031c1f53351db9295f98c0d7dd8204fc14d4f8ed9aaf6f"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "48682fb0438da203bc928c4a8964fa8eee4d54640de78160ed1ee2807c2d9628"
     decision: same-version
   - root: "event:developer/message"
-    previous: "2026-10-05-working-directory-attribution"
-    after: "ec815e4603d44195802820df434f499c777f88b4c66ca65d4f53a6ddefb79758"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "db570388df700b34e2d7330e2114fb6b67513f64b915e83b104a83a46d0ba2e6"
     decision: same-version
   - root: "event:session/title-llm-request"
-    previous: "2026-10-07-title-reasoning-effort"
-    after: "f3449ee7306ee3d3c5d5af935b2db922516c499ec7b1a6bc20342b6a1637aae7"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "69207758da6350ec4bc96014d039f17f47c12442e12ff621c95010b71e3573f8"
     decision: same-version
   - root: "event:user/message"
-    previous: "2026-10-05-working-directory-attribution"
-    after: "578be6c12e868f1beb6f427b61b1a7b9146d2626f040267c478a2bdbeff6f5fc"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "2d7a591baca42163e83c4b895d23258ed7bfd3e01537d4f31d503ce4c5b50a49"
     decision: same-version
 ```
 
 <a id="compatibility"></a>
 ## 兼容性
 
-官方已接受的记录和已发布的 V4 读取器保持不变。此前三份定制 alpha.1 声明及完整 schema 快照按原始字节保存在 custom-alpha1 下，作为分支历史。此后继记录覆盖官方工作目录归因更新后的合并类型。已有消息来源及没有可选 edit 字段的记录仍可读取。session-relay 元数据是消息归因，不是回放指令。可选 user-rpc 编辑范围在下一合法开放步骤内应用，物理日志历史保留。旧控制器不会执行排队编辑意图，因此不支持带着待处理编辑降级。本次文档整合不重写用户会话文件。
+定制元数据仍为可选字段，保留官方 user-rpc 的 principal 来源信息。旧 alpha.2 定制记录缺少 principal 时仍代表所有者。edit 判别字段标识排队修订，接纳后的替换仍使用普通持久化表面替换。不识别定制来源的读取器可能显示审计行，但模型回放必须使用已持久化的替换。本记录不属于已定稿检查点，按官方历史刷新；不改写任何会话代次文件或已定稿模式。
 
 <a id="verification"></a>
 ## 验证
 
-在 alpha.2 整合版本上，edit-message.host.spec.ts 通过已完成和排队编辑的压缩日志关闭重开、拒绝接纳测试；session-relay.host.spec.ts 通过消息投递、单次反馈和防止反馈回弹测试。七组针对性测试通过 298 项，另有一项平台跳过。
+alpha.3 集成的编辑消息 Host 定向测试通过，Host 和 Client 类型检查通过。实际桌面注释场景通过，包含注释准确传递给模型及完成提醒跨窗口同步。
 
 <a id="dev-note"></a>
 ## 开发备注

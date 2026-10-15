@@ -206,3 +206,11 @@ export function annotationSelectionMarkdown(root: HTMLElement, selected: Range):
   if (!root.contains(selected.startContainer) || !root.contains(selected.endContainer)) return ''
   return rangeContent(root, selected, true)
 }
+
+/** Copy visible message contents while retaining formula sources and table structure.
+ * @param root - Rendered message content without attachment or action chrome.
+ * @returns Content-only clipboard text; hidden secret originals are never consulted.
+ */
+export function renderedClipboardText(root: HTMLElement): string {
+  return trimBreaks(childrenText(root, false))
+}

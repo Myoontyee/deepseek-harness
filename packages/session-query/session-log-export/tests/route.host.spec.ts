@@ -66,7 +66,7 @@ describe('Session log export Fetch route', () => {
 
     const response = await shared.fetch(new Request(
       `http://host${SESSION_LOG_EXPORT_PATH}?sessionId=session-1`,
-    ))
+    ), connection.browserPeer)
     expect(response.status).toBe(200)
     expect(response.headers.get('content-type')).toBe('application/zip')
     const files = unzipSync(new Uint8Array(await response.arrayBuffer()))
@@ -74,26 +74,26 @@ describe('Session log export Fetch route', () => {
 
     const head = await shared.fetch(new Request(
       `http://host${SESSION_LOG_EXPORT_PATH}?sessionId=session-1`, { method: 'HEAD' },
-    ))
+    ), connection.browserPeer)
     expect(head.status).toBe(200)
     expect(head.body).toBeNull()
 
     await dispose()
     expect((await shared.fetch(new Request(
       `http://host${SESSION_LOG_EXPORT_PATH}?sessionId=session-1`,
-    ))).status).toBe(404)
+    ), connection.browserPeer)).status).toBe(404)
   })
 
   it('validates the query before reporting missing export services', async () => {
     const { connection, dispose } = await mounted(false)
     const shared = connection.createSharedFetchHandler('/api')
-    expect((await shared.fetch(new Request(`http://host${SESSION_LOG_EXPORT_PATH}`))).status).toBe(400)
+    expect((await shared.fetch(new Request(`http://host${SESSION_LOG_EXPORT_PATH}`), connection.browserPeer)).status).toBe(400)
     expect((await shared.fetch(new Request(
       `http://host${SESSION_LOG_EXPORT_PATH}?sessionId=session-1&includeDescendants=1`,
-    ))).status).toBe(400)
+    ), connection.browserPeer)).status).toBe(400)
     expect((await shared.fetch(new Request(
       `http://host${SESSION_LOG_EXPORT_PATH}?sessionId=session-1`,
-    ))).status).toBe(500)
+    ), connection.browserPeer)).status).toBe(500)
     await dispose()
   })
 
@@ -126,7 +126,7 @@ describe('Session log export Fetch route', () => {
       const shared = connection.createSharedFetchHandler('/api')
       const response = await shared.fetch(new Request(
         `http://host${SESSION_LOG_EXPORT_PATH}?sessionId=session-1&format=markdown&locale=zh`,
-      ))
+      ), connection.browserPeer)
       expect(response.status).toBe(200)
       expect(response.headers.get('content-type')).toBe('text/markdown; charset=utf-8')
       expect(await response.text()).toBe('## 用户\n\nFull conversation\n')
@@ -134,7 +134,7 @@ describe('Session log export Fetch route', () => {
       expect(release).toHaveBeenCalledOnce()
       const invalid = await shared.fetch(new Request(
         `http://host${SESSION_LOG_EXPORT_PATH}?sessionId=session-1&format=html`,
-      ))
+      ), connection.browserPeer)
       expect(invalid.status).toBe(400)
     } finally {
       await fiber.dispose()

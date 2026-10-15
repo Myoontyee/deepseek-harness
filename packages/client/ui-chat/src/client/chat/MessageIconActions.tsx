@@ -14,6 +14,8 @@ import css from './MessageIconActions.module.css'
 export interface MessageIconActionsProps {
   /** Source content the copy action writes. */
   text: string
+  /** Resolve the visible copy value at activation, including secret reveal state. */
+  getCopyText?: (() => string) | undefined
   /** Apply the content-only Markdown projection for rendered assistant replies. */
   markdown?: boolean
   /** Open the latest human message for editing; omission hides the action. */
@@ -48,7 +50,7 @@ export interface MessageIconActionsProps {
  * @returns The actions row element.
  */
 export function MessageIconActions({
-  text, markdown = false, time, clock, onBranch, branchUnavailable = false, className,
+  text, getCopyText, markdown = false, time, clock, onBranch, branchUnavailable = false, className,
   extraActions, usageAction, onEdit, t,
 }: MessageIconActionsProps) {
   const day = useCalendarDay()
@@ -68,7 +70,8 @@ export function MessageIconActions({
     if (copied || copyPending.current) return
     const epoch = copyEpoch.current
     copyPending.current = true
-    void writeClipboard(markdown ? markdownClipboardText(text) : text).then((ok) => {
+    const copyText = getCopyText?.() ?? text
+    void writeClipboard(markdown ? markdownClipboardText(copyText) : copyText).then((ok) => {
       if (epoch !== copyEpoch.current) return
       copyPending.current = false
       if (!ok) return
@@ -78,7 +81,7 @@ export function MessageIconActions({
         setCopied(false)
       }, 1000)
     })
-  }, [copied, text, markdown])
+  }, [copied, text, markdown, getCopyText])
   const clockEl = time === undefined ? null : (
     <span className={clock === 'start' ? css.timeStart : css.timeEnd}>
       {formatMessageClock(time, t, day)}
