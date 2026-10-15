@@ -65,8 +65,9 @@ Only sending a topic message invokes the model. The quotation and selected compl
 
 The UI adds no extra model request. Only context selected by the Host enters subsequent topic requests.
 
-<a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work
+
+<a id="known-limitations-and-deferred-work"></a>
 
 - This initial board has explicit refresh and one selected assistant per topic. Automatic memory extraction, multi-member dispatch, topic search and unread counts are not implemented. Unsaved topic creation fields are panel-local; native chat drafts use the existing conversation persistence. No automatic history deletion is enabled.
 

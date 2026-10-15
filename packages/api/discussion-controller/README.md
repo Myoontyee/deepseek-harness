@@ -69,8 +69,9 @@ Only sending a topic message invokes the model. The quotation and selected compl
 
 Changing an assistant profile or confirmed memory changes its subsequent context contribution. Saving history by itself does not invoke a model or inject old transcripts.
 
-<a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work
+
+<a id="known-limitations-and-deferred-work"></a>
 
 - No automatic fact extraction, vector index, background wake or multi-member dispatch is implemented. Project memories use the exact Host workspace identity. Topic metadata has no automatic expiry; explicit archive retains native Session history. Remote delegation requires an explicit access-policy grant for the new endpoints.
 

@@ -65,8 +65,9 @@ kind: "package-reference"
 
 界面不增加额外模型请求。仅 Host 选中的上下文进入话题后续请求。
 
-<a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与后续工作
+
+<a id="known-limitations-and-deferred-work"></a>
 
 - 首版提供手动刷新，每个话题选择一个助手。尚未实现自动记忆提取、多成员调度、话题搜索和未读数量。未保存的话题创建字段暂存在面板中；原生聊天草稿使用现有会话持久化。不启用自动删除历史。
 

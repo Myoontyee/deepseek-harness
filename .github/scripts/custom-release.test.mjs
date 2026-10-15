@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -31,6 +31,10 @@ test('withholds checksums for incomplete drafts and distinguishes unsigned draft
     mkdirSync(assets)
     copyFileSync(new URL('./custom-release.mjs', import.meta.url), join(scripts, 'custom-release.mjs'))
     writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '0.2.1-alpha.3' }))
+    execFileSync('git', ['init', '--quiet', root])
+    execFileSync('git', ['-c', 'user.name=Release fixture', '-c', 'user.email=fixture@example.invalid',
+      '-c', 'commit.gpgsign=false', 'commit', '--allow-empty', '--quiet', '-m', 'release fixture'], { cwd: root })
+    const source = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
     const version = '0.2.1-alpha.3.20261015.1'
     const invoke = command => {
       const result = spawnSync(process.execPath, [join(scripts, 'custom-release.mjs'), command], {
@@ -44,7 +48,13 @@ test('withholds checksums for incomplete drafts and distinguishes unsigned draft
     for (const suffix of ['win-x64-unsigned.exe', 'mac-arm64-unsigned.dmg', 'mac-x64-unsigned.dmg', 'android-universal-unsigned.apk']) {
       writeFileSync(join(assets, `deepseek-harness-${version}-${suffix}`), suffix)
     }
-    assert.equal(invoke('desktop-manifest').status, 0)
+    const draft = invoke('desktop-manifest')
+    assert.equal(draft.status, 0, draft.stderr)
+    const payload = JSON.parse(readFileSync(join(assets, 'UPDATE-PAYLOAD.json'), 'utf8'))
+    assert.equal(payload.source, source)
+    assert.equal(payload.version, version)
+    assert.equal(payload.assets.length, 4)
+    assert.ok(payload.assets.every(asset => /^[A-Za-z0-9+/]{86}==$/u.test(asset.sha512)))
     assert.equal(readFileSync(join(assets, 'SHA256SUMS.txt'), 'utf8').trim().split('\n').length, 4)
     assert.notEqual(invoke('manifest').status, 0)
     renameSync(join(assets, `deepseek-harness-${version}-android-universal-unsigned.apk`), join(assets, `deepseek-harness-${version}-android-universal.apk`))
