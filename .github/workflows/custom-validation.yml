@@ -34,6 +34,8 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
+      - name: Build the native host module required by session persistence tests
+        run: pnpm run build:native-system
       - run: node --test .github/scripts/custom-release.test.mjs
       - run: pnpm run typecheck
       - name: Verify retained custom interactions
