@@ -15,7 +15,10 @@ if (!/^\d+$/u.test(runId ?? '')) throw new Error('Supply the successful cloud re
 const repository = 'Myoontyee/deepseek-harness'
 const gh = args => execFileSync(process.env.GH_BIN ?? 'gh', args, { encoding: 'utf8' }).trim()
 const release = () => {
-  const value = JSON.parse(gh(['api', `repos/${repository}/releases/tags/${tag}`]))
+  // The REST tag endpoint does not resolve unpublished drafts. The CLI locates
+  // drafts by tag, then the release-ID endpoint supplies asset digests.
+  const metadata = JSON.parse(gh(['release', 'view', tag, '--repo', repository, '--json', 'databaseId']))
+  const value = JSON.parse(gh(['api', `repos/${repository}/releases/${metadata.databaseId}`]))
   return { isDraft: value.draft, assets: value.assets }
 }
 if (!release().isDraft) throw new Error('Only an unpublished draft may be completed; published releases are immutable')
