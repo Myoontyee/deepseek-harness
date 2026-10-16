@@ -1,14 +1,15 @@
 /** Explicitly managed identities and memories, separate from transcript retention. */
 import { useEffect, useState } from 'react'
-import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
+import type { HostObservable, InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { AssistantDraft, AssistantMemory, DiscussionAssistant, MemoryDraft } from '@deepseek-ai/dsh-api-discussion-controller/types'
-import type { ModelCatalog } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { ModelCatalogState } from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import { readAvatar } from './avatar.ts'
 import css from './Discussions.module.css'
 
 /** Typed settings operations; errors remain visible without clearing drafts. */
 export interface AssistantSettingsActions {
-  listModels: () => Promise<ModelCatalog>
+  hooks: { models: HostObservable<ModelCatalogState> }
+  refreshModels: () => void
   listAssistants: () => Promise<DiscussionAssistant[]>
   saveAssistant: (current: DiscussionAssistant | undefined, draft: AssistantDraft) => Promise<DiscussionAssistant>
   listMemories: (assistant: DiscussionAssistant) => Promise<AssistantMemory[]>
@@ -19,21 +20,19 @@ export interface AssistantSettingsActions {
 const blank: AssistantDraft = { name: '', instructions: '', template: 'temporary', memoryMode: 'off' }
 
 /** @param props - Native persistent assistant actions and localized copy. @returns The assistant and memory settings panel. */
-export function AssistantSettings({ listModels, listAssistants, saveAssistant, listMemories, remember, updateMemory, forget, t }:
+export function AssistantSettings({ useModels, refreshModels, listAssistants, saveAssistant, listMemories,
+  remember, updateMemory, forget, t }:
   PropsLocale<'discussions'> & InjectFace<AssistantSettingsActions>) {
   const [rows, setRows] = useState<DiscussionAssistant[]>([])
   const [current, setCurrent] = useState<DiscussionAssistant>()
   const [draft, setDraft] = useState<AssistantDraft>(blank)
-  const [models, setModels] = useState<ModelCatalog>()
+  const catalog = useModels(value => value)
+  const models = catalog.value
   const [memories, setMemories] = useState<AssistantMemory[]>([])
   const [editingMemory, setEditingMemory] = useState<AssistantMemory>()
   const [text, setText] = useState(''), [project, setProject] = useState('')
   const [scope, setScope] = useState<MemoryDraft['scope']>('assistant')
   const [busy, setBusy] = useState(false), [error, setError] = useState('')
-  useEffect(() => { let live = true
-    void listModels().then((value) => { if (live) setModels(value) }, (failure: unknown) => { if (live) setError(String(failure)) })
-    return () => { live = false }
-  }, [listModels])
   useEffect(() => { let live = true
     void listAssistants().then((value) => { if (live) setRows(value) }, (failure: unknown) => { if (live) setError(String(failure)) })
     return () => { live = false }
@@ -64,7 +63,8 @@ export function AssistantSettings({ listModels, listAssistants, saveAssistant, l
             .find(route => JSON.stringify([route.provider, route.model]) === event.target.value)
           if (selected) setDraft({ ...draft, ...selected })
         }}>
-        <option value="" disabled>{t(models ? 'chooseModel' : 'loading')}</option>
+        <option value="" disabled>{t(models?.groups.some(group => group.models.length) ? 'chooseModel'
+          : catalog.status === 'error' ? 'modelsFailed' : catalog.status === 'ready' ? 'modelsEmpty' : 'loading')}</option>
         {draft.provider && draft.model && !models?.groups.some(group => group.id === draft.provider
           && group.models.some(model => model.id === draft.model))
           && <option value={JSON.stringify([draft.provider, draft.model])} disabled>{draft.provider} / {draft.model} — {t('unavailable')}</option>}
@@ -72,7 +72,8 @@ export function AssistantSettings({ listModels, listAssistants, saveAssistant, l
           {group.models.map(model => <option key={model.id} value={JSON.stringify([group.id, model.id])}>{model.name}</option>)}
         </optgroup>)}
       </select></label>
-      <button type="button" onClick={() => { void run(async () => { setModels(await listModels()) }) }}>{t('refresh')}</button>
+      <button type="button" disabled={catalog.status === 'loading'} onClick={refreshModels}>{t('refresh')}</button>
+      {catalog.error && <p role="alert">{t('failed', { message: catalog.error })}</p>}
       {models?.failures.map(failure => <p role="status" key={failure.id}>{failure.name}: {failure.message}</p>)}
       <div className={css.avatarChoices} role="group" aria-label={t('avatar')}>
         {(draft.avatar ?? '').startsWith('data:image/') && <img src={draft.avatar} alt={t('avatar')} className={css.avatarPreview} />}

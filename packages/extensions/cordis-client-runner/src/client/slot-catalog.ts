@@ -2151,7 +2151,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'discussion.board\', () => ctx.slots.register(\n      { name: \'discussion.board\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-discussions/src/client/plugin.tsx:28',
+    source: 'packages/client/ui-discussions/src/client/plugin.tsx:29',
   },
   {
     key: 'discussion.conversation',
@@ -2191,7 +2191,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'discussion.conversation\', () => ctx.slots.register(\n      { name: \'discussion.conversation\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-discussions/src/client/plugin.tsx:30',
+    source: 'packages/client/ui-discussions/src/client/plugin.tsx:31',
   },
   {
     key: 'document.annotation.voice',

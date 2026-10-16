@@ -3,6 +3,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 
 /** Chinese dictionary and key owner. */
 export const zh = {
+  modelsFailed: '模型加载失败，请重试', modelsEmpty: '暂无可用模型，请先在设置中接入模型',
   model: '回答模型', chooseModel: '请选择模型', unavailable: '暂不可用', avatar: '助手头像', uploadAvatar: '上传头像（PNG / JPEG / WebP，最大 2 MB）',
   showModel: '回复时显示模型名称', mentionHint: '在对话中输入 @ 并选择助手，它会读取当前对话上下文并使用此模型回答。每条消息选择一个助手。',
   copy: '复制', copied: '已复制', footnotes: '脚注',
@@ -23,6 +24,7 @@ export const zh = {
 }
 /** English dictionary. */
 export const en: Record<keyof typeof zh, string> = {
+  modelsFailed: 'Model loading failed. Retry.', modelsEmpty: 'No models available. Configure a model in Settings.',
   model: 'Reply model', chooseModel: 'Choose a model', unavailable: 'Unavailable', avatar: 'Assistant avatar', uploadAvatar: 'Upload avatar (PNG / JPEG / WebP, up to 2 MB)',
   showModel: 'Show model name on replies', mentionHint: 'Type @ in a conversation and select this assistant to reply using this model and the current conversation context. Select one assistant per message.',
   copy: 'Copy', copied: 'Copied', footnotes: 'Footnotes',

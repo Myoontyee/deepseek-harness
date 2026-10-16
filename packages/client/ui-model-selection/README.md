@@ -58,6 +58,8 @@ When another writer owns the Session, model-selection failures tell the user to 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 
+`ModelDirectoryResolver.catalog` exposes the same Host-generation catalog to settings consumers. Its observable store supplies cached groups, loading status and failures; `refresh()` reloads it without changing a conversation's selected model.
+
 Menus use the shared `MenuSurface` material, including the macOS backing for background blur; custom content follows the [menu rules](../../../docs/web-styling.md#component-rules).
 
 <details>

@@ -58,6 +58,8 @@ composer 菜单中的模型名称和推理等级均使用 400（regular）字重
 <a id="understand-the-implementation"></a>
 ## 理解实现
 
+`ModelDirectoryResolver.catalog` 向设置界面提供同一份 Host 代次模型目录。其可观察存储提供缓存分组、加载状态和错误；`refresh()` 重新加载目录，不改变对话已选择的模型。
+
 菜单采用共享 `MenuSurface` 材质，包括用于背景模糊的 macOS 底层；自定义内容遵循[菜单规则](../../../docs/web-styling.zh.md#component-rules)。
 
 <details>

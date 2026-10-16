@@ -8,6 +8,7 @@ import type {} from '@deepseek-ai/dsh-client-resources/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
+import type {} from '@deepseek-ai/dsh-client-ui-model-selection/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type { PropsLocale, PropsRenderFactories, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ConversationViewsProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -75,7 +76,7 @@ class DiscussionNavigation extends Service {
 }
 
 /** Dependencies used only while a discussion or settings panel is actually opened. */
-export const inject = ['slots', 'locale', 'remote', 'remote.discussions', 'remote.session', 'sessions', 'resources', 'sidebarRight', 'sidebarRightTabs', 'uiWorkspace']
+export const inject = ['slots', 'locale', 'remote', 'remote.discussions', 'remote.session', 'modelDirectories', 'sessions', 'resources', 'sidebarRight', 'sidebarRightTabs', 'uiWorkspace']
 
 /** Register lazy discussion panes and the assistant settings panel.
  * @param ctx - Authenticated client runtime.
@@ -88,7 +89,8 @@ export function apply(ctx: Context): void {
   })
   const t = ctx.locale.bind('discussions'), navigation = new DiscussionNavigation(ctx)
   const assistantActions: AssistantSettingsActions = {
-    listModels: async () => unwrap(await ctx.remote.session.modelCatalog()),
+    hooks: { models: ctx.modelDirectories.catalog.store },
+    refreshModels: () => { ctx.modelDirectories.catalog.refresh() },
     listAssistants: async () => unwrap(await ctx.remote.discussions.assistants()),
     saveAssistant: async (current, draft) => unwrap(await (current
       ? ctx.remote.discussions.updateAssistant(current.id, current.revision, draft)

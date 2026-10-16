@@ -27,6 +27,8 @@ Each conversation can open a sidebar discussion board. Selected transcript or fi
 
 Create an assistant in Settings → Saved assistants and select an available model. Choose a default avatar or upload a local PNG/JPEG/WebP up to 2 MB; uploads become 64-pixel thumbnails. A checkbox controls model-name display on replies. Type `@` in any conversation and select an assistant to answer with current context. Replies retain the identity captured at request time, including after profile edits and reloads.
 
+The model list shares the conversation selector's cached catalog and follows model configuration and credential changes. Opening settings does not start another catalog request. Refresh retains available models; failed and empty catalogs show explicit messages without clearing the assistant draft.
+
 Open Discussions from a conversation header or a text-selection menu. A topic starts an independent native Session without copying parent history. Select a topic to continue it in the sidebar. Closing, resolving or archiving keeps its history. Add a reviewed conclusion to the parent composer with its discussion link; this does not send the message.
 
 -----
