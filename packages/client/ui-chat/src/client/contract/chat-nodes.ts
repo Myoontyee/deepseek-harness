@@ -34,6 +34,20 @@ export type ChatNode<Kind extends ChatNodeKind = ChatNodeKind> = {
   }
 }[Kind]
 
+/** Display identity captured when an explicitly selected speaker starts its reply. */
+export interface ChatAssistantIdentity {
+  readonly name: string
+  readonly avatar: string
+  readonly modelName?: string
+}
+
+declare module '@deepseek-ai/dsh-client-ui-conversation/client' {
+  interface ConversationTurnDataMap {
+    /** Explicit saved-speaker snapshots keyed by request step, derived from logged selection notices. */
+    'assistant-identities': Readonly<Record<number, ChatAssistantIdentity>>
+  }
+}
+
 /** Final Assistant row payload shared by streaming and settled states. */
 export interface AssistantChatData {
   readonly status: 'running' | 'settled' | 'interrupted'

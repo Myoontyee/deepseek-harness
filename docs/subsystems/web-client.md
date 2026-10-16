@@ -140,7 +140,7 @@ Metadata lives in a storage domain; messages and attachments use native Session 
  * @param draft - Replacement editable fields.
  * @returns Committed profile.
  */
-@Remote updateAssistant(id: AssistantId, revision: number, draft: AssistantDraft): Promise<DiscussionAssistant>
+@Remote async updateAssistant(id: AssistantId, revision: number, draft: AssistantDraft): Promise<DiscussionAssistant>
 
 /** Read explicitly saved notes for the settings editor.
  * @param id - Assistant identity.

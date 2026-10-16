@@ -25,7 +25,9 @@ Each conversation can open a sidebar discussion board. Selected transcript or fi
 <a id="use-this-package"></a>
 ## Use this package
 
-Create an assistant in Settings → Saved assistants. Open Discussions from a conversation header or a text-selection menu. A topic starts an independent native Session without copying parent history. Select a topic to continue it in the sidebar. Closing the tab keeps the topic and its transcript. Resolve, archive and reopen retain history. Add a reviewed conclusion to the parent composer with its discussion link; this does not send the message.
+Create an assistant in Settings → Saved assistants and select an available model. Choose a default avatar or upload a local PNG/JPEG/WebP up to 2 MB; uploads become 64-pixel thumbnails. A checkbox controls model-name display on replies. Type `@` in any conversation and select an assistant to answer with current context. Replies retain the identity captured at request time, including after profile edits and reloads.
+
+Open Discussions from a conversation header or a text-selection menu. A topic starts an independent native Session without copying parent history. Select a topic to continue it in the sidebar. Closing, resolving or archiving keeps its history. Add a reviewed conclusion to the parent composer with its discussion link; this does not send the message.
 
 -----
 
@@ -55,7 +57,7 @@ The `discussionboard` resource retains the parent Session while its tab is open.
 
 #### What the model sees
 
-Opening a pane or saving an assistant does not run a model. Sending within a topic uses the native conversation pipeline and its recorded `discussion-assistant` context. Confirmed memories are managed through Settings, not automatically extracted from every discussion.
+Opening a pane or saving an assistant does not run a model. Topic quotation context uses `discussion-assistant`; the selected speaker's duties and confirmed memories use a logged `saved-assistant` notice. Confirmed memories are managed through Settings, not automatically extracted from every discussion.
 
 #### Token effect
 

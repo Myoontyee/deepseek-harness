@@ -10,6 +10,7 @@ import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@deepseek-ai/dsh-permission-presets'
 import { assistantRecord, discussionDomainSpec, memoryRecord, topicRecord } from './spec.ts'
 import { discussionContext, selectAssistantMemory } from './policy.ts'
+import { installAssistantRouting } from './routing.ts'
 import type {
   AssistantDraft, AssistantId, AssistantMemory, AssistantMemoryId, DiscussionAssistant, DiscussionId, DiscussionTopic,
   MemoryDraft, TopicDraft,
@@ -42,6 +43,14 @@ export default class DiscussionController extends TypertRemoteService {
   protected async [Service.init](): Promise<void> {
     const domain = await this.ctx.storageDomain.open(discussionDomainSpec)
     this.domain = domain
+    installAssistantRouting(this.ctx,
+      () => [...domain.table('assistants').entries()].map(([, value]) => value),
+      (agent) => {
+        const topic = [...domain.table('topics').entries()].find(([, value]) => value.sessionId === agent.id)?.[1]
+        return topic ? domain.table('assistants').get(topic.assistantId) : undefined
+      },
+      (agent, assistant) => selectAssistantMemory(assistant, agent.session.header.cwd ?? '',
+        [...domain.table('memories').entries()].map(([, value]) => value), this.config.maxMemoryChars))
     this.ctx.effect(() => async () => {
       await Promise.allSettled([...this.creating.values()].map(value => value.operation))
       await domain.close()
@@ -52,11 +61,7 @@ export default class DiscussionController extends TypertRemoteService {
         if (!agent) return ''
         const topic = [...domain.table('topics').entries()].find(([, value]) => value.sessionId === agent.id)?.[1]
         if (!topic) return ''
-        const assistant = domain.table('assistants').get(topic.assistantId)
-        if (!assistant) throw new Error('Discussion assistant no longer exists')
-        const memory = selectAssistantMemory(assistant, topic.project,
-          [...domain.table('memories').entries()].map(([, value]) => value), this.config.maxMemoryChars)
-        return discussionContext(topic, assistant, memory)
+        return discussionContext(topic)
       },
     }), 'discussions: logged assistant context')
   }
@@ -80,6 +85,7 @@ export default class DiscussionController extends TypertRemoteService {
    */
   @Remote
   async createAssistant(draft: AssistantDraft): Promise<DiscussionAssistant> {
+    await this.validateAssistantModel(draft)
     const now = Date.now()
     const value = assistantRecord.parse({ ...draft, id: randomUUID(), revision: 1, archived: false, createdAt: now, updatedAt: now })
     await this.storage().table('assistants').put(value.id, value)
@@ -93,11 +99,20 @@ export default class DiscussionController extends TypertRemoteService {
    * @returns Committed profile.
    */
   @Remote
-  updateAssistant(id: AssistantId, revision: number, draft: AssistantDraft): Promise<DiscussionAssistant> {
+  async updateAssistant(id: AssistantId, revision: number, draft: AssistantDraft): Promise<DiscussionAssistant> {
+    await this.validateAssistantModel(draft)
     return this.storage().table('assistants').update(id, (current) => {
       if (current.revision !== revision) throw new Error('Assistant changed in another window; reload before saving')
       return assistantRecord.parse({ ...current, ...draft, id, revision: revision + 1, updatedAt: Date.now() })
     })
+  }
+
+  private async validateAssistantModel(draft: AssistantDraft): Promise<void> {
+    if (!draft.provider && !draft.model) return
+    const catalog = await this.ctx.sessionController.modelCatalog()
+    if (!catalog.groups.some(group => group.id === draft.provider && group.models.some(model => model.id === draft.model))) {
+      throw new Error('Selected assistant model is unavailable; check model settings / 助手模型不可用，请检查模型设置')
+    }
   }
 
   /** Read explicitly saved notes for the settings editor.

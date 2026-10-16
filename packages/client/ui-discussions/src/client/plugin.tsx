@@ -19,6 +19,8 @@ import { AssistantSettings, type AssistantSettingsActions } from './AssistantSet
 import { DiscussionBoard, type DiscussionBoardActions } from './DiscussionBoard.tsx'
 import { en, zh } from './locales.ts'
 import css from './Discussions.module.css'
+import { registerAssistantMentions } from './assistant-mentions.ts'
+import { registerAssistantIdentities } from './assistant-identities.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -73,15 +75,20 @@ class DiscussionNavigation extends Service {
 }
 
 /** Dependencies used only while a discussion or settings panel is actually opened. */
-export const inject = ['slots', 'locale', 'remote', 'remote.discussions', 'sessions', 'resources', 'sidebarRight', 'sidebarRightTabs', 'uiWorkspace']
+export const inject = ['slots', 'locale', 'remote', 'remote.discussions', 'remote.session', 'sessions', 'resources', 'sidebarRight', 'sidebarRightTabs', 'uiWorkspace']
 
 /** Register lazy discussion panes and the assistant settings panel.
  * @param ctx - Authenticated client runtime.
  */
 export function apply(ctx: Context): void {
   ctx.effect(() => ctx.locale.register('discussions', { en, zh }))
+  ctx.inject(['inputTriggers', 'uiConversation'], (scope) => {
+    registerAssistantMentions(scope)
+    registerAssistantIdentities(scope)
+  })
   const t = ctx.locale.bind('discussions'), navigation = new DiscussionNavigation(ctx)
   const assistantActions: AssistantSettingsActions = {
+    listModels: async () => unwrap(await ctx.remote.session.modelCatalog()),
     listAssistants: async () => unwrap(await ctx.remote.discussions.assistants()),
     saveAssistant: async (current, draft) => unwrap(await (current
       ? ctx.remote.discussions.updateAssistant(current.id, current.revision, draft)
@@ -110,7 +117,10 @@ export function apply(ctx: Context): void {
       try {
         await reference.ready
         yield { ok: true, value: { reference } }
-        if (!signal.aborted) await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
+        await new Promise<void>((resolve) => {
+          if (signal.aborted) resolve()
+          else signal.addEventListener('abort', () => { resolve() }, { once: true })
+        })
       } finally { reference.release() }
     },
   }))

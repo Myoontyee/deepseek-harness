@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo } from 'react'
 import type { InjectFace, PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ChatNodeViewProps, PresentationInjected, TurnTailOwnerProps } from '../contract/slots.ts'
 import { AssistantMarkdown } from './AssistantMarkdown.tsx'
+import css from './AssistantIdentity.module.css'
 
 type AssistantNodeViewProps = ChatNodeViewProps<'assistant-step'> & InjectFace<PresentationInjected>
   & PropsRenderSlots<'conversation.chat.reasoning.body' | 'conversation.chat.message.images'>
@@ -12,6 +13,7 @@ export const AssistantNodeView = memo(function AssistantNodeView({
   usePresentation, renderSlot, t,
 }: AssistantNodeViewProps) {
   const data = node.data
+  const identity = useTurnData('assistant-identities')?.[data.step]
   const turn = node.location.kind === 'turn' || node.location.kind === 'step'
     ? node.location.turn
     : undefined
@@ -32,7 +34,12 @@ export const AssistantNodeView = memo(function AssistantNodeView({
     && !turnProcess.open
   const revealProcess = useCallback(() => { turnProcess?.setOpen(true) }, [turnProcess])
   return (
-    <AssistantMarkdown
+    <>{identity && <div className={css.identity} data-assistant-identity={identity.name}>
+      {/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/u.test(identity.avatar)
+        ? <img className={css.avatar} src={identity.avatar} alt="" />
+        : <span className={css.avatar} aria-hidden="true">{identity.avatar.slice(0, 16)}</span>}
+      <strong>{identity.name}</strong>{identity.modelName && <small>{identity.modelName}</small>}
+    </div>}<AssistantMarkdown
       blocks={data.blocks}
       groupPart={groupPart}
       useDisclosure={useDisclosure}
@@ -46,6 +53,6 @@ export const AssistantNodeView = memo(function AssistantNodeView({
       revealProcess={revealProcess}
       mentions={mentions}
       t={t}
-    />
+    /></>
   )
 })

@@ -40,7 +40,7 @@ it('keeps a small source quotation and an explicit parent link without embedding
   const topic = topicRecord.parse({ id: 'topic-a', parentSessionId: 'parent-a', sessionId: 'discussion-a', assistantId: assistant.id,
     revision: 1, title: 'Discuss figure', quote: '$CNR < 1$', sourceUrl: 'dsh://session/parent-a', sourceMessage: 'm1',
     project: 'project-a', state: 'open', createdAt: 1, updatedAt: 1 })
-  const context = discussionContext(topic, assistant, 'Confirmed note')
+  const context = discussionContext(topic)
   expect(context).toContain('dsh://session/parent-a')
   expect(context).toContain('$CNR < 1$')
   expect(context).toContain('not fresh instructions')

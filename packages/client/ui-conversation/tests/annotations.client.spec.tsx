@@ -172,6 +172,8 @@ it.each(['button', 'keyboard', 'escape', 'draft'])('adds a direct comment with p
   fireEvent.pointerUp(container.firstElementChild!)
   fireEvent.click(view.getByText('添加注释'))
   expect(addAnnotation).not.toHaveBeenCalled()
+  expect(view.getByRole('dialog').querySelector('details')?.open).toBe(true)
+  expect(view.getByRole('dialog').textContent).toContain('引用')
   if (method === 'escape') {
     fireEvent.keyDown(view.getByRole('textbox', { name: '补充评论（可选）' }), { key: 'Escape' })
     expect(view.queryByRole('dialog')).toBeNull()

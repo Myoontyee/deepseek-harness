@@ -68,7 +68,9 @@
     "@deepseek-ai/dsh-client-resources": "workspace:*",
     "@deepseek-ai/dsh-api-discussion-controller": "workspace:*",
     "@deepseek-ai/dsh-api-session-controller": "workspace:*",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*"
+    "@deepseek-ai/dsh-typert-protocol": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-input-trigger": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-chat": "workspace:*"
   },
   "files": [
     "lib/index.js",

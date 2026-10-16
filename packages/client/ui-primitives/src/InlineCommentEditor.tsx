@@ -43,13 +43,14 @@ export function InlineCommentEditor({ getAnchorRect, title, inputLabel = title, 
   return createPortal(<MenuSurface ref={panel} className={css.panel} style={position} role="dialog" aria-label={title}
     onPointerDown={(event) => { event.stopPropagation() }} onPointerUp={(event) => { event.stopPropagation() }}
     onKeyDown={(event) => {
+      // oxlint-disable-next-line typescript/no-deprecated -- Some Windows IMEs report composition only through legacy keyCode 229.
       if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose() }
       if (event.key === 'Enter' && event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
         event.preventDefault(); event.stopPropagation(); if (!event.repeat) onSubmit()
       }
     }}>
-    <details className={css.quote}><summary>{title}</summary>{children}</details>
+    <details className={css.quote} open><summary>{title}</summary>{children}</details>
     <textarea ref={input} aria-label={inputLabel} placeholder={inputLabel} value={value}
       onChange={(event) => { onChange(event.target.value) }} />
     <div className={css.tools}>{voice}

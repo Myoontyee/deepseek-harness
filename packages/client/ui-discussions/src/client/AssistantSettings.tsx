@@ -2,10 +2,13 @@
 import { useEffect, useState } from 'react'
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { AssistantDraft, AssistantMemory, DiscussionAssistant, MemoryDraft } from '@deepseek-ai/dsh-api-discussion-controller/types'
+import type { ModelCatalog } from '@deepseek-ai/dsh-api-session-controller/types'
+import { readAvatar } from './avatar.ts'
 import css from './Discussions.module.css'
 
 /** Typed settings operations; errors remain visible without clearing drafts. */
 export interface AssistantSettingsActions {
+  listModels: () => Promise<ModelCatalog>
   listAssistants: () => Promise<DiscussionAssistant[]>
   saveAssistant: (current: DiscussionAssistant | undefined, draft: AssistantDraft) => Promise<DiscussionAssistant>
   listMemories: (assistant: DiscussionAssistant) => Promise<AssistantMemory[]>
@@ -16,23 +19,28 @@ export interface AssistantSettingsActions {
 const blank: AssistantDraft = { name: '', instructions: '', template: 'temporary', memoryMode: 'off' }
 
 /** @param props - Native persistent assistant actions and localized copy. @returns The assistant and memory settings panel. */
-export function AssistantSettings({ listAssistants, saveAssistant, listMemories, remember, updateMemory, forget, t }:
+export function AssistantSettings({ listModels, listAssistants, saveAssistant, listMemories, remember, updateMemory, forget, t }:
   PropsLocale<'discussions'> & InjectFace<AssistantSettingsActions>) {
   const [rows, setRows] = useState<DiscussionAssistant[]>([])
   const [current, setCurrent] = useState<DiscussionAssistant>()
   const [draft, setDraft] = useState<AssistantDraft>(blank)
+  const [models, setModels] = useState<ModelCatalog>()
   const [memories, setMemories] = useState<AssistantMemory[]>([])
   const [editingMemory, setEditingMemory] = useState<AssistantMemory>()
   const [text, setText] = useState(''), [project, setProject] = useState('')
   const [scope, setScope] = useState<MemoryDraft['scope']>('assistant')
   const [busy, setBusy] = useState(false), [error, setError] = useState('')
   useEffect(() => { let live = true
-    void listAssistants().then((value) => { if (live) setRows(value) }, (failure) => { if (live) setError(String(failure)) })
+    void listModels().then((value) => { if (live) setModels(value) }, (failure: unknown) => { if (live) setError(String(failure)) })
+    return () => { live = false }
+  }, [listModels])
+  useEffect(() => { let live = true
+    void listAssistants().then((value) => { if (live) setRows(value) }, (failure: unknown) => { if (live) setError(String(failure)) })
     return () => { live = false }
   }, [listAssistants])
   useEffect(() => { let live = true; setMemories([])
     if (current) void listMemories(current).then((value) => { if (live) setMemories(value) },
-      (failure) => { if (live) setError(String(failure)) })
+      (failure: unknown) => { if (live) setError(String(failure)) })
     return () => { live = false }
   }, [current, listMemories])
   const run = async (action: () => Promise<void>): Promise<void> => {
@@ -49,6 +57,36 @@ export function AssistantSettings({ listAssistants, saveAssistant, listMemories,
     </div>
     <fieldset disabled={busy}>
       <label>{t('name')}<input value={draft.name} maxLength={120} onChange={(e) => { setDraft({ ...draft, name: e.target.value }) }} /></label>
+      <label>{t('model')}<select aria-label={t('model')}
+        value={draft.provider && draft.model ? JSON.stringify([draft.provider, draft.model]) : ''}
+        onChange={(event) => {
+          const selected = models?.groups.flatMap(group => group.models.map(model => ({ provider: group.id, model: model.id })))
+            .find(route => JSON.stringify([route.provider, route.model]) === event.target.value)
+          if (selected) setDraft({ ...draft, ...selected })
+        }}>
+        <option value="" disabled>{t(models ? 'chooseModel' : 'loading')}</option>
+        {draft.provider && draft.model && !models?.groups.some(group => group.id === draft.provider
+          && group.models.some(model => model.id === draft.model))
+          && <option value={JSON.stringify([draft.provider, draft.model])} disabled>{draft.provider} / {draft.model} — {t('unavailable')}</option>}
+        {models?.groups.map(group => <optgroup key={group.id} label={group.name}>
+          {group.models.map(model => <option key={model.id} value={JSON.stringify([group.id, model.id])}>{model.name}</option>)}
+        </optgroup>)}
+      </select></label>
+      <button type="button" onClick={() => { void run(async () => { setModels(await listModels()) }) }}>{t('refresh')}</button>
+      {models?.failures.map(failure => <p role="status" key={failure.id}>{failure.name}: {failure.message}</p>)}
+      <div className={css.avatarChoices} role="group" aria-label={t('avatar')}>
+        {(draft.avatar ?? '').startsWith('data:image/') && <img src={draft.avatar} alt={t('avatar')} className={css.avatarPreview} />}
+        {['🤖', '🦉', '🦊', '🐼', '🐱', '🧑‍🔬', '🎨', '🌱'].map(avatar => <button type="button" key={avatar}
+          aria-label={avatar} aria-pressed={(draft.avatar ?? '🤖') === avatar}
+          onClick={() => { setDraft({ ...draft, avatar }) }}>{avatar}</button>)}
+      </div>
+      <label>{t('uploadAvatar')}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => {
+        const file = event.target.files?.[0]; event.target.value = ''
+        if (file) void run(async () => { const avatar = await readAvatar(file); setDraft(currentDraft => ({ ...currentDraft, avatar })) })
+      }} /></label>
+      <label className={css.checkbox}><input type="checkbox" checked={draft.showModel ?? false}
+        onChange={(event) => { setDraft({ ...draft, showModel: event.target.checked }) }} />{t('showModel')}</label>
+      <p>{t('mentionHint')}</p>
       <label>{t('template')}<select aria-label={t('template')} value={draft.template} onChange={(e) => {
         const template = e.target.value
         if (template === 'temporary' || template === 'project' || template === 'resident') {
@@ -62,7 +100,7 @@ export function AssistantSettings({ listAssistants, saveAssistant, listMemories,
         if (mode === 'off' || mode === 'project' || mode === 'assistant') setDraft({ ...draft, memoryMode: mode })
       }}><option value="off">{t('off')}</option><option value="project">{t('projectMemory')}</option>
         <option value="assistant">{t('assistantMemory')}</option></select></label>
-      <button type="button" disabled={!draft.name.trim()} onClick={() => { void run(async () => {
+      <button type="button" disabled={!draft.name.trim() || !draft.provider || !draft.model} onClick={() => { void run(async () => {
         const saved = await saveAssistant(current, draft); setCurrent(saved); setDraft(saved); setRows(await listAssistants())
       }) }}>{t(busy ? 'saving' : 'save')}</button>
     </fieldset>

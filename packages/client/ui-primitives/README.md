@@ -15,8 +15,6 @@ New submissions include model-visible guidance connecting the selected passages 
 
 Use `dsh-client-ui-primitives` to build web-client controls and render agent output with shared React UI. It includes standard controls, icons, anchored overlays, and renderers for Markdown with TeX, terminal output, file reads, diffs, search, web retrieval, and JSON. The renderers handle untrusted model output by dropping raw HTML, restricting links, and parsing ANSI escape sequences. The components import no Cordis runtime; callers supply localized labels, and theme-facing colors use `--dsw-*` design tokens.
 
-InlineCommentEditor is a non-modal selection-anchored editor shared by conversation and file comments. Callers own draft storage and dictation; the editor owns viewport clamping, focus, scrolling and Ctrl+Enter/Escape gestures.
-
 ## Table of Contents
 
 - [Use this package](#use-this-package)
@@ -30,6 +28,8 @@ InlineCommentEditor is a non-modal selection-anchored editor shared by conversat
 
 <a id="use-this-package"></a>
 ## Use this package
+
+InlineCommentEditor is a non-modal selection-anchored editor shared by conversation and file comments. Selected text is expanded by default with a scrollable preview. Callers own draft storage and dictation; the editor owns viewport clamping, focus, scrolling and Ctrl+Enter/Escape gestures.
 
 `Toast` uses the theme’s toast background and label colors in both light and dark modes. `Menu` data rows and `MenuItemButton` component rows accept owner-provided effective shortcuts and align their keys at the trailing edge as muted text without a background, including submenus. `ShortcutKeys` defaults to unboxed keys for menu and inline hints. Its `tooltip` variant uses lighter keycaps over the dark bubble and groups plus-separated combinations into one filled block. `Tooltip.shortcutKeys` vertically centers keycaps beside optional localized action text, or shows only keys when the label is empty. The optional `className` supplies owner interaction styles. `Modal` uses the frame’s shared overlay inset, with a minimum 24px viewport margin. Its mask leaves the Windows caption unpainted while the full-viewport layer blocks background clicks. `Modal` and the settings shell share top-layer Escape and Tab handling through `useModalLayer`, restoring the previous focus on close. `closeTopModal(document)` requests the foreground modal’s current close action; newer menus or unregistered dialogs block dismissal of the modal behind them. Components use `isBehindModal` to avoid moving focus behind a nested dialog. Menus consume their local Escape before modal dismissal. `observeComposition` supplies the same composition-end and legacy IME guard to local modal and recording handlers; callers dispose its document listeners with their interaction lifetime.
 

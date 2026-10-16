@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type Page } from 'playwright'
 import { expect, it, onTestFinished } from 'vitest'
 import type {} from '@deepseek-ai/dsh-api-discussion-controller'
+import type { GenerateOptions } from '@deepseek-ai/dsh-llm'
 import { launchWebScaffold, seedSession, type WebScaffold } from './scaffold.ts'
 import { newEnglishPage, openSettings, saveFailureShot } from './support.ts'
 
@@ -40,6 +41,23 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   const settings = page.getByRole('dialog', { name: 'Settings', exact: true })
   await settings.getByRole('button', { name: 'Saved assistants', exact: true }).click()
   await settings.getByLabel('Assistant name', { exact: true }).fill('Review partner')
+  await settings.getByLabel('Reply model', { exact: true }).locator('optgroup option').first().waitFor({ state: 'attached' })
+  const modelValue = await settings.getByLabel('Reply model', { exact: true }).locator('optgroup option').first().getAttribute('value')
+  if (!modelValue) throw new Error('Fixture model catalog is missing')
+  await settings.getByLabel('Reply model', { exact: true }).selectOption(modelValue)
+  const avatarPng = await page.evaluate(() => {
+    const canvas = document.createElement('canvas'); canvas.width = 8; canvas.height = 8
+    const context = canvas.getContext('2d'); if (!context) throw new Error('Canvas unavailable')
+    context.fillStyle = '#3468ef'; context.fillRect(0, 0, 8, 8)
+    return canvas.toDataURL('image/png').split(',')[1] ?? ''
+  })
+  await settings.getByLabel('Upload avatar (PNG / JPEG / WebP, up to 2 MB)', { exact: true }).setInputFiles({
+    name: 'avatar.png', mimeType: 'image/png', buffer: Buffer.from(avatarPng, 'base64'),
+  })
+  await settings.getByRole('img', { name: 'Assistant avatar', exact: true }).waitFor()
+  expect(await settings.getByRole('img', { name: 'Assistant avatar', exact: true }).getAttribute('src')).toMatch(/^data:image\/webp;base64,/u)
+  await settings.getByRole('button', { name: '🦉', exact: true }).click()
+  await settings.getByLabel('Show model name on replies', { exact: true }).check()
   await settings.getByLabel('Template').selectOption('project')
   await settings.getByLabel('Responsibilities and preferences', { exact: true }).fill('Discuss the selected passage and check its claims.')
   await settings.getByRole('button', { name: 'Save', exact: true }).click()
@@ -68,9 +86,9 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   if (!agent) throw new Error('Topic Agent is unavailable')
   const assembly = await scaffold.ctx.systemPrompt.assemble({ agent, scope: agent })
   const context = assembly.contexts.find(value => value.name === 'discussion-assistant')
-  expect(context?.text).toContain('Use SI units.')
+  expect(context?.text).not.toContain('Use SI units.')
   expect(context?.text).toContain('"text":"DONE"')
-  expect(context?.text).toContain('Discuss the selected passage and check its claims.')
+  expect(context?.text).not.toContain('Discuss the selected passage and check its claims.')
   expect(context?.interpolate).toBe(false)
   const profile = scaffold.ctx.discussionController.assistants()[0]
   if (!profile) throw new Error('Assistant was not persisted')
@@ -93,5 +111,31 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   await page.getByRole('button', { name: 'Check this result', exact: true }).click()
   expect(await page.locator('[data-discussion-source]').textContent()).toContain('DONE')
   expect(modelSteps).toBe(0)
+  const requests: GenerateOptions[] = []
+  scaffold.ctx.on('llm/stream', async function* (request) {
+    requests.push(request)
+    yield { type: 'block-start', index: 0, blockType: 'text' }
+    yield { type: 'text-delta', index: 0, text: 'Assistant fixture answer with context.' }
+    yield { type: 'block-end', index: 0, block: { type: 'text', text: 'Assistant fixture answer with context.' } }
+    yield { type: 'finish', reason: { kind: 'stop' } }
+  }, { prepend: true })
+  const main = page.locator('[data-conversation-session="discussion-e2e-parent"]').first()
+  const editor = main.locator('[contenteditable="true"]').first()
+  await editor.fill('@Review')
+  await page.getByRole('option').filter({ hasText: 'Review partner' }).click()
+  await page.keyboard.type(' Please explain the earlier result.')
+  await main.getByRole('button', { name: 'Send message', exact: true }).click()
+  await main.getByText('Assistant fixture answer with context.', { exact: true }).waitFor()
+  const identity = main.locator('[data-assistant-identity="Review partner"]')
+  await identity.waitFor()
+  expect(await main.locator('[data-message-literal]').last().innerText()).not.toContain('dsh-assistant:')
+  expect(await identity.innerText()).toContain('🦉')
+  expect(await identity.innerText()).toContain(profile.model)
+  expect(requests).toHaveLength(1)
+  expect(requests[0]).toMatchObject({ provider: profile.provider, model: profile.model })
+  expect(JSON.stringify(requests[0]?.messages)).toContain('DONE')
+  await page.reload()
+  await page.locator('[data-assistant-identity="Review partner"]').waitFor()
+  await page.screenshot({ path: '.artifacts/discussions-assistant-mention.png' })
   completed = true
 }, 120_000)

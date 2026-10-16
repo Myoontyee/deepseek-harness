@@ -13,8 +13,11 @@ export const assistantRecord = z.object({
   id: identity.transform(value => value as AssistantId), revision,
   name: z.string().trim().min(1).max(120), instructions: z.string().max(12000),
   template: z.enum(['temporary', 'project', 'resident']), memoryMode: z.enum(['off', 'project', 'assistant']),
+  provider: z.string().trim().min(1).max(200).optional(), model: z.string().trim().min(1).max(300).optional(),
+  avatar: z.string().max(48000).refine(value => value.length <= 16 || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/u.test(value), 'Choose an emoji or a small local PNG, JPEG or WebP image').optional(),
+  showModel: z.boolean().optional(),
   archived: z.boolean(), createdAt: timestamp, updatedAt: timestamp,
-})
+}).refine(value => Boolean(value.provider) === Boolean(value.model), 'Select both a provider and model')
 
 /** Saved memory is explicit text with scope; disabled memory remains stored for later review. */
 export const memoryRecord = z.object({

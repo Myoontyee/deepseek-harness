@@ -61,6 +61,12 @@
     },
     {
       "path": "../../util/crypto"
+    },
+    {
+      "path": "../ui-input-trigger"
+    },
+    {
+      "path": "../ui-chat/tsconfig.client.json"
     }
   ]
 }

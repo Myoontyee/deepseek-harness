@@ -21,6 +21,12 @@ export interface DiscussionAssistant {
   instructions: string
   template: AssistantTemplate
   memoryMode: AssistantMemoryMode
+  /** Explicit route; absent on profiles created before model selection was introduced. */
+  provider?: string | undefined
+  model?: string | undefined
+  /** Emoji or a bounded local image data URL; never a remote image request. */
+  avatar?: string | undefined
+  showModel?: boolean | undefined
   archived: boolean
   createdAt: number
   updatedAt: number
@@ -62,6 +68,32 @@ export interface AssistantDraft {
   instructions: string
   template: AssistantTemplate
   memoryMode: AssistantMemoryMode
+  provider?: string | undefined
+  model?: string | undefined
+  avatar?: string | undefined
+  showModel?: boolean | undefined
+}
+
+/** Immutable identity captured for a particular reply, independent of later profile edits. */
+export interface AssistantSpeaker {
+  id: AssistantId
+  name: string
+  avatar: string
+  modelName?: string
+}
+
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    /** Logged assistant selection and context; older readers retain it as ordinary context. */
+    'saved-assistant': {
+      kind: 'saved-assistant'
+      form: 'notice'
+      summary: string
+      turn: number
+      step: number
+      speaker: AssistantSpeaker
+    }
+  }
 }
 
 /** User-confirmed memory content and visibility. */

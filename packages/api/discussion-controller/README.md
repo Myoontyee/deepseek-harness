@@ -27,6 +27,8 @@ Keep sidebar discussions across restarts and give recurring assistants explicitl
 
 The Web bundle composes the service. Settings manages names, responsibilities and memory scope. Temporary assistants inject no cross-task memory; project assistants use only their current project's entries; resident assistants may also use their own global entries. Memory changes require explicit user saves. `maxMemoryChars` bounds complete selected entries, including separators, per model request.
 
+Saved assistants bind a provider and model. A newly submitted `@name` or assistant reference invokes one saved identity in the current Session with its existing history; code and quoted lines do not select an assistant. Ambiguous names and unavailable models fail visibly. Topic messages use their selected assistant by default. The next ordinary parent turn uses its own selected model.
+
 | Field | Default | Meaning |
 |---|---|---|
 | maxMemoryChars | 6000 | Selected memory character budget including separators; 0 disables injection. |
@@ -40,6 +42,8 @@ The Web bundle composes the service. Settings manages names, responsibilities an
 <summary>Maintainer details — click to expand</summary>
 
 The generated `discussions` Remote owns profile edits, topic creation and memory changes. Topic creation uses an idempotency key and an independent Session rather than forking the entire parent history. Profile and topic edits use revision checks. The system-context contribution is recorded through the existing prompt pipeline. Source quotations and parent transcripts are reference material, not new instructions. The parent is never automatically notified or awakened.
+
+The step hook appends a `saved-assistant` notice containing duties, bounded memory and a reply identity snapshot. Request routing changes only that invocation. Old profiles remain readable but need a model before direct mention. Shared topic context contains the quotation and parent link, without another speaker's memory. Avatar thumbnails stay local and bounded.
 
 </details>
 
@@ -59,7 +63,7 @@ The generated `discussions` Remote owns profile edits, topic creation and memory
 
 #### What the model sees
 
-Discussion requests include the assistant responsibilities, the original quotation, a parent deep link and bounded user-confirmed memory. The existing `read_session` tool can retrieve more parent text only when needed. These APIs do not expose automatic memory-writing tools.
+Discussion requests include assistant duties, the original quotation, a parent deep link and bounded confirmed memory. The `read_session` tool retrieves more parent text when needed. Direct mentions use current Session history, including other speakers' replies. A notice ends the saved identity on the next ordinary turn. Avatars are metadata, not model image inputs; these APIs expose no automatic memory-writing tools.
 
 #### Token effect
 

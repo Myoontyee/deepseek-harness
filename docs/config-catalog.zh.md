@@ -276,7 +276,7 @@ export interface SshProfile {
 ## `@deepseek-ai/dsh-api-discussion-controller`
 
 - `inject`: `typert` · `storageDomain` · `sessionController` · `systemPrompt` · `permissionPresets` · `agents`
-- `source`: [`packages/api/discussion-controller/src/index.ts:19`](../packages/api/discussion-controller/src/index.ts)
+- `source`: [`packages/api/discussion-controller/src/index.ts:20`](../packages/api/discussion-controller/src/index.ts)
 
 ```ts config-catalog
 /** Configurable upper bound on confirmed notes included in a model request. */

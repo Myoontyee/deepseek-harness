@@ -12,3 +12,9 @@
 .settings article { white-space: pre-wrap; overflow-wrap: anywhere; padding: 8px 0; }
 .quote { max-height: 180px; overflow: auto; padding: 8px; overflow-wrap: anywhere; }
 .board fieldset { border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md); padding: 12px; margin-top: 12px; }
+.avatarChoices { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.avatarChoices button { font-size: 24px; }
+.avatarChoices button[aria-pressed="true"] { outline: 2px solid var(--dsw-alias-label-primary); }
+.avatarPreview { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+.settings .checkbox { flex-direction: row; align-items: center; }
+.settings .checkbox input { width: auto; }
