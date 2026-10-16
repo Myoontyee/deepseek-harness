@@ -3,7 +3,7 @@ import { expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry, { installModelSelection } from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
+import SessionStore, { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
@@ -36,7 +36,7 @@ it('routes mentions with history and restores the ordinary model without rewriti
       archived: false, createdAt: 1, updatedAt: 1 })
     const routing = (scope: Context): void => {
       installAssistantRouting(scope, () => [assistant], () => undefined, () => 'Confirmed preference: Chinese',
-        agent => Promise.resolve(agent.session.snapshotEvents()))
+        agent => Promise.resolve(agent.session.snapshotEvents().slice(agent.session.inheritedEventCount)))
     }
     const routingFiber = await ctx.plugin(routing)
     const agent = await ctx.agentLoop.create(SessionId('mention-conversation'), { provider: 'normal', model: 'ordinary' })
@@ -57,6 +57,7 @@ it('routes mentions with history and restores the ordinary model without rewriti
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain('the number is 42')
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain('Confirmed preference: Chinese')
     const identity = agent.session.snapshotEvents().find(event => event.type === 'user/message' && event.data.source.kind === 'saved-assistant')
+    const assistantPrefix = agent.session.snapshotEvents()
     expect(identity?.data).toMatchObject({ source: { turn: 2, step: 1, speaker: { name: 'Reviewer', avatar: '🦉', modelName: 'review-model' } } })
     expect(assistantReturnRoute(agent.session.snapshotEvents(), { provider: 'normal', model: 'ordinary' })).toMatchObject({
       wasAssistant: true, route: { provider: 'normal', model: 'ordinary' },
@@ -74,5 +75,14 @@ it('routes mentions with history and restores the ordinary model without rewriti
     agent.session.append('model/selection', { provider: 'normal', model: 'new-user-choice' })
     await send('Use my newly selected ordinary model')
     expect(adapter.requests[5]).toMatchObject({ provider: 'normal', model: 'new-user-choice' })
+    const child = (await ctx.agents.create({ sessionId: SessionId('forked-mention-context'),
+      agentOptions: { provider: 'normal', model: 'child-own' }, seed: assistantPrefix,
+      meta: { isSeeded: true, parentSession: agent.id },
+      inheritedEventCount: SessionLogOffset(assistantPrefix.length),
+    })).agent
+    installModelSelection(child.ctx, { current: { provider: 'normal', model: 'child-own' }, assembled: undefined })
+    child.followup(createUserMessage({ content: [{ type: 'text', text: 'Read inherited context using my own model' }], source: { kind: 'user' } }))
+    await child.whenIdle()
+    expect(adapter.requests[6]).toMatchObject({ provider: 'normal', model: 'child-own' })
   } finally { await ctx.fiber.dispose() }
 })

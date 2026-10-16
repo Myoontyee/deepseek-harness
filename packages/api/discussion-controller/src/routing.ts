@@ -9,7 +9,7 @@ import { mentionedAssistant } from './mentions.ts'
 interface Selection { turn: number; assistant?: DiscussionAssistant; returnModel: AssistantReturnModel }
 
 /** Recover the conversation route from logged selections, including after reloading an Agent.
- * @param events - Current Session events, obtained through the Session inspection API.
+ * @param events - Current Session's own committed events, excluding any inherited prefix.
  * @param fallback - Initial Agent route before its first request.
  * @returns The return route and whether the previous admitted input belonged to a saved assistant.
  */

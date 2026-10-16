@@ -51,7 +51,7 @@ export default class DiscussionController extends TypertRemoteService {
       },
       (agent, assistant) => selectAssistantMemory(assistant, agent.session.header.cwd ?? '',
         [...domain.table('memories').entries()].map(([, value]) => value), this.config.maxMemoryChars),
-      async agent => (await this.ctx.sessionController.inspect(agent.id)).events)
+      async agent => (await this.ctx.sessionController.inspect(agent.id)).events.slice(agent.session.inheritedEventCount))
     this.ctx.effect(() => async () => {
       await Promise.allSettled([...this.creating.values()].map(value => value.operation))
       await domain.close()
