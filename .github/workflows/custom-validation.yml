@@ -46,6 +46,8 @@ jobs:
           apps/desktop/tests/official-update-check.spec.ts
           packages/api/discussion-controller/tests/policy.spec.ts
           packages/api/discussion-controller/tests/persistence.spec.ts
+          packages/api/discussion-controller/tests/mentions.spec.ts
+          packages/api/discussion-controller/tests/routing.spec.ts
           packages/client/ui-discussions/tests/assistant-settings.client.spec.tsx
           packages/client/ui-settings-general/tests/desktop-update.client.spec.tsx
           packages/experimental/client-ui-voice-input/tests/voice-input.client.spec.tsx
