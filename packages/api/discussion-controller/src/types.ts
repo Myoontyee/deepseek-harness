@@ -82,6 +82,15 @@ export interface AssistantSpeaker {
   modelName?: string
 }
 
+/** Conversation route to resume after a temporary assistant invocation. */
+export interface AssistantReturnModel {
+  provider: string
+  model: string
+  reasoningEffort?: string | undefined
+  /** Most recent explicit model-selection event considered when capturing this route. */
+  selectionSeq: number
+}
+
 declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
     /** Logged assistant selection and context; older readers retain it as ordinary context. */
@@ -92,6 +101,13 @@ declare module '@deepseek-ai/dsh-llm' {
       turn: number
       step: number
       speaker: AssistantSpeaker
+      returnModel?: AssistantReturnModel
+    }
+    /** Explicit boundary ending a temporary saved-assistant invocation. */
+    'saved-assistant-return': {
+      kind: 'saved-assistant-return'
+      form: 'notice'
+      summary: string
     }
   }
 }

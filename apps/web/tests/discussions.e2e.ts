@@ -25,6 +25,9 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   const scaffold = await launchWebScaffold({ replayFixture: fixture, replayProvidersOnly: true })
   resources.scaffold = scaffold
   await seedSession(scaffold, await readFile(history, 'utf8'), 'discussion-e2e-parent', 'standard')
+  const initial = await scaffold.ctx.sessionController.inspect('discussion-e2e-parent' as Parameters<typeof scaffold.ctx.sessionController.inspect>[0])
+  const initialHeader = initial.events.findLast(event => event.type === 'request/header')
+  if (initialHeader?.type !== 'request/header') throw new Error('The fixture must contain its original model request')
   let modelSteps = 0
   scaffold.ctx.on('session/event', (_session, event) => { if (event.type === 'step/start') modelSteps++ })
   const channel = process.env.DSH_TEST_BROWSER_CHANNEL
@@ -42,7 +45,7 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   await settings.getByRole('button', { name: 'Saved assistants', exact: true }).click()
   await settings.getByLabel('Assistant name', { exact: true }).fill('Review partner')
   await settings.getByLabel('Reply model', { exact: true }).locator('optgroup option').first().waitFor({ state: 'attached' })
-  const modelValue = await settings.getByLabel('Reply model', { exact: true }).locator('optgroup option').first().getAttribute('value')
+  const modelValue = await settings.getByLabel('Reply model', { exact: true }).locator('optgroup option').nth(1).getAttribute('value')
   if (!modelValue) throw new Error('Fixture model catalog is missing')
   await settings.getByLabel('Reply model', { exact: true }).selectOption(modelValue)
   const avatarPng = await page.evaluate(() => {
@@ -122,7 +125,7 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   const main = page.locator('[data-conversation-session="discussion-e2e-parent"]').first()
   const editor = main.locator('[contenteditable="true"]').first()
   await editor.fill('@Review')
-  await page.getByRole('option').filter({ hasText: 'Review partner' }).click()
+  await page.locator('[data-trigger-menu]').getByRole('option').filter({ hasText: 'Review partner' }).click()
   await page.keyboard.type(' Please explain the earlier result.')
   await main.getByRole('button', { name: 'Send message', exact: true }).click()
   await main.getByText('Assistant fixture answer with context.', { exact: true }).waitFor()
@@ -137,5 +140,9 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   await page.reload()
   await page.locator('[data-assistant-identity="Review partner"]').waitFor()
   await page.screenshot({ path: '.artifacts/discussions-assistant-mention.png' })
+  await editor.fill('Continue with the ordinary conversation model.')
+  await main.getByRole('button', { name: 'Send message', exact: true }).click()
+  await expect.poll(() => requests.length).toBe(2)
+  expect(requests[1]).toMatchObject({ provider: initialHeader.data.header.config.provider, model: initialHeader.data.header.config.model })
   completed = true
 }, 120_000)

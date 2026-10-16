@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for 2026-10-16-assistant-model-restoration.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/persistence-changes/2026-10-16-assistant-model-restoration.md
+/:
+  en: 3d5a424ae7d7e46b
+  zh: c22a8e4a62d8cc1a
+/2026-10-16-assistant-model-restoration:
+  en: 3a8c20b091333b8b
+  zh: de8ae80ac638072f
+/2026-10-16-assistant-model-restoration/summary:
+  en: 17d3cc5bb9244f98
+  zh: bad2256196490d51
+/2026-10-16-assistant-model-restoration/table-of-contents:
+  en: 6cf314a069ceb451
+  zh: 9adff678e9ecab3b
+/2026-10-16-assistant-model-restoration/declaration:
+  en: 6907136f28e48c90
+  zh: 02f8298485f3d8e7
+/2026-10-16-assistant-model-restoration/compatibility:
+  en: 6e02f6f735eff994
+  zh: 0273e7dbd09c6376
+/2026-10-16-assistant-model-restoration/verification:
+  en: 2069314954df999d
+  zh: f157d304adb7b66f
+/2026-10-16-assistant-model-restoration/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

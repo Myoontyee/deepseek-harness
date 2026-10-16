@@ -45,6 +45,8 @@ The generated `discussions` Remote owns profile edits, topic creation and memory
 
 The step hook appends a `saved-assistant` notice containing duties, bounded memory and a reply identity snapshot. Request routing changes only that invocation. Old profiles remain readable but need a model before direct mention. Shared topic context contains the quotation and parent link, without another speaker's memory. Avatar thumbnails stay local and bounded.
 
+The notice also records the conversation's return model. A fresh routing instance recovers it from the Session log; a later explicit user model choice takes precedence. A `saved-assistant-return` notice ends the invocation. This avoids adopting the assistant's last-used model as the ordinary conversation model after reload.
+
 </details>
 
 -----

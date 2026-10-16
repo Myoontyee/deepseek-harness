@@ -11,6 +11,7 @@ export async function apply(ctx) {
   const require = createRequire(join(process.cwd(), 'package.json'))
   const { createUserMessage, LlmAdapter } = await import(pathToFileURL(require.resolve('@deepseek-ai/dsh-llm')).href)
   class DemoAdapter extends LlmAdapter {
+    listModels(provider) {return Promise.resolve([{provider,id:'demo',name:'会话通信演示（本地固定回复）'}])}
     resolveModel(provider, model) {return Promise.resolve({provider,id:model,name:'会话通信演示（本地固定回复）'})}
     async *stream(options) {
       const last = options.messages.findLast(message => message.role === 'user')

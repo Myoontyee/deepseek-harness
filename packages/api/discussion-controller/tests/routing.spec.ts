@@ -8,7 +8,7 @@ import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import LlmRuntime, { createUserMessage, LlmAdapter, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
-import { installAssistantRouting } from '../src/routing.ts'
+import { assistantReturnRoute, installAssistantRouting } from '../src/routing.ts'
 import { assistantRecord } from '../src/spec.ts'
 
 class Adapter extends LlmAdapter {
@@ -34,9 +34,18 @@ it('routes mentions with history and restores the ordinary model without rewriti
     let assistant = assistantRecord.parse({ id: 'reviewer', revision: 1, name: 'Reviewer', instructions: 'Check evidence',
       template: 'resident', memoryMode: 'assistant', provider: 'specialist', model: 'review-model', avatar: '🦉', showModel: true,
       archived: false, createdAt: 1, updatedAt: 1 })
-    installAssistantRouting(ctx, () => [assistant], () => undefined, () => 'Confirmed preference: Chinese')
+    const routing = (scope: Context): void => {
+      installAssistantRouting(scope, () => [assistant], () => undefined, () => 'Confirmed preference: Chinese',
+        agent => Promise.resolve(agent.session.snapshotEvents()))
+    }
+    const routingFiber = await ctx.plugin(routing)
     const agent = await ctx.agentLoop.create(SessionId('mention-conversation'), { provider: 'normal', model: 'ordinary' })
-    installModelSelection(agent.ctx, { current: { provider: 'normal', model: 'ordinary' }, assembled: undefined })
+    installModelSelection(agent.ctx, {
+      get current() {
+        const logged = agent.session.requestHeader()?.config
+        return logged ? { provider: logged.provider, model: logged.model } : { provider: 'normal', model: 'ordinary' }
+      }, assembled: undefined,
+    })
     const send = async (text: string) => {
       agent.followup(createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'user' } }))
       await agent.whenIdle()
@@ -49,9 +58,21 @@ it('routes mentions with history and restores the ordinary model without rewriti
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain('Confirmed preference: Chinese')
     const identity = agent.session.snapshotEvents().find(event => event.type === 'user/message' && event.data.source.kind === 'saved-assistant')
     expect(identity?.data).toMatchObject({ source: { turn: 2, step: 1, speaker: { name: 'Reviewer', avatar: '🦉', modelName: 'review-model' } } })
+    expect(assistantReturnRoute(agent.session.snapshotEvents(), { provider: 'normal', model: 'ordinary' })).toMatchObject({
+      wasAssistant: true, route: { provider: 'normal', model: 'ordinary' },
+    })
+    await routingFiber.dispose()
+    await ctx.plugin(routing)
     assistant = { ...assistant, name: 'New name', avatar: '🐼' }
     await send('Continue as the ordinary assistant')
     expect(adapter.requests[2]).toMatchObject({ provider: 'normal', model: 'ordinary' })
     expect(identity?.data).toMatchObject({ source: { speaker: { name: 'Reviewer', avatar: '🦉' } } })
+    await send('@New name explain again')
+    await send('@New name continue')
+    expect(adapter.requests[3]).toMatchObject({ provider: 'specialist', model: 'review-model' })
+    expect(adapter.requests[4]).toMatchObject({ provider: 'specialist', model: 'review-model' })
+    agent.session.append('model/selection', { provider: 'normal', model: 'new-user-choice' })
+    await send('Use my newly selected ordinary model')
+    expect(adapter.requests[5]).toMatchObject({ provider: 'normal', model: 'new-user-choice' })
   } finally { await ctx.fiber.dispose() }
 })

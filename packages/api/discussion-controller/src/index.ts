@@ -50,7 +50,8 @@ export default class DiscussionController extends TypertRemoteService {
         return topic ? domain.table('assistants').get(topic.assistantId) : undefined
       },
       (agent, assistant) => selectAssistantMemory(assistant, agent.session.header.cwd ?? '',
-        [...domain.table('memories').entries()].map(([, value]) => value), this.config.maxMemoryChars))
+        [...domain.table('memories').entries()].map(([, value]) => value), this.config.maxMemoryChars),
+      async agent => (await this.ctx.sessionController.inspect(agent.id)).events)
     this.ctx.effect(() => async () => {
       await Promise.allSettled([...this.creating.values()].map(value => value.operation))
       await domain.close()
