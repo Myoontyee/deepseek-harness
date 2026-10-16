@@ -5218,7 +5218,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'AssistantDraft',
-    declaration: 'export interface AssistantDraft {\n    name: string;\n    instructions: string;\n    template: AssistantTemplate;\n    memoryMode: AssistantMemoryMode;\n    provider?: string | undefined;\n    model?: string | undefined;\n    avatar?: string | undefined;\n    showModel?: boolean | undefined;\n}',
+    declaration: 'export interface AssistantDraft {\n    name: string;\n    instructions: string;\n    template: AssistantTemplate;\n    memoryMode: AssistantMemoryMode;\n    provider?: string | undefined;\n    model?: string | undefined;\n    reasoningEffort?: string | undefined;\n    avatar?: string | undefined;\n    showModel?: boolean | undefined;\n}',
   },
   {
     name: 'AssistantId',
@@ -5762,7 +5762,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'DiscussionAssistant',
-    declaration: 'export interface DiscussionAssistant {\n    id: AssistantId;\n    revision: number;\n    name: string;\n    instructions: string;\n    template: AssistantTemplate;\n    memoryMode: AssistantMemoryMode;\n    provider?: string | undefined;\n    model?: string | undefined;\n    avatar?: string | undefined;\n    showModel?: boolean | undefined;\n    archived: boolean;\n    createdAt: number;\n    updatedAt: number;\n}',
+    declaration: 'export interface DiscussionAssistant {\n    id: AssistantId;\n    revision: number;\n    name: string;\n    instructions: string;\n    template: AssistantTemplate;\n    memoryMode: AssistantMemoryMode;\n    provider?: string | undefined;\n    model?: string | undefined;\n    reasoningEffort?: string | undefined;\n    avatar?: string | undefined;\n    showModel?: boolean | undefined;\n    archived: boolean;\n    createdAt: number;\n    updatedAt: number;\n}',
   },
   {
     name: 'DiscussionId',

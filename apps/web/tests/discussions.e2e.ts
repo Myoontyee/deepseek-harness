@@ -4,12 +4,20 @@ import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type Page } from 'playwright'
 import { expect, it, onTestFinished } from 'vitest'
 import type {} from '@deepseek-ai/dsh-api-discussion-controller'
-import type { GenerateOptions } from '@deepseek-ai/dsh-llm'
+import { LlmAdapter, ReasoningEffortId, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import { launchWebScaffold, seedSession, type WebScaffold } from './scaffold.ts'
 import { newEnglishPage, openSettings, saveFailureShot } from './support.ts'
 
 const fixture = fileURLToPath(new URL('../../../snapshots/web/plan-narrow-viewport/session.v3.jsonl', import.meta.url))
 const history = fileURLToPath(new URL('../../../snapshots/web/fresh-round-trip/session.v4.jsonl', import.meta.url))
+
+class EffortAdapter extends LlmAdapter {
+  override async listModels(provider: string) { return [await this.resolveModel(provider, 'review')] }
+  override async resolveModel(provider: string, model: string) { return { provider, id: model, name: 'Effort fixture', reasoning: {
+    efforts: ['off', 'high', 'max'].map(id => ({ id: ReasoningEffortId(id), name: id })), defaultEffort: ReasoningEffortId('high'),
+  } } }
+  override async *stream(): AsyncIterable<StreamChunk> { yield { type: 'finish', reason: { kind: 'stop' } } }
+}
 
 it('creates a saved assistant and a persistent topic beside the main conversation', async () => {
   const resources: { scaffold?: WebScaffold; browser?: Browser; page?: Page } = {}
@@ -24,6 +32,7 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   })
   const scaffold = await launchWebScaffold({ replayFixture: fixture, replayProvidersOnly: true })
   resources.scaffold = scaffold
+  scaffold.ctx.effect(() => scaffold.ctx.llm.registerAdapter(['assistant-effort-fixture'], new EffortAdapter()))
   await seedSession(scaffold, await readFile(history, 'utf8'), 'discussion-e2e-parent', 'standard')
   const initial = await scaffold.ctx.sessionController.inspect('discussion-e2e-parent' as Parameters<typeof scaffold.ctx.sessionController.inspect>[0])
   const initialHeader = initial.events.findLast(event => event.type === 'request/header')
@@ -45,9 +54,9 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   await settings.getByRole('button', { name: 'Saved assistants', exact: true }).click()
   await settings.getByLabel('Assistant name', { exact: true }).fill('Review partner')
   await settings.getByLabel('Reply model', { exact: true }).locator('optgroup option').first().waitFor({ state: 'attached' })
-  const modelValue = await settings.getByLabel('Reply model', { exact: true }).locator('optgroup option').nth(1).getAttribute('value')
-  if (!modelValue) throw new Error('Fixture model catalog is missing')
+  const modelValue = JSON.stringify(['assistant-effort-fixture', 'review'])
   await settings.getByLabel('Reply model', { exact: true }).selectOption(modelValue)
+  await settings.getByLabel('Reasoning effort', { exact: true }).selectOption('max')
   const avatarPng = await page.evaluate(() => {
     const canvas = document.createElement('canvas'); canvas.width = 8; canvas.height = 8
     const context = canvas.getContext('2d'); if (!context) throw new Error('Canvas unavailable')
@@ -95,7 +104,15 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   expect(context?.interpolate).toBe(false)
   const profile = scaffold.ctx.discussionController.assistants()[0]
   if (!profile) throw new Error('Assistant was not persisted')
-  await scaffold.ctx.discussionController.updateAssistant(profile.id, profile.revision, { ...profile, memoryMode: 'off' })
+  expect(profile.reasoningEffort).toBe('max')
+  await expect(scaffold.ctx.discussionController.createAssistant({ ...profile, reasoningEffort: 'not-supported' })).rejects.toThrow('unsupported')
+  await expect(scaffold.ctx.discussionController.updateAssistant(profile.id, profile.revision,
+    { ...profile, reasoningEffort: 'not-supported' })).rejects.toThrow('unsupported')
+  const updated = await scaffold.ctx.discussionController.updateAssistant(profile.id, profile.revision, { ...profile, memoryMode: 'off' })
+  const { reasoningEffort: _effort, ...defaultDraft } = updated
+  const defaulted = await scaffold.ctx.discussionController.updateAssistant(updated.id, updated.revision, defaultDraft)
+  expect(defaulted.reasoningEffort).toBeUndefined()
+  await scaffold.ctx.discussionController.updateAssistant(defaulted.id, defaulted.revision, { ...defaulted, reasoningEffort: 'max' })
   const disabled = await scaffold.ctx.systemPrompt.assemble({ agent, scope: agent })
   expect(disabled.contexts.find(value => value.name === 'discussion-assistant')?.text).not.toContain('Use SI units.')
   expect(scaffold.ctx.discussionController.memories(profile.id)).toHaveLength(1)
@@ -135,7 +152,7 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   expect(await identity.innerText()).toContain('🦉')
   expect(await identity.innerText()).toContain(profile.model)
   expect(requests).toHaveLength(1)
-  expect(requests[0]).toMatchObject({ provider: profile.provider, model: profile.model })
+  expect(requests[0]).toMatchObject({ provider: profile.provider, model: profile.model, reasoningEffort: 'max' })
   expect(JSON.stringify(requests[0]?.messages)).toContain('DONE')
   await page.reload()
   await page.locator('[data-assistant-identity="Review partner"]').waitFor()

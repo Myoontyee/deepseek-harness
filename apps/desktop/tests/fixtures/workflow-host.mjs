@@ -32,9 +32,12 @@ export async function apply(ctx) {
   class ReviewAdapter extends LlmAdapter {
     providerInfo(provider) { return { id: provider, name: 'Review fixture' } }
     listModels(provider) { return Promise.resolve([{provider, id:'review', name:'Review fixture'}]) }
-    resolveModel(provider,model) { return Promise.resolve({provider,id:model,name:'Review fixture'}) }
+    resolveModel(provider,model) { return Promise.resolve({provider,id:model,name:'Review fixture', reasoning: {
+      efforts: [{id:'off',name:'Off'},{id:'high',name:'High'},{id:'max',name:'Max'}], defaultEffort:'high',
+    }}) }
     async *stream(options) {
       await writeFile(join(root,'review-model-input.json'),JSON.stringify({
+        reasoningEffort: options.reasoningEffort,
         prompt: options.messages.filter(message=>message.role==='user').flatMap(message=>message.content.filter(part=>part.type==='text').map(part=>part.text)).join('\n'),
         allText: options.messages.flatMap(message=>message.content.filter(part=>part.type==='text').map(part=>part.text)).join('\n'),
         tools: (options.tools ?? []).map(tool=>tool.name ?? tool.function?.name), defaultBefore, defaultAfter:ctx.agentDefaultModel.currentSelection(),

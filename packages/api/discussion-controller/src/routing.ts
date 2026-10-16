@@ -97,7 +97,9 @@ export function installAssistantRouting(ctx: Context, profiles: () => Discussion
     if (selected?.turn !== turn) return resolved
     const { reasoningEffort: _effort, ...base } = resolved
     if (selected.assistant?.provider && selected.assistant.model) {
-      return { ...base, provider: selected.assistant.provider, model: selected.assistant.model }
+      return { ...base, provider: selected.assistant.provider, model: selected.assistant.model,
+        ...(selected.assistant.reasoningEffort === undefined ? {}
+          : { reasoningEffort: ReasoningEffortId(selected.assistant.reasoningEffort) }) }
     }
     if (selected.assistant) return resolved
     return { ...base, provider: selected.returnModel.provider, model: selected.returnModel.model,

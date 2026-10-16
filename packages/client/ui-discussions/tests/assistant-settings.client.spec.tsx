@@ -5,6 +5,7 @@ import { useSyncExternalStore, type ComponentProps } from 'react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import type { DiscussionAssistant } from '@deepseek-ai/dsh-api-discussion-controller/types'
+import type { ModelCatalog } from '@deepseek-ai/dsh-api-session-controller/types'
 import { AssistantSettings, type AssistantSettingsActions } from '../src/client/AssistantSettings.tsx'
 import { en } from '../src/client/locales.ts'
 import { ModelCatalogDirectory } from '../../ui-model-selection/src/client/catalog.ts'
@@ -14,8 +15,10 @@ async function fixture() {
   const profile: DiscussionAssistant = { id: 'a' as DiscussionAssistant['id'], revision: 1, name: 'Analyst', instructions: '',
     template: 'temporary', memoryMode: 'off', archived: false, createdAt: 1, updatedAt: 1 }
   const save = vi.fn<AssistantSettingsActions['saveAssistant']>(async (_current, draft) => ({ ...profile, ...draft }))
-  const value = { default: { provider: 'test', model: 'reviewer' }, routableProviders: ['test'], failures: [],
-    groups: [{ id: 'test', name: 'Test provider', models: [{ id: 'reviewer', name: 'Reviewer model' }] }] }
+  const value: ModelCatalog = { default: { provider: 'test', model: 'reviewer' }, routableProviders: ['test'], failures: [],
+    groups: [{ id: 'test', name: 'Test provider', models: [{ id: 'reviewer', name: 'Reviewer model', reasoning: {
+      defaultEffort: 'high', efforts: [{ id: 'off', name: 'Off' }, { id: 'high', name: 'High' }, { id: 'max', name: 'Max' }],
+    } }, { id: 'basic', name: 'Basic model' }] }] }
   const request = vi.fn(async () => ({ ok: true as const, value }))
   // The conversation has already loaded this Host-generation directory.
   const catalog = new ModelCatalogDirectory({ remote: { session: { modelCatalog: request } } } as never)
@@ -100,4 +103,38 @@ it('shows failed and empty catalogs instead of perpetual loading and allows retr
   expect(await view.findByRole('option', { name: en.modelsEmpty })).toBeTruthy()
   fireEvent.click(view.getByRole('button', { name: en.refresh }))
   expect(await view.findByRole('option', { name: 'Reviewer model' })).toBeTruthy()
+})
+
+it('saves supported reasoning effort, clears it for model default, and resets it when switching models', async () => {
+  const { view, save } = await fixture()
+  fireEvent.change(view.getByLabelText(en.name), { target: { value: 'Deep reviewer' } })
+  expect(view.getByRole('option', { name: 'Model default (High)' })).toBeTruthy()
+  fireEvent.change(view.getByLabelText(en.reasoningEffort), { target: { value: 'max' } })
+  fireEvent.click(view.getByRole('button', { name: en.save }))
+  await waitFor(() => { expect(save).toHaveBeenLastCalledWith(undefined, expect.objectContaining({ reasoningEffort: 'max' })) })
+  await waitFor(() => { expect(view.getByRole('button', { name: en.save })).toHaveProperty('disabled', false) })
+  fireEvent.change(view.getByLabelText(en.reasoningEffort), { target: { value: '' } })
+  fireEvent.click(view.getByRole('button', { name: en.save }))
+  await waitFor(() => { expect(save).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ reasoningEffort: undefined })) })
+  await waitFor(() => { expect(view.getByRole('button', { name: en.save })).toHaveProperty('disabled', false) })
+  fireEvent.change(view.getByLabelText(en.reasoningEffort), { target: { value: 'off' } })
+  fireEvent.change(view.getByLabelText(en.model), { target: { value: JSON.stringify(['test', 'basic']) } })
+  expect(view.getByLabelText(en.reasoningEffort)).toHaveProperty('disabled', true)
+  expect(view.getByRole('option', { name: en.reasoningUnsupported })).toBeTruthy()
+  fireEvent.click(view.getByRole('button', { name: en.save }))
+  await waitFor(() => { expect(save).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ model: 'basic', reasoningEffort: undefined })) })
+})
+
+it('blocks a stale saved effort when the live model catalog removes that option', async () => {
+  const { view, catalog, value } = await fixture()
+  fireEvent.change(view.getByLabelText(en.name), { target: { value: 'Reviewer' } })
+  fireEvent.change(view.getByLabelText(en.reasoningEffort), { target: { value: 'max' } })
+  act(() => { catalog.store.set({ status: 'ready', error: null, value: { ...value,
+    groups: [{ id: 'test', name: 'Test provider', models: [{ id: 'reviewer', name: 'Reviewer model',
+      reasoning: { efforts: [{ id: 'high', name: 'High' }], defaultEffort: 'high' } }] }],
+  } }) })
+  expect(view.getByRole('alert').textContent).toBe(en.reasoningUnavailable)
+  expect(view.getByRole('button', { name: en.save })).toHaveProperty('disabled', true)
+  fireEvent.change(view.getByLabelText(en.reasoningEffort), { target: { value: 'high' } })
+  expect(view.getByRole('button', { name: en.save })).toHaveProperty('disabled', false)
 })

@@ -29,6 +29,8 @@ Create an assistant in Settings → Saved assistants and select an available mod
 
 The model list shares the conversation selector's cached catalog and follows model configuration and credential changes. Opening settings does not start another catalog request. Refresh retains available models; failed and empty catalogs show explicit messages without clearing the assistant draft.
 
+Reasoning effort lists only the selected model's advertised levels, alongside Model default. Models without adjustable effort show a disabled control. Changing models clears the previous effort; unavailable saved levels must be reselected before saving. The choice persists across restarts and applies to assistant mentions and discussion replies.
+
 Open Discussions from a conversation header or a text-selection menu. A topic starts an independent native Session without copying parent history. Select a topic to continue it in the sidebar. Closing, resolving or archiving keeps its history. Add a reviewed conclusion to the parent composer with its discussion link; this does not send the message.
 
 -----

@@ -3219,7 +3219,7 @@ Sources: [`packages/llm/llm/src/message.ts:167`](../packages/llm/llm/src/message
 
 SHA-256: `ffa24698542ef8b02ce19f3a1f8f68b27892f3ab8c1ab9296f9ec3da587a5643`
 
-Sources: [`packages/api/discussion-controller/src/types.ts:86`](../packages/api/discussion-controller/src/types.ts)
+Sources: [`packages/api/discussion-controller/src/types.ts:89`](../packages/api/discussion-controller/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3238,7 +3238,7 @@ Sources: [`packages/api/discussion-controller/src/types.ts:86`](../packages/api/
 
 SHA-256: `00fdf9ed9a6d52d5d4e079137421b4deb5461a155940ad40779fc51541dccfef`
 
-Sources: [`packages/api/discussion-controller/src/types.ts:78`](../packages/api/discussion-controller/src/types.ts)
+Sources: [`packages/api/discussion-controller/src/types.ts:81`](../packages/api/discussion-controller/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -7249,7 +7249,7 @@ SHA-256: `2aad1179f957631477b582e57cd8f538cb82618fc3fb816bde1171154235b065`
 
 SHA-256: `14d0fa8a00307951af5c498444bac817e7cf8b2f8bbb2836e30bf8300814fce4`
 
-Sources: [`packages/api/discussion-controller/src/types.ts:97`](../packages/api/discussion-controller/src/types.ts)
+Sources: [`packages/api/discussion-controller/src/types.ts:100`](../packages/api/discussion-controller/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -7267,7 +7267,7 @@ Sources: [`packages/api/discussion-controller/src/types.ts:97`](../packages/api/
 
 SHA-256: `af4cc05bf92665906832b4f4d2a86d3ccde257f0730471923932cfd3cd86c3d9`
 
-Sources: [`packages/api/discussion-controller/src/types.ts:107`](../packages/api/discussion-controller/src/types.ts)
+Sources: [`packages/api/discussion-controller/src/types.ts:110`](../packages/api/discussion-controller/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|

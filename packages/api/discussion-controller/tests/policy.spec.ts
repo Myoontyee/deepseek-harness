@@ -5,6 +5,11 @@ import { assistantRecord, memoryRecord, topicRecord } from '../src/spec.ts'
 
 const assistant = assistantRecord.parse({ id: 'assistant-a', revision: 1, name: 'Researcher', instructions: 'Check sources',
   template: 'resident', memoryMode: 'assistant', archived: false, createdAt: 1, updatedAt: 1 })
+
+it('reads older profiles without an effort and refuses an effort without a model', () => {
+  expect(assistant.reasoningEffort).toBeUndefined()
+  expect(assistantRecord.safeParse({ ...assistant, reasoningEffort: 'max' }).success).toBe(false)
+})
 const memory = (id: string, text: string, scope: 'assistant' | 'project' = 'assistant', project = '', assistantId = assistant.id) =>
   memoryRecord.parse({ id, assistantId, revision: 1, scope, project, text, createdAt: 1, updatedAt: 1 })
 

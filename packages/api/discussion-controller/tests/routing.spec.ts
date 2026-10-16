@@ -7,13 +7,15 @@ import SessionStore, { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-sess
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
-import LlmRuntime, { createUserMessage, LlmAdapter, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
+import LlmRuntime, { createUserMessage, LlmAdapter, ReasoningEffortId, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import { assistantReturnRoute, installAssistantRouting } from '../src/routing.ts'
 import { assistantRecord } from '../src/spec.ts'
 
 class Adapter extends LlmAdapter {
   requests: GenerateOptions[] = []
-  override async resolveModel(provider: string, model: string) { return { provider, id: model, name: model } }
+  override async resolveModel(provider: string, model: string) { return { provider, id: model, name: model, reasoning: {
+    efforts: ['off', 'low', 'high', 'max'].map(id => ({ id: ReasoningEffortId(id), name: id })), defaultEffort: ReasoningEffortId('high'),
+  } } }
   override async *stream(request: GenerateOptions): AsyncIterable<StreamChunk> {
     this.requests.push(request)
     yield { type: 'block-start', index: 0, blockType: 'text' }
@@ -33,7 +35,7 @@ it('routes mentions with history and restores the ordinary model without rewriti
     ctx.llm.registerAdapter(['normal', 'specialist'], adapter)
     let assistant = assistantRecord.parse({ id: 'reviewer', revision: 1, name: 'Reviewer', instructions: 'Check evidence',
       template: 'resident', memoryMode: 'assistant', provider: 'specialist', model: 'review-model', avatar: '🦉', showModel: true,
-      archived: false, createdAt: 1, updatedAt: 1 })
+      reasoningEffort: 'max', archived: false, createdAt: 1, updatedAt: 1 })
     const routing = (scope: Context): void => {
       installAssistantRouting(scope, () => [assistant], () => undefined, () => 'Confirmed preference: Chinese',
         agent => Promise.resolve(agent.session.snapshotEvents().slice(agent.session.inheritedEventCount)))
@@ -43,7 +45,9 @@ it('routes mentions with history and restores the ordinary model without rewriti
     installModelSelection(agent.ctx, {
       get current() {
         const logged = agent.session.requestHeader()?.config
-        return logged ? { provider: logged.provider, model: logged.model } : { provider: 'normal', model: 'ordinary' }
+        return logged ? { provider: logged.provider, model: logged.model,
+          ...(logged.reasoningEffort === undefined ? {} : { reasoningEffort: logged.reasoningEffort }) }
+          : { provider: 'normal', model: 'ordinary', reasoningEffort: ReasoningEffortId('low') }
       }, assembled: undefined,
     })
     const send = async (text: string) => {
@@ -53,7 +57,7 @@ it('routes mentions with history and restores the ordinary model without rewriti
     await send('Earlier context: the number is 42')
     await send('Please @Reviewer explain the earlier number')
     expect(adapter.requests).toHaveLength(2)
-    expect(adapter.requests[1]).toMatchObject({ provider: 'specialist', model: 'review-model' })
+    expect(adapter.requests[1]).toMatchObject({ provider: 'specialist', model: 'review-model', reasoningEffort: 'max' })
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain('the number is 42')
     expect(JSON.stringify(adapter.requests[1]?.messages)).toContain('Confirmed preference: Chinese')
     const identity = agent.session.snapshotEvents().find(event => event.type === 'user/message' && event.data.source.kind === 'saved-assistant')
@@ -66,7 +70,7 @@ it('routes mentions with history and restores the ordinary model without rewriti
     await ctx.plugin(routing)
     assistant = { ...assistant, name: 'New name', avatar: '🐼' }
     await send('Continue as the ordinary assistant')
-    expect(adapter.requests[2]).toMatchObject({ provider: 'normal', model: 'ordinary' })
+    expect(adapter.requests[2]).toMatchObject({ provider: 'normal', model: 'ordinary', reasoningEffort: 'low' })
     expect(identity?.data).toMatchObject({ source: { speaker: { name: 'Reviewer', avatar: '🦉' } } })
     await send('@New name explain again')
     await send('@New name continue')
@@ -84,5 +88,11 @@ it('routes mentions with history and restores the ordinary model without rewriti
     child.followup(createUserMessage({ content: [{ type: 'text', text: 'Read inherited context using my own model' }], source: { kind: 'user' } }))
     await child.whenIdle()
     expect(adapter.requests[6]).toMatchObject({ provider: 'normal', model: 'child-own' })
+    assistant = { ...assistant, reasoningEffort: 'off' }
+    await send('@New name answer without thinking')
+    expect(adapter.requests[7]).toMatchObject({ reasoningEffort: 'off' })
+    assistant = { ...assistant, reasoningEffort: undefined }
+    await send('@New name use the model default')
+    expect(adapter.requests[8]?.reasoningEffort).not.toBe('off')
   } finally { await ctx.fiber.dispose() }
 })

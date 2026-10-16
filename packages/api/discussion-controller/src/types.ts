@@ -24,6 +24,8 @@ export interface DiscussionAssistant {
   /** Explicit route; absent on profiles created before model selection was introduced. */
   provider?: string | undefined
   model?: string | undefined
+  /** Omitted uses the selected model's default; explicit values must be advertised by that model. */
+  reasoningEffort?: string | undefined
   /** Emoji or a bounded local image data URL; never a remote image request. */
   avatar?: string | undefined
   showModel?: boolean | undefined
@@ -70,6 +72,7 @@ export interface AssistantDraft {
   memoryMode: AssistantMemoryMode
   provider?: string | undefined
   model?: string | undefined
+  reasoningEffort?: string | undefined
   avatar?: string | undefined
   showModel?: boolean | undefined
 }

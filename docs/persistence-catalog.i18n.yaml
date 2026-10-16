@@ -984,11 +984,11 @@
   en: 8ac9d20c81acce82
   zh: 793fe1ff767aff2f
 /session-persistence-event-catalog/resolved-persistence-types/assistantreturnmodel:
-  en: 94efded1274d6885
-  zh: a62e17b328a7874e
+  en: 48f30cd829c0b67b
+  zh: d04a50d6856bd247
 /session-persistence-event-catalog/resolved-persistence-types/assistantspeaker:
-  en: 43031789ca2cb31f
-  zh: cf7d1fe5a9f4bd9b
+  en: 2e0a70ced1adcc85
+  zh: 492c4e062c28011b
 /session-persistence-event-catalog/resolved-persistence-types/assistantstreamrecord:
   en: 144fc40c557c39fb
   zh: 93edf73620f690bc
@@ -1743,11 +1743,11 @@
   en: ef5cc8c3a63ecd3c
   zh: e28a440df46442b7
 /session-persistence-event-catalog/resolved-persistence-types/kind-saved-assistant-form-notice:
-  en: 7331769bb8569e8f
-  zh: 44d926453e3ed07f
+  en: 1fbfbc905dc5c56b
+  zh: 400e0021108c2d0c
 /session-persistence-event-catalog/resolved-persistence-types/kind-saved-assistant-return-form-notice:
-  en: 1c3dd41b26895931
-  zh: 2f7940de82cb1255
+  en: 7dbdb96cd983be78
+  zh: 59c6036cf4251c29
 /session-persistence-event-catalog/resolved-persistence-types/kind-schedule:
   en: 3fc00c80aca5abbf
   zh: dc3a14c9fb5aadf4

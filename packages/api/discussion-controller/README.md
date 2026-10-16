@@ -38,6 +38,8 @@ Saved assistants bind a provider and model. A newly submitted `@name` or assista
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 
+Assistant profiles optionally store `reasoningEffort`. Missing values use the selected model's default, preserving older profiles. Create and update validate explicit effort against that model's catalog. Replacing a draft without the field clears a previous override. Request routing passes the saved effort for the invocation; the next ordinary turn restores the conversation's model and effort.
+
 <details>
 <summary>Maintainer details — click to expand</summary>
 

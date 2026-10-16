@@ -28,6 +28,9 @@ export function AssistantSettings({ useModels, refreshModels, listAssistants, sa
   const [draft, setDraft] = useState<AssistantDraft>(blank)
   const catalog = useModels(value => value)
   const models = catalog.value
+  const selectedModel = models?.groups.find(group => group.id === draft.provider)?.models.find(model => model.id === draft.model)
+  const reasoning = selectedModel?.reasoning
+  const validEffort = draft.reasoningEffort === undefined || reasoning?.efforts.some(effort => effort.id === draft.reasoningEffort)
   const [memories, setMemories] = useState<AssistantMemory[]>([])
   const [editingMemory, setEditingMemory] = useState<AssistantMemory>()
   const [text, setText] = useState(''), [project, setProject] = useState('')
@@ -61,7 +64,7 @@ export function AssistantSettings({ useModels, refreshModels, listAssistants, sa
         onChange={(event) => {
           const selected = models?.groups.flatMap(group => group.models.map(model => ({ provider: group.id, model: model.id })))
             .find(route => JSON.stringify([route.provider, route.model]) === event.target.value)
-          if (selected) setDraft({ ...draft, ...selected })
+          if (selected) setDraft({ ...draft, ...selected, reasoningEffort: undefined })
         }}>
         <option value="" disabled>{t(models?.groups.some(group => group.models.length) ? 'chooseModel'
           : catalog.status === 'error' ? 'modelsFailed' : catalog.status === 'ready' ? 'modelsEmpty' : 'loading')}</option>
@@ -75,6 +78,17 @@ export function AssistantSettings({ useModels, refreshModels, listAssistants, sa
       <button type="button" disabled={catalog.status === 'loading'} onClick={refreshModels}>{t('refresh')}</button>
       {catalog.error && <p role="alert">{t('failed', { message: catalog.error })}</p>}
       {models?.failures.map(failure => <p role="status" key={failure.id}>{failure.name}: {failure.message}</p>)}
+      <label>{t('reasoningEffort')}<select aria-label={t('reasoningEffort')}
+        disabled={!reasoning?.efforts.length && draft.reasoningEffort === undefined} value={draft.reasoningEffort ?? ''}
+        onChange={(event) => { setDraft({ ...draft, reasoningEffort: event.target.value || undefined }) }}>
+        <option value="">{!selectedModel ? t('chooseModel') : !reasoning?.efforts.length ? t('reasoningUnsupported')
+          : reasoning.defaultEffort === undefined ? t('reasoningDefault')
+            : t('reasoningDefaultNamed', { name: reasoning.efforts.find(effort => effort.id === reasoning.defaultEffort)?.name
+              ?? reasoning.defaultEffort })}</option>
+        {!validEffort && <option value={draft.reasoningEffort} disabled>{draft.reasoningEffort} — {t('unavailable')}</option>}
+        {reasoning?.efforts.map(effort => <option key={effort.id} value={effort.id}>{effort.name}</option>)}
+      </select></label>
+      {!validEffort && <p role="alert">{t('reasoningUnavailable')}</p>}
       <div className={css.avatarChoices} role="group" aria-label={t('avatar')}>
         {(draft.avatar ?? '').startsWith('data:image/') && <img src={draft.avatar} alt={t('avatar')} className={css.avatarPreview} />}
         {['🤖', '🦉', '🦊', '🐼', '🐱', '🧑‍🔬', '🎨', '🌱'].map(avatar => <button type="button" key={avatar}
@@ -101,9 +115,10 @@ export function AssistantSettings({ useModels, refreshModels, listAssistants, sa
         if (mode === 'off' || mode === 'project' || mode === 'assistant') setDraft({ ...draft, memoryMode: mode })
       }}><option value="off">{t('off')}</option><option value="project">{t('projectMemory')}</option>
         <option value="assistant">{t('assistantMemory')}</option></select></label>
-      <button type="button" disabled={!draft.name.trim() || !draft.provider || !draft.model} onClick={() => { void run(async () => {
-        const saved = await saveAssistant(current, draft); setCurrent(saved); setDraft(saved); setRows(await listAssistants())
-      }) }}>{t(busy ? 'saving' : 'save')}</button>
+      <button type="button" disabled={!draft.name.trim() || !draft.provider || !draft.model || !validEffort}
+        onClick={() => { void run(async () => {
+          const saved = await saveAssistant(current, draft); setCurrent(saved); setDraft(saved); setRows(await listAssistants())
+        }) }}>{t(busy ? 'saving' : 'save')}</button>
     </fieldset>
     {current && <fieldset disabled={busy}><legend>{t('memory')}</legend>
       {memories.map(memory => <article key={memory.id}><p>{memory.text}</p><small>{memory.project || t('global')}</small>

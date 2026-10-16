@@ -104,15 +104,20 @@ export default class DiscussionController extends TypertRemoteService {
     await this.validateAssistantModel(draft)
     return this.storage().table('assistants').update(id, (current) => {
       if (current.revision !== revision) throw new Error('Assistant changed in another window; reload before saving')
-      return assistantRecord.parse({ ...current, ...draft, id, revision: revision + 1, updatedAt: Date.now() })
+      return assistantRecord.parse({ ...current, ...draft, reasoningEffort: draft.reasoningEffort,
+        id, revision: revision + 1, updatedAt: Date.now() })
     })
   }
 
   private async validateAssistantModel(draft: AssistantDraft): Promise<void> {
-    if (!draft.provider && !draft.model) return
+    if (!draft.provider && !draft.model && draft.reasoningEffort === undefined) return
     const catalog = await this.ctx.sessionController.modelCatalog()
-    if (!catalog.groups.some(group => group.id === draft.provider && group.models.some(model => model.id === draft.model))) {
+    const selected = catalog.groups.find(group => group.id === draft.provider)?.models.find(model => model.id === draft.model)
+    if (!selected) {
       throw new Error('Selected assistant model is unavailable; check model settings / 助手模型不可用，请检查模型设置')
+    }
+    if (draft.reasoningEffort !== undefined && !selected.reasoning?.efforts.some(effort => effort.id === draft.reasoningEffort)) {
+      throw new Error('Selected reasoning effort is unsupported by this model / 当前模型不支持所选思考强度，请重新选择')
     }
   }
 

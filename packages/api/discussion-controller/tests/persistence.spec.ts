@@ -13,7 +13,8 @@ it('retains assistant, disabled memory and archived topic after closing and reop
   const scratch = await mkdtemp(join(tmpdir(), 'dsh-discussion-persistence-'))
   const path = join(scratch, 'state.sqlite')
   const profile = assistantRecord.parse({ id: 'assistant-a', revision: 1, name: 'Analyst', instructions: 'Read only',
-    template: 'temporary', memoryMode: 'off', archived: false, createdAt: 1, updatedAt: 1 })
+    template: 'temporary', memoryMode: 'off', provider: 'test', model: 'reviewer', reasoningEffort: 'max',
+    archived: false, createdAt: 1, updatedAt: 1 })
   const memory = memoryRecord.parse({ id: 'memory-a', assistantId: profile.id, revision: 1, scope: 'assistant',
     project: '', text: 'Saved preference', createdAt: 1, updatedAt: 1 })
   const topic = topicRecord.parse({ id: 'topic-a', parentSessionId: 'main-a', sessionId: 'discussion-a', assistantId: profile.id,
