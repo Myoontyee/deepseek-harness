@@ -14,9 +14,11 @@ import javax.net.ssl.X509TrustManager;
 
 final class Pairing {
  final String origin;
+ final boolean embedded;
  final String pin;
  final String secret;
  Pairing(JSONObject json, String field) throws Exception {
+  embedded=json.optBoolean("tailnet",false);
   URI uri = new URI(json.getString("url"));
   if (!"https".equals(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null || !(uri.getPath().isEmpty() || uri.getPath().equals("/"))) throw new Exception("连接地址必须是电脑生成的 HTTPS 地址");
   origin = uri.getScheme() + "://" + uri.getRawAuthority();

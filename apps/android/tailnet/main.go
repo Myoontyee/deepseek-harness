@@ -8,6 +8,11 @@ import (
  "flag"
  "fmt"
  "io"
+ "net"
+ "net/http"
+ "net/url"
+ "regexp"
+ "sync/atomic"
  "os"
  "sort"
  "strings"
@@ -18,7 +23,7 @@ import (
  "tailscale.com/ipn/ipnstate"
 )
 
-type command struct { Action string `json:"action"` }
+type command struct { Action string `json:"action"`; ID string `json:"id"`; Origin string `json:"origin"` }
 type device struct {
  ID string `json:"id"`
  Name string `json:"name"`
@@ -45,13 +50,31 @@ func main() {
  defer srv.Close()
  client,err:=srv.LocalClient()
  if err!=nil {return}
+ var allowed atomic.Value;allowed.Store("")
+ proxyListener,err:=net.Listen("tcp","127.0.0.1:0")
+ if err!=nil{return}
+ defer proxyListener.Close()
+ slots:=make(chan struct{},8)
+ proxy:=&http.Server{ReadHeaderTimeout:5*time.Second,Handler:http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
+  if r.Method!="CONNECT" || r.Host!=allowed.Load().(string) || r.Host=="" {http.Error(w,"Forbidden",403);return}
+  select{case slots<-struct{}{}:defer func(){<-slots}();default:http.Error(w,"Busy",429);return}
+  ctx,cancel:=context.WithTimeout(r.Context(),10*time.Second);defer cancel()
+  upstream,err:=srv.Dial(ctx,"tcp",r.Host);if err!=nil{http.Error(w,"Unavailable",502);return};defer upstream.Close()
+  hj,ok:=w.(http.Hijacker);if !ok{http.Error(w,"Unsupported",500);return}
+  downstream,buffer,err:=hj.Hijack();if err!=nil{return};defer downstream.Close()
+  buffer.WriteString("HTTP/1.1 200 Connection Established\r\n\r\n");if buffer.Flush()!=nil{return}
+  go func(){io.Copy(upstream,buffer);upstream.Close()}()
+  io.Copy(downstream,upstream)
+ })}
+ go proxy.Serve(proxyListener)
+ defer proxy.Close()
  scanner:=bufio.NewScanner(os.Stdin);scanner.Buffer(make([]byte,4096),65536)
  out:=json.NewEncoder(os.Stdout)
  for scanner.Scan() {
   var request command
   if err:=json.Unmarshal(scanner.Bytes(),&request);err!=nil {out.Encode(map[string]any{"ok":false,"error":"Invalid command"});continue}
   if request.Action=="stop" {out.Encode(map[string]any{"ok":true});return}
-  ctx,cancel:=context.WithTimeout(context.Background(),15*time.Second)
+  ctx,cancel:=context.WithTimeout(context.Background(),65*time.Second)
   var result any
   switch request.Action {
   case "login":
@@ -60,6 +83,45 @@ func main() {
   case "logout":
    err=client.Logout(ctx)
    result=map[string]any{"ok":err==nil}
+  case "pair", "use":
+   var status *ipnstate.Status
+   status,err=client.Status(ctx)
+   if err==nil && status.BackendState!="Running" {err=fmt.Errorf("请先在应用内登录 Tailscale")}
+   if err==nil && request.Action=="pair" {
+    var selected *ipnstate.PeerStatus
+    for _,peer:=range status.Peer {if string(peer.ID)==request.ID{selected=peer;break}}
+    if selected==nil{err=fmt.Errorf("设备已不在当前 Tailscale 列表中")}else{
+     address:="";for _,ip:=range selected.TailscaleIPs{if ip.Is4(){address=ip.String();break}}
+     if address==""{err=fmt.Errorf("设备没有可用的 Tailscale IPv4 地址")}else{
+      transport:=&http.Transport{DialContext:srv.Dial,Proxy:nil,DisableKeepAlives:true}
+      hc:=&http.Client{Transport:transport,Timeout:60*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
+      var req *http.Request;req,err=http.NewRequestWithContext(ctx,"POST","http://"+net.JoinHostPort(address,"42873")+"/v1/pair",strings.NewReader("{}"))
+      if err==nil {req.Header.Set("Content-Type","application/json");var response *http.Response;response,err=hc.Do(req)
+       if err==nil{
+        bytes,readErr:=io.ReadAll(io.LimitReader(response.Body,65537));response.Body.Close();err=readErr
+        if len(bytes)>65536{err=fmt.Errorf("电脑返回的配对资料过长")}
+        var connection map[string]any
+        if err==nil && response.StatusCode!=200 {err=fmt.Errorf("电脑未批准连接或尚未运行支持免扫码的版本（%d）",response.StatusCode)}
+        if err==nil{err=json.Unmarshal(bytes,&connection)}
+        if err==nil{
+         origin,_:=connection["url"].(string);pin,_:=connection["pin"].(string);token,_:=connection["token"].(string)
+         u,parseErr:=url.Parse(origin)
+         if parseErr!=nil||u.Scheme!="https"||u.Hostname()!=address||u.User!=nil||u.RawQuery!=""||u.Fragment!=""||(u.Path!=""&&u.Path!="/")||!regexp.MustCompile(`^[a-fA-F0-9]{64}$`).MatchString(pin)||!regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`).MatchString(token){err=fmt.Errorf("电脑返回的连接身份无效")}else{result=map[string]any{"ok":true,"connection":map[string]any{"url":origin,"pin":pin,"token":token,"name":view(selected,false).Name}}}
+        }
+       }
+      }
+      if err!=nil && result==nil{err=fmt.Errorf("请确认电脑已安装支持免扫码的版本并允许手机控制：%w",err)}
+     }
+    }
+   }else if err==nil {
+    var u *url.URL;u,err=url.Parse(request.Origin)
+    if err==nil {
+     known:=false;for _,peer:=range status.Peer{for _,ip:=range peer.TailscaleIPs{if ip.String()==u.Hostname(){known=true}}}
+     if !known||u.Scheme!="https"||u.User!=nil||u.RawQuery!=""||u.Fragment!=""||(u.Path!=""&&u.Path!="/"){err=fmt.Errorf("已保存的电脑不在当前 Tailscale 网络中")}else{
+      port:=u.Port();if port==""{port="443"};allowed.Store(net.JoinHostPort(u.Hostname(),port));result=map[string]any{"ok":true,"proxyPort":proxyListener.Addr().(*net.TCPAddr).Port}
+     }
+    }
+   }
   case "status":
    var status *ipnstate.Status
    status,err=client.Status(ctx)

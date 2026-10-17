@@ -42,7 +42,7 @@ final class AccountSignIn implements AutoCloseable {
       String[] parts=first==null?new String[0]:first.split(" ");
       if(parts.length!=3 || !"GET".equals(parts[0])) throw new IOException("Invalid callback request");
       code=proof.callback(parts[1],host);
-      reply(socket,200,"授权已收到，请返回 DSH 手机端。连接电脑仍需要电脑端确认授权。");
+      reply(socket,200,"授权已收到，请返回 DeepSeek Harness Desktop。连接电脑仍需要电脑端确认授权。");
      } catch(Exception invalid) { reply(socket,400,"无效的登录回调，请返回 DSH 重试。"); }
     } catch(SocketTimeoutException polling) { /* Bound the wait by the authorization deadline. */ }
    }
