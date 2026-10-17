@@ -353,7 +353,6 @@ export function apply(ctx: Context, config: Config = Config({})): void {
       widthControls: { scope: 'root' },
     },
     inject: (sessionId: SessionId | undefined): ConversationInjected => ({
-      openDiscussion: (annotation) => { if (sessionId !== undefined) ctx.get('discussionNavigation')?.open(sessionId, annotation) },
       hooks: {
         composerBlock: sessionId === undefined ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId),
       },

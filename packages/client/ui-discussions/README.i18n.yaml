@@ -3,44 +3,44 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-discussions/README.md
 /:
-  en: 71e2230196913d6a
-  zh: 3de227811b2c2867
+  en: 202ddce2db7db073
+  zh: dc1a2330867bb482
 /deepseek-ai-dsh-client-ui-discussions:
   en: 281c8da44f6d4a08
   zh: 0a26b0c66bc79986
 /deepseek-ai-dsh-client-ui-discussions/summary:
-  en: 20c92bfb9af7d9dd
-  zh: 0eb2ff25f97c583f
+  en: 2439a834e957a9f1
+  zh: 87c40a7151382413
 /deepseek-ai-dsh-client-ui-discussions/table-of-contents:
   en: d152484eb41ac6b4
   zh: 1db86285abf6c499
 /deepseek-ai-dsh-client-ui-discussions/use-this-package:
-  en: 91b6f71efaf66793
-  zh: 563209fdf383a78a
+  en: ce1bf7a5b2b95636
+  zh: 83155b2c286eae6f
 /deepseek-ai-dsh-client-ui-discussions/understand-the-implementation:
-  en: f62ede51242458b8
-  zh: 4a09a563beb79661
+  en: 0caaae836082d537
+  zh: 0e8f46394cc672b3
 /deepseek-ai-dsh-client-ui-discussions/further-exploration:
   en: 64ad3b737e419632
   zh: 3f3f0ddf794b58d4
 /deepseek-ai-dsh-client-ui-discussions/model-experience:
   en: 215e7ba838619b7b
   zh: a311da3843709f90
-/deepseek-ai-dsh-client-ui-discussions/model-experience/discussion-context:
-  en: 41cd7818deaab2fa
-  zh: b853a3e26e54e496
-/deepseek-ai-dsh-client-ui-discussions/model-experience/discussion-context/what-the-model-sees:
-  en: c546c18d71b5791f
-  zh: 6f2e75db18d0f58b
-/deepseek-ai-dsh-client-ui-discussions/model-experience/discussion-context/token-effect:
-  en: 7b131fd6df297955
-  zh: 11b8944776eb7a1f
-/deepseek-ai-dsh-client-ui-discussions/model-experience/discussion-context/kv-cache-effect:
-  en: 2a5abad7033366d9
-  zh: 7c59cee81446268b
+/deepseek-ai-dsh-client-ui-discussions/model-experience/historical-presentation:
+  en: 375055e6f0558b55
+  zh: 648d425379527b56
+/deepseek-ai-dsh-client-ui-discussions/model-experience/historical-presentation/what-the-model-sees:
+  en: 3cf1498851219865
+  zh: 2c134c8023f42e15
+/deepseek-ai-dsh-client-ui-discussions/model-experience/historical-presentation/token-effect:
+  en: 34c8af85b666ad14
+  zh: fa441bd4ae6c5394
+/deepseek-ai-dsh-client-ui-discussions/model-experience/historical-presentation/kv-cache-effect:
+  en: 11f27c75e5f084e3
+  zh: 2d1971c8786e5720
 /deepseek-ai-dsh-client-ui-discussions/known-limitations-and-deferred-work:
-  en: 7c7ecb11e5a47411
-  zh: ddf85116f61d9c99
+  en: 0c750a0ecba558f8
+  zh: da691c6510e083b4
 /deepseek-ai-dsh-client-ui-discussions/known-limitations-and-deferred-work/dev-note:
   en: 0225ba087c5266f3
   zh: 709b692e280b394c

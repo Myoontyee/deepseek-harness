@@ -8,12 +8,9 @@ The Web Client is a browser-side Cordis application assembled from independently
 
 ## Persistent discussions and assistants
 
-The [discussion service](../../packages/api/discussion-controller/README.md) owns topic metadata and explicitly confirmed memories; [the discussion UI](../../packages/client/ui-discussions/README.md) opens one board per parent conversation. Native Sessions retain the messages and attachments. Closing or archiving a topic does not delete history, and returning a conclusion only updates the parent draft.
+Saved assistants and sidebar discussions are retired in the custom build. The [archive service](../../packages/api/discussion-controller/README.md) retains read-only records and restores ordinary chat after a previously active assistant. The [compatibility UI](../../packages/client/ui-discussions/README.md) renders historical identities and closes obsolete discussion tabs without deleting native Sessions.
 
-`DiscussionAssistant` and `AssistantDraft` describe saved identity, responsibilities and memory policy. `AssistantMemory` and `MemoryDraft` describe confirmed notes with assistant or exact-project scope. `DiscussionTopic` and `TopicDraft` link an independent Session to its original quotation and parent. `AssistantId`, `AssistantMemoryId` and `DiscussionId` are opaque identities; `AssistantTemplate` and `AssistantMemoryMode` select the starter policy and its current memory visibility. Complete field definitions live in [types.ts](../../packages/api/discussion-controller/src/types.ts).
-
-Memory is read only when a topic prepares context. No background model loop or automatic fact extraction runs. Selected notes are bounded by the configured character budget; disabling memory leaves saved notes and conversation history intact.
-
+The types in [types.ts](../../packages/api/discussion-controller/src/types.ts) describe historical assistant, memory and topic records. No settings page, assistant mention source, discussion creation operation or saved-memory injection is active.
 
 ## Layers and ownership
 
@@ -120,73 +117,25 @@ Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnp
 
 ### `ctx.discussionController` — `DiscussionController`
 
-Metadata lives in a storage domain; messages and attachments use native Session storage.
+Existing records remain readable; no creation, mutation or assistant selection is exposed.
 
 ```ts cordis-catalog
-/** List saved identities without starting any model process.
- * @returns Saved assistant profiles, including archived ones.
+/** Read retained profiles without activating their settings, memory or models.
+ * @returns Historical assistant records, including archived ones.
  */
 @Remote assistants(): DiscussionAssistant[]
 
-/** Save a user-defined assistant without creating a conversation.
- * @param draft - Explicit identity and memory policy.
- * @returns Durably stored assistant.
- */
-@Remote async createAssistant(draft: AssistantDraft): Promise<DiscussionAssistant>
-
-/** Update one profile without overwriting another window's edits.
- * @param id - Saved assistant identity.
- * @param revision - Revision shown in the editor.
- * @param draft - Replacement editable fields.
- * @returns Committed profile.
- */
-@Remote async updateAssistant(id: AssistantId, revision: number, draft: AssistantDraft): Promise<DiscussionAssistant>
-
-/** Read explicitly saved notes for the settings editor.
- * @param id - Assistant identity.
- * @returns Its stored memory entries, including entries currently disabled by policy.
+/** Read historical explicit notes without injecting them into any request.
+ * @param id - Original assistant identity.
+ * @returns Its retained memory entries.
  */
 @Remote memories(id: AssistantId): AssistantMemory[]
 
-/** Save a memory only after an explicit user action.
- * @param draft - Confirmed text and scope.
- * @returns Committed memory entry.
- */
-@Remote async remember(draft: MemoryDraft): Promise<AssistantMemory>
-
-/** Edit a confirmed note without overwriting another window's change.
- * @param id - Existing memory identity.
- * @param revision - Revision displayed in the editor.
- * @param draft - Replacement text and scope for the same assistant.
- * @returns Committed memory entry.
- */
-@Remote updateMemory(id: AssistantMemoryId, revision: number, draft: MemoryDraft): Promise<AssistantMemory>
-
-/** Remove one confirmed note without deleting any conversation.
- * @param id - Memory identity selected by the user.
- * @returns Whether an entry was removed.
- */
-@Remote forget(id: AssistantMemoryId): Promise<boolean>
-
-/** List the small topic index for one parent; transcript messages are loaded separately.
- * @param parentSessionId - Main conversation identity.
- * @returns Durable topics, most recently updated first.
+/** Read historical topic links; their conversations remain ordinary native Sessions.
+ * @param parentSessionId - Original parent conversation.
+ * @returns Retained metadata ordered by last update.
  */
 @Remote topics(parentSessionId: SessionId): DiscussionTopic[]
-
-/** Create an independent, initially read-only native Session, without running a model or copying parent history.
- * @param draft - Idempotency key, source quotation and selected assistant.
- * @returns Persisted topic and Session identity.
- */
-@Remote async createTopic(draft: TopicDraft): Promise<DiscussionTopic>
-
-/** Resolve, archive or reopen a topic without deleting its history.
- * @param id - Topic identity.
- * @param revision - Revision the caller displayed.
- * @param state - New topic visibility state.
- * @returns Committed metadata.
- */
-@Remote setTopicState(id: DiscussionId, revision: number, state: 'open' | 'resolved' | 'archived'): Promise<DiscussionTopic>
 ```
 
 Types: [SessionId](core.md)

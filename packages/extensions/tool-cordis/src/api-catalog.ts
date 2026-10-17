@@ -1110,68 +1110,26 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   },
   {
     key: 'discussionController',
-    summary: 'Metadata lives in a storage domain; messages and attachments use native Session storage.',
-    description: 'Metadata lives in a storage domain; messages and attachments use native Session storage.',
+    summary: 'Existing records remain readable; no creation, mutation or assistant selection is exposed.',
+    description: 'Existing records remain readable; no creation, mutation or assistant selection is exposed.',
     methods: [
       {
         signature: '@Remote assistants(): DiscussionAssistant[]',
-        description: 'List saved identities without starting any model process.',
+        description: 'Read retained profiles without activating their settings, memory or models.',
         parameters: [],
-        returns: 'Saved assistant profiles, including archived ones.',
-      },
-      {
-        signature: '@Remote async createAssistant(draft: AssistantDraft): Promise<DiscussionAssistant>',
-        description: 'Save a user-defined assistant without creating a conversation.',
-        parameters: [{ name: 'draft', description: 'Explicit identity and memory policy.' }],
-        returns: 'Durably stored assistant.',
-      },
-      {
-        signature: '@Remote async updateAssistant(id: AssistantId, revision: number, draft: AssistantDraft): Promise<DiscussionAssistant>',
-        description: 'Update one profile without overwriting another window\'s edits.',
-        parameters: [{ name: 'id', description: 'Saved assistant identity.' }, { name: 'revision', description: 'Revision shown in the editor.' }, { name: 'draft', description: 'Replacement editable fields.' }],
-        returns: 'Committed profile.',
+        returns: 'Historical assistant records, including archived ones.',
       },
       {
         signature: '@Remote memories(id: AssistantId): AssistantMemory[]',
-        description: 'Read explicitly saved notes for the settings editor.',
-        parameters: [{ name: 'id', description: 'Assistant identity.' }],
-        returns: 'Its stored memory entries, including entries currently disabled by policy.',
-      },
-      {
-        signature: '@Remote async remember(draft: MemoryDraft): Promise<AssistantMemory>',
-        description: 'Save a memory only after an explicit user action.',
-        parameters: [{ name: 'draft', description: 'Confirmed text and scope.' }],
-        returns: 'Committed memory entry.',
-      },
-      {
-        signature: '@Remote updateMemory(id: AssistantMemoryId, revision: number, draft: MemoryDraft): Promise<AssistantMemory>',
-        description: 'Edit a confirmed note without overwriting another window\'s change.',
-        parameters: [{ name: 'id', description: 'Existing memory identity.' }, { name: 'revision', description: 'Revision displayed in the editor.' }, { name: 'draft', description: 'Replacement text and scope for the same assistant.' }],
-        returns: 'Committed memory entry.',
-      },
-      {
-        signature: '@Remote forget(id: AssistantMemoryId): Promise<boolean>',
-        description: 'Remove one confirmed note without deleting any conversation.',
-        parameters: [{ name: 'id', description: 'Memory identity selected by the user.' }],
-        returns: 'Whether an entry was removed.',
+        description: 'Read historical explicit notes without injecting them into any request.',
+        parameters: [{ name: 'id', description: 'Original assistant identity.' }],
+        returns: 'Its retained memory entries.',
       },
       {
         signature: '@Remote topics(parentSessionId: SessionId): DiscussionTopic[]',
-        description: 'List the small topic index for one parent; transcript messages are loaded separately.',
-        parameters: [{ name: 'parentSessionId', description: 'Main conversation identity.' }],
-        returns: 'Durable topics, most recently updated first.',
-      },
-      {
-        signature: '@Remote async createTopic(draft: TopicDraft): Promise<DiscussionTopic>',
-        description: 'Create an independent, initially read-only native Session, without running a model or copying parent history.',
-        parameters: [{ name: 'draft', description: 'Idempotency key, source quotation and selected assistant.' }],
-        returns: 'Persisted topic and Session identity.',
-      },
-      {
-        signature: '@Remote setTopicState(id: DiscussionId, revision: number, state: \'open\' | \'resolved\' | \'archived\'): Promise<DiscussionTopic>',
-        description: 'Resolve, archive or reopen a topic without deleting its history.',
-        parameters: [{ name: 'id', description: 'Topic identity.' }, { name: 'revision', description: 'Revision the caller displayed.' }, { name: 'state', description: 'New topic visibility state.' }],
-        returns: 'Committed metadata.',
+        description: 'Read historical topic links; their conversations remain ordinary native Sessions.',
+        parameters: [{ name: 'parentSessionId', description: 'Original parent conversation.' }],
+        returns: 'Retained metadata ordered by last update.',
       },
     ],
   },
@@ -5022,7 +4980,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'AccountBonusNotification',
-    declaration: 'export interface AccountBonusNotification {\n    readonly orderId: AccountBonusOrderId;\n    readonly campaign: string;\n    readonly amount: string;\n    readonly currency: \'CNY\' | \'USD\';\n    readonly grantedAt: string;\n    readonly expiresAt: string;\n    readonly message: string;\n}',
+    declaration: 'export interface AccountBonusNotification {\n    readonly title?: string;\n    readonly orderId: AccountBonusOrderId;\n    readonly campaign?: JsonValue;\n    readonly amount?: JsonValue;\n    readonly currency?: JsonValue;\n    readonly grantedAt?: JsonValue;\n    readonly expiresAt: string;\n    readonly message: string;\n}',
   },
   {
     name: 'AccountBonusOrderId',
@@ -5215,10 +5173,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AssembledSection',
     declaration: 'export interface AssembledSection {\n    name: string;\n    text: string;\n    interpolate?: boolean;\n}',
-  },
-  {
-    name: 'AssistantDraft',
-    declaration: 'export interface AssistantDraft {\n    name: string;\n    instructions: string;\n    template: AssistantTemplate;\n    memoryMode: AssistantMemoryMode;\n    provider?: string | undefined;\n    model?: string | undefined;\n    reasoningEffort?: string | undefined;\n    avatar?: string | undefined;\n    showModel?: boolean | undefined;\n}',
   },
   {
     name: 'AssistantId',
@@ -6583,10 +6537,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'McpResourceRequest',
     declaration: 'export type McpResourceRequest = {\n    method: \'resources/list\' | \'resources/templates/list\';\n    cursor?: string;\n} | {\n    method: \'resources/read\';\n    uri: string;\n};',
-  },
-  {
-    name: 'MemoryDraft',
-    declaration: 'export interface MemoryDraft {\n    assistantId: AssistantId;\n    scope: \'project\' | \'assistant\';\n    project: string;\n    text: string;\n}',
   },
   {
     name: 'Message',
@@ -8867,10 +8817,6 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ToolUseSummary',
     declaration: 'export interface ToolUseSummary {\n    tool_use_id: string;\n    tool: string;\n    input: Record<string, unknown>;\n}',
-  },
-  {
-    name: 'TopicDraft',
-    declaration: 'export interface TopicDraft {\n    requestId: string;\n    parentSessionId: SessionId;\n    assistantId: AssistantId;\n    title: string;\n    quote: string;\n    sourceUrl: string;\n    sourceMessage: string;\n}',
   },
   {
     name: 'Transcript',

@@ -112,7 +112,6 @@ export function apply(ctx: ClientContext): void {
       },
       inject: (sessionId, actions): TextPreviewInjected => ({
         ...face(sessionId, actions),
-        openDiscussion: (annotation) => { ctx.get('discussionNavigation')?.open(sessionId, annotation) },
         hooks: { documentPreviews: source },
       }),
     },

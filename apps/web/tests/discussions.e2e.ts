@@ -1,44 +1,49 @@
-/** Real Web composition for saved assistants and a parent-scoped sidebar topic, without remote model calls. */
+/** Real Web composition after saved assistants and sidebar discussions are retired. */
 import { readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type Page } from 'playwright'
 import { expect, it, onTestFinished } from 'vitest'
 import type {} from '@deepseek-ai/dsh-api-discussion-controller'
-import { LlmAdapter, ReasoningEffortId, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions } from '@deepseek-ai/dsh-llm'
+import type { Domain } from '@deepseek-ai/dsh-storage-domain'
+import { assistantRecord, discussionDomainSpec, memoryRecord, topicRecord } from '../../../packages/api/discussion-controller/src/spec.ts'
 import { launchWebScaffold, seedSession, type WebScaffold } from './scaffold.ts'
 import { newEnglishPage, openSettings, saveFailureShot } from './support.ts'
 
 const fixture = fileURLToPath(new URL('../../../snapshots/web/plan-narrow-viewport/session.v3.jsonl', import.meta.url))
 const history = fileURLToPath(new URL('../../../snapshots/web/fresh-round-trip/session.v4.jsonl', import.meta.url))
 
-class EffortAdapter extends LlmAdapter {
-  override async listModels(provider: string) { return [await this.resolveModel(provider, 'review')] }
-  override async resolveModel(provider: string, model: string) { return { provider, id: model, name: 'Effort fixture', reasoning: {
-    efforts: ['off', 'high', 'max'].map(id => ({ id: ReasoningEffortId(id), name: id })), defaultEffort: ReasoningEffortId('high'),
-  } } }
-  override async *stream(): AsyncIterable<StreamChunk> { yield { type: 'finish', reason: { kind: 'stop' } } }
-}
-
-it('creates a saved assistant and a persistent topic beside the main conversation', async () => {
+it('removes assistant and discussion controls while preserving history and ordinary model selection', async () => {
   const resources: { scaffold?: WebScaffold; browser?: Browser; page?: Page } = {}
   let completed = false
   onTestFinished(async () => {
     try {
       if (resources.page && !completed) {
-        await saveFailureShot(resources.page, 'web-e2e-discussions')
-        await writeFile('.artifacts/web-e2e-discussions.txt', await resources.page.locator('body').innerText())
+        await saveFailureShot(resources.page, 'web-e2e-discussion-retirement')
+        await writeFile('.artifacts/web-e2e-discussion-retirement.txt', await resources.page.locator('body').innerText())
       }
     } finally { try { await resources.browser?.close() } finally { await resources.scaffold?.close() } }
   })
   const scaffold = await launchWebScaffold({ replayFixture: fixture, replayProvidersOnly: true })
   resources.scaffold = scaffold
-  scaffold.ctx.effect(() => scaffold.ctx.llm.registerAdapter(['assistant-effort-fixture'], new EffortAdapter()))
   await seedSession(scaffold, await readFile(history, 'utf8'), 'discussion-e2e-parent', 'standard')
+  await seedSession(scaffold, await readFile(history, 'utf8'), 'discussion-e2e-history', 'standard')
   const initial = await scaffold.ctx.sessionController.inspect('discussion-e2e-parent' as Parameters<typeof scaffold.ctx.sessionController.inspect>[0])
   const initialHeader = initial.events.findLast(event => event.type === 'request/header')
-  if (initialHeader?.type !== 'request/header') throw new Error('The fixture must contain its original model request')
-  let modelSteps = 0
-  scaffold.ctx.on('session/event', (_session, event) => { if (event.type === 'step/start') modelSteps++ })
+  if (initialHeader?.type !== 'request/header') throw new Error('Fixture model is missing')
+  // Seed pre-upgrade records through the already-open archive; the public API is read-only.
+  const domain = Reflect.get(scaffold.ctx.discussionController, 'domain') as Domain<typeof discussionDomainSpec>
+  const assistant = assistantRecord.parse({ id: 'retired-helper', revision: 1, name: 'Retired helper fixture', instructions: 'OLD DUTIES',
+    template: 'resident', memoryMode: 'assistant', provider: 'removed-provider', model: 'removed-model',
+    reasoningEffort: 'max', avatar: '🦉', archived: false, createdAt: 1, updatedAt: 1 })
+  const memory = memoryRecord.parse({ id: 'retained-note', assistantId: assistant.id, revision: 1, scope: 'assistant',
+    project: '', text: 'RETIRED MEMORY MUST NOT BE INJECTED', createdAt: 1, updatedAt: 1 })
+  const topic = topicRecord.parse({ id: 'retained-topic', parentSessionId: 'discussion-e2e-parent',
+    sessionId: 'discussion-e2e-history', assistantId: assistant.id, revision: 1, title: 'Retained discussion',
+    quote: '$CNR < 1$', sourceUrl: '', sourceMessage: '', project: '', state: 'open', createdAt: 1, updatedAt: 1 })
+  await domain.table('assistants').put(assistant.id, assistant)
+  await domain.table('memories').put(memory.id, memory)
+  await domain.table('topics').put(topic.id, topic)
   const channel = process.env.DSH_TEST_BROWSER_CHANNEL
   const browser = await chromium.launch(channel ? { channel } : {})
   resources.browser = browser
@@ -48,118 +53,44 @@ it('creates a saved assistant and a persistent topic beside the main conversatio
   const ungrouped = page.getByRole('treeitem', { name: /^Ungrouped/ })
   if (await ungrouped.getAttribute('aria-expanded') !== 'true') await ungrouped.click()
   await page.locator('[role="treeitem"]').last().click()
-  await page.locator('[data-conversation-session="discussion-e2e-parent"]').first().waitFor()
   await openSettings(page, 'en')
   const settings = page.getByRole('dialog', { name: 'Settings', exact: true })
-  await settings.getByRole('button', { name: 'Saved assistants', exact: true }).click()
-  await settings.getByLabel('Assistant name', { exact: true }).fill('Review partner')
-  await settings.getByLabel('Reply model', { exact: true }).locator('optgroup option').first().waitFor({ state: 'attached' })
-  const modelValue = JSON.stringify(['assistant-effort-fixture', 'review'])
-  await settings.getByLabel('Reply model', { exact: true }).selectOption(modelValue)
-  await settings.getByLabel('Reasoning effort', { exact: true }).selectOption('max')
-  const avatarPng = await page.evaluate(() => {
-    const canvas = document.createElement('canvas'); canvas.width = 8; canvas.height = 8
-    const context = canvas.getContext('2d'); if (!context) throw new Error('Canvas unavailable')
-    context.fillStyle = '#3468ef'; context.fillRect(0, 0, 8, 8)
-    return canvas.toDataURL('image/png').split(',')[1] ?? ''
-  })
-  await settings.getByLabel('Upload avatar (PNG / JPEG / WebP, up to 2 MB)', { exact: true }).setInputFiles({
-    name: 'avatar.png', mimeType: 'image/png', buffer: Buffer.from(avatarPng, 'base64'),
-  })
-  await settings.getByRole('img', { name: 'Assistant avatar', exact: true }).waitFor()
-  expect(await settings.getByRole('img', { name: 'Assistant avatar', exact: true }).getAttribute('src')).toMatch(/^data:image\/webp;base64,/u)
-  await settings.getByRole('button', { name: '🦉', exact: true }).click()
-  await settings.getByLabel('Show model name on replies', { exact: true }).check()
-  await settings.getByLabel('Template').selectOption('project')
-  await settings.getByLabel('Responsibilities and preferences', { exact: true }).fill('Discuss the selected passage and check its claims.')
-  await settings.getByRole('button', { name: 'Save', exact: true }).click()
-  await settings.getByRole('button', { name: 'Review partner', exact: true }).waitFor()
-  await settings.getByLabel('Applies to').selectOption('project')
-  await settings.getByLabel('Absolute project path', { exact: true }).fill(scaffold.workspaceCwd)
-  await settings.getByLabel('Write explicit, verifiable preferences or facts', { exact: true }).fill('Use SI units.')
-  await settings.getByRole('button', { name: 'Save memory', exact: true }).click()
-  await settings.locator('article').filter({ hasText: 'Use SI units.' }).waitFor()
-  await page.screenshot({ path: '.artifacts/discussions-settings.png' })
-  await settings.getByRole('button', { name: 'Close', exact: true }).last().click()
-  const passage = page.getByText('DONE', { exact: true })
+  expect(await settings.getByRole('button', { name: 'Saved assistants', exact: true }).count()).toBe(0)
+  await page.keyboard.press('Escape')
+  await settings.waitFor({ state: 'detached' })
+  expect(await page.getByRole('button', { name: 'Discussions', exact: true }).count()).toBe(0)
+  const passage = page.getByText('DONE', { exact: true }).first()
   await passage.evaluate((element) => {
     const range = document.createRange(); range.selectNodeContents(element)
     const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range)
   })
   await passage.dispatchEvent('pointerup')
-  await page.getByRole('menuitem', { name: 'Discuss in sidebar', exact: true }).click()
-  await page.getByLabel('Topic title', { exact: true }).fill('Check this result')
-  await page.getByRole('button', { name: 'New discussion', exact: true }).click()
-  await page.getByRole('button', { name: 'Back to topics', exact: true }).waitFor()
-  const topics = scaffold.ctx.discussionController.topics('discussion-e2e-parent' as Parameters<typeof scaffold.ctx.discussionController.topics>[0])
-  const topic = topics[0]
-  if (!topic) throw new Error('Topic was not persisted')
-  const agent = scaffold.ctx.agents.get(topic.sessionId)
-  if (!agent) throw new Error('Topic Agent is unavailable')
-  const assembly = await scaffold.ctx.systemPrompt.assemble({ agent, scope: agent })
-  const context = assembly.contexts.find(value => value.name === 'discussion-assistant')
-  expect(context?.text).not.toContain('Use SI units.')
-  expect(context?.text).toContain('"text":"DONE"')
-  expect(context?.text).not.toContain('Discuss the selected passage and check its claims.')
-  expect(context?.interpolate).toBe(false)
-  const profile = scaffold.ctx.discussionController.assistants()[0]
-  if (!profile) throw new Error('Assistant was not persisted')
-  expect(profile.reasoningEffort).toBe('max')
-  await expect(scaffold.ctx.discussionController.createAssistant({ ...profile, reasoningEffort: 'not-supported' })).rejects.toThrow('unsupported')
-  await expect(scaffold.ctx.discussionController.updateAssistant(profile.id, profile.revision,
-    { ...profile, reasoningEffort: 'not-supported' })).rejects.toThrow('unsupported')
-  const updated = await scaffold.ctx.discussionController.updateAssistant(profile.id, profile.revision, { ...profile, memoryMode: 'off' })
-  const { reasoningEffort: _effort, ...defaultDraft } = updated
-  const defaulted = await scaffold.ctx.discussionController.updateAssistant(updated.id, updated.revision, defaultDraft)
-  expect(defaulted.reasoningEffort).toBeUndefined()
-  await scaffold.ctx.discussionController.updateAssistant(defaulted.id, defaulted.revision, { ...defaulted, reasoningEffort: 'max' })
-  const disabled = await scaffold.ctx.systemPrompt.assemble({ agent, scope: agent })
-  expect(disabled.contexts.find(value => value.name === 'discussion-assistant')?.text).not.toContain('Use SI units.')
-  expect(scaffold.ctx.discussionController.memories(profile.id)).toHaveLength(1)
-  await page.getByLabel('Write the conclusion to return to the parent', { exact: true }).fill('We should verify the source.')
-  await page.getByRole('button', { name: 'Add to parent draft', exact: true }).click()
-  await page.getByText('Added to the parent draft, not sent.', { exact: true }).waitFor()
-  expect(await page.locator('[data-conversation-region="chat"]').count()).toBeGreaterThanOrEqual(2)
-  await page.getByRole('button', { name: 'Back to topics', exact: true }).click()
-  await page.getByRole('button', { name: 'Archive', exact: true }).click()
-  await page.getByText('Archived', { exact: true }).waitFor()
-  await page.reload()
-  await page.getByRole('button', { name: 'Discussions', exact: true }).first().click()
-  await page.getByRole('button', { name: 'Check this result', exact: true }).waitFor()
-  await page.getByText('Archived', { exact: true }).waitFor()
-  await page.screenshot({ path: '.artifacts/discussions-board.png' })
-  await page.getByRole('button', { name: 'Check this result', exact: true }).click()
-  expect(await page.locator('[data-discussion-source]').textContent()).toContain('DONE')
-  expect(modelSteps).toBe(0)
+  await page.getByRole('menuitem', { name: 'Add annotation', exact: true }).waitFor()
+  expect(await page.getByRole('menuitem', { name: 'Discuss in sidebar', exact: true }).count()).toBe(0)
+  await page.keyboard.press('Escape')
   const requests: GenerateOptions[] = []
   scaffold.ctx.on('llm/stream', async function* (request) {
     requests.push(request)
     yield { type: 'block-start', index: 0, blockType: 'text' }
-    yield { type: 'text-delta', index: 0, text: 'Assistant fixture answer with context.' }
-    yield { type: 'block-end', index: 0, block: { type: 'text', text: 'Assistant fixture answer with context.' } }
+    yield { type: 'text-delta', index: 0, text: 'Ordinary conversation after retirement.' }
+    yield { type: 'block-end', index: 0, block: { type: 'text', text: 'Ordinary conversation after retirement.' } }
     yield { type: 'finish', reason: { kind: 'stop' } }
   }, { prepend: true })
-  const main = page.locator('[data-conversation-session="discussion-e2e-parent"]').first()
-  const editor = main.locator('[contenteditable="true"]').first()
-  await editor.fill('@Review')
-  await page.locator('[data-trigger-menu]').getByRole('option').filter({ hasText: 'Review partner' }).click()
-  await page.keyboard.type(' Please explain the earlier result.')
+  const main = page.locator('[data-conversation-session]').filter({ has: page.locator('[contenteditable="true"]') }).first()
+  await main.locator('[contenteditable="true"]').first().fill('@Retired helper fixture answer this as ordinary text.')
   await main.getByRole('button', { name: 'Send message', exact: true }).click()
-  await main.getByText('Assistant fixture answer with context.', { exact: true }).waitFor()
-  const identity = main.locator('[data-assistant-identity="Review partner"]')
-  await identity.waitFor()
-  expect(await main.locator('[data-message-literal]').last().innerText()).not.toContain('dsh-assistant:')
-  expect(await identity.innerText()).toContain('🦉')
-  expect(await identity.innerText()).toContain(profile.model)
+  await main.getByText('Ordinary conversation after retirement.', { exact: true }).waitFor()
   expect(requests).toHaveLength(1)
-  expect(requests[0]).toMatchObject({ provider: profile.provider, model: profile.model, reasoningEffort: 'max' })
-  expect(JSON.stringify(requests[0]?.messages)).toContain('DONE')
+  expect(requests[0]).toMatchObject({ provider: initialHeader.data.header.config.provider, model: initialHeader.data.header.config.model })
+  expect(JSON.stringify(requests[0]?.messages)).not.toContain(memory.text)
+  expect(JSON.stringify(requests[0]?.messages)).not.toContain('OLD DUTIES')
+  expect(scaffold.ctx.discussionController.assistants()).toContainEqual(assistant)
+  expect(scaffold.ctx.discussionController.memories(assistant.id)).toContainEqual(memory)
+  expect(scaffold.ctx.discussionController.topics(topic.parentSessionId)).toContainEqual(topic)
+  expect(scaffold.ctx.discussionController).not.toHaveProperty('createAssistant')
+  expect(scaffold.ctx.discussionController).not.toHaveProperty('createTopic')
   await page.reload()
-  await page.locator('[data-assistant-identity="Review partner"]').waitFor()
-  await page.screenshot({ path: '.artifacts/discussions-assistant-mention.png' })
-  await editor.fill('Continue with the ordinary conversation model.')
-  await main.getByRole('button', { name: 'Send message', exact: true }).click()
-  await expect.poll(() => requests.length).toBe(2)
-  expect(requests[1]).toMatchObject({ provider: initialHeader.data.header.config.provider, model: initialHeader.data.header.config.model })
+  await page.getByText('Ordinary conversation after retirement.', { exact: true }).waitFor()
+  await page.screenshot({ path: '.artifacts/discussion-retirement.png' })
   completed = true
 }, 120_000)

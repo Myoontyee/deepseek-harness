@@ -273,13 +273,13 @@ export interface SshProfile {
 
 ## `@deepseek-ai/dsh-api-discussion-controller`
 
-- `inject`: `typert` · `storageDomain` · `sessionController` · `systemPrompt` · `permissionPresets` · `agents`
-- `source`: [`packages/api/discussion-controller/src/index.ts:20`](../packages/api/discussion-controller/src/index.ts)
+- `inject`: `typert` · `storageDomain` · `sessionController` · `agents`
+- `source`: [`packages/api/discussion-controller/src/index.ts:13`](../packages/api/discussion-controller/src/index.ts)
 
 ```ts config-catalog
-/** Configurable upper bound on confirmed notes included in a model request. */
+/** Legacy configuration accepted for existing profiles; memory injection is retired. */
 export interface Config {
-  /** Maximum characters of complete confirmed memories included per model request; zero disables injection. */
+  /** Retained for configuration compatibility; no saved memory is injected. */
   maxMemoryChars: number
 }
 ```

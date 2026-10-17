@@ -8,12 +8,9 @@ Web Client 是由独立加载插件组装而成的浏览器侧 Cordis 应用。�
 
 ## 持久讨论与助手
 
-[讨论服务](../../packages/api/discussion-controller/README.zh.md)负责话题元数据和明确确认的记忆；[讨论界面](../../packages/client/ui-discussions/README.zh.md)为每个主对话打开一个讨论区。消息和附件由原生会话保存。关闭或归档话题不会删除历史，带回结论只更新主对话草稿。
+定制版已退役常驻助手和侧边讨论区。[历史服务](../../packages/api/discussion-controller/README.zh.md)保留只读记录，并在旧助手调用后恢复普通聊天。[兼容界面](../../packages/client/ui-discussions/README.zh.md)显示历史身份、关闭旧讨论标签，不删除原生会话。
 
-`DiscussionAssistant` 和 `AssistantDraft` 描述保存的身份、职责及记忆策略。`AssistantMemory` 和 `MemoryDraft` 描述按助手或精确项目限定的确认记忆。`DiscussionTopic` 和 `TopicDraft` 将独立会话关联到原始引用和主对话。`AssistantId`、`AssistantMemoryId` 和 `DiscussionId` 是不透明标识；`AssistantTemplate` 和 `AssistantMemoryMode` 分别选择初始策略和当前记忆范围。完整字段定义见 [types.ts](../../packages/api/discussion-controller/src/types.ts)。
-
-只有话题准备上下文时才读取记忆。不运行后台模型循环，也不自动提取事实。选中条目受配置的字符预算限制；关闭记忆仍保留已保存条目和对话历史。
-
+[types.ts](../../packages/api/discussion-controller/src/types.ts) 描述历史助手、记忆和话题记录。当前不提供设置页、助手提及来源或讨论创建操作，也不注入已保存的助手记忆。
 
 ## 分层与所有权
 
@@ -120,73 +117,25 @@ Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnp
 
 ### `ctx.discussionController` — `DiscussionController`
 
-Metadata lives in a storage domain; messages and attachments use native Session storage.
+Existing records remain readable; no creation, mutation or assistant selection is exposed.
 
 ```ts cordis-catalog
-/** List saved identities without starting any model process.
- * @returns Saved assistant profiles, including archived ones.
+/** Read retained profiles without activating their settings, memory or models.
+ * @returns Historical assistant records, including archived ones.
  */
 @Remote assistants(): DiscussionAssistant[]
 
-/** Save a user-defined assistant without creating a conversation.
- * @param draft - Explicit identity and memory policy.
- * @returns Durably stored assistant.
- */
-@Remote async createAssistant(draft: AssistantDraft): Promise<DiscussionAssistant>
-
-/** Update one profile without overwriting another window's edits.
- * @param id - Saved assistant identity.
- * @param revision - Revision shown in the editor.
- * @param draft - Replacement editable fields.
- * @returns Committed profile.
- */
-@Remote async updateAssistant(id: AssistantId, revision: number, draft: AssistantDraft): Promise<DiscussionAssistant>
-
-/** Read explicitly saved notes for the settings editor.
- * @param id - Assistant identity.
- * @returns Its stored memory entries, including entries currently disabled by policy.
+/** Read historical explicit notes without injecting them into any request.
+ * @param id - Original assistant identity.
+ * @returns Its retained memory entries.
  */
 @Remote memories(id: AssistantId): AssistantMemory[]
 
-/** Save a memory only after an explicit user action.
- * @param draft - Confirmed text and scope.
- * @returns Committed memory entry.
- */
-@Remote async remember(draft: MemoryDraft): Promise<AssistantMemory>
-
-/** Edit a confirmed note without overwriting another window's change.
- * @param id - Existing memory identity.
- * @param revision - Revision displayed in the editor.
- * @param draft - Replacement text and scope for the same assistant.
- * @returns Committed memory entry.
- */
-@Remote updateMemory(id: AssistantMemoryId, revision: number, draft: MemoryDraft): Promise<AssistantMemory>
-
-/** Remove one confirmed note without deleting any conversation.
- * @param id - Memory identity selected by the user.
- * @returns Whether an entry was removed.
- */
-@Remote forget(id: AssistantMemoryId): Promise<boolean>
-
-/** List the small topic index for one parent; transcript messages are loaded separately.
- * @param parentSessionId - Main conversation identity.
- * @returns Durable topics, most recently updated first.
+/** Read historical topic links; their conversations remain ordinary native Sessions.
+ * @param parentSessionId - Original parent conversation.
+ * @returns Retained metadata ordered by last update.
  */
 @Remote topics(parentSessionId: SessionId): DiscussionTopic[]
-
-/** Create an independent, initially read-only native Session, without running a model or copying parent history.
- * @param draft - Idempotency key, source quotation and selected assistant.
- * @returns Persisted topic and Session identity.
- */
-@Remote async createTopic(draft: TopicDraft): Promise<DiscussionTopic>
-
-/** Resolve, archive or reopen a topic without deleting its history.
- * @param id - Topic identity.
- * @param revision - Revision the caller displayed.
- * @param state - New topic visibility state.
- * @returns Committed metadata.
- */
-@Remote setTopicState(id: DiscussionId, revision: number, state: 'open' | 'resolved' | 'archived'): Promise<DiscussionTopic>
 ```
 
 Types: [SessionId](core.zh.md)
