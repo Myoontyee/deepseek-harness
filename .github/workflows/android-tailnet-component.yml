@@ -1,0 +1,45 @@
+name: Android embedded Tailscale component
+on:
+  push:
+    branches: [codex/android-tailnet-20261018]
+    paths: ['apps/android/tailnet/**', '.github/workflows/android-tailnet-component.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-tailnet-component
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Resolve pinned Tailscale dependency
+        working-directory: apps/android/tailnet
+        run: go mod tidy
+      - name: Build Android native helpers
+        working-directory: apps/android/tailnet
+        shell: bash
+        run: |
+          set -euo pipefail
+          ndk=$(find "$ANDROID_HOME/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          test -n "$ndk"
+          for target in arm64-v8a x86_64; do
+            if [ "$target" = arm64-v8a ]; then arch=arm64; cc=aarch64-linux-android26-clang; else arch=amd64; cc=x86_64-linux-android26-clang; fi
+            mkdir -p "out/$target"
+            GOOS=android GOARCH=$arch CGO_ENABLED=1 CC="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/$cc" go build -trimpath -buildmode=pie -tags netgo,osusergo -ldflags '-s -w -extldflags=-Wl,-z,max-page-size=16384' -o "out/$target/libdsh_tailnet.so" .
+          done
+          cp go.mod go.sum out/
+          sha256sum out/*/*.so > out/SHA256SUMS
+      - uses: actions/upload-artifact@v6
+        with:
+          name: android-tailnet-component
+          path: apps/android/tailnet/out/
+          retention-days: 7
