@@ -22,12 +22,32 @@ export function DevicesPage({ useDevices, deviceCommand, watchDevices, t }: Prop
       <div className="actions"><button onClick={() => { void deviceCommand('refresh') }}>{t('refresh')}</button>
         <button onClick={() => { void deviceCommand('invitation') }}>{t('devices.invite')}</button></div>
       {state.catalog.warning && <p role="status">{state.catalog.warning}</p>}
-      {state.catalog.detect && <div className="card"><h3>{t('devices.nearby')}</h3>
-        {state.catalog.peers.map(peer => <div key={peer.id}>
-          <span title={peer.os}><IconGlobeOutlineRegular size={16} /> {peer.name}</span> · {peer.os} · {peer.self ? t('devices.self') : peer.online ? t('devices.online') : t('devices.offline')}
-          {!peer.self && !state.catalog.paired.some(device => device.address === peer.address) && <button onClick={() => { setName(peer.name); setPairing(true) }}>{t('devices.choose')}</button>}
-        </div>)}
-      </div>}
+      {state.catalog.detect && <section className="dsh-device-inventory" aria-label={t('devices.nearby')}>
+        <div className="dsh-device-inventory-heading"><h3>{t('devices.nearby')}</h3></div>
+        {state.catalog.peers.length === 0 ? <p className="dsh-device-empty">{t('devices.noneFound')}</p> :
+          <table className="dsh-device-table">
+            <thead><tr><th scope="col">{t('devices.name')}</th><th scope="col">{t('devices.address')}</th>
+              <th scope="col">{t('devices.system')}</th><th scope="col">{t('devices.status')}</th><th scope="col">{t('devices.action')}</th></tr></thead>
+            <tbody>{state.catalog.peers.map((peer) => {
+              const paired = state.catalog.paired.find(device => device.address === peer.address)
+              const connected = paired !== undefined && state.sessions[paired.id] !== undefined && !state.failures[paired.id]
+              return <tr key={peer.id}>
+                <th scope="row"><span className="dsh-device-name"><IconGlobeOutlineRegular size={18} /><span>{peer.name}</span></span></th>
+                <td data-label={t('devices.address')}><code>{peer.address}</code></td>
+                <td data-label={t('devices.system')}>{peer.os}</td>
+                <td data-label={t('devices.status')}><span className="dsh-device-status" data-online={peer.self || connected || peer.online}>
+                  <span className="dsh-device-status-dot" aria-hidden="true" />
+                  {peer.self ? t('devices.self') : connected ? t('devices.connected') : peer.online ? t('devices.online') : t('devices.offline')}
+                </span></td>
+                <td data-label={t('devices.action')} className="dsh-device-actions">
+                  {peer.self ? <span className="dsh-device-muted">{t('devices.self')}</span> : paired ?
+                    <span className="dsh-device-muted">{t('devices.paired')}</span> :
+                    <button onClick={() => { setName(peer.name); setPairing(true) }}>{t('devices.choose')}</button>}
+                </td>
+              </tr>
+            })}</tbody>
+          </table>}
+      </section>}
       <details open={pairing} onToggle={(event) => { setPairing(event.currentTarget.open) }}><summary>{t('devices.pair')}</summary><p>{t('devices.pairHint')}</p>
         <label>{t('devices.name')}<input value={name} maxLength={200} onChange={(event) => { setName(event.target.value) }} /></label>
         <label>{t('devices.code')}<textarea value={code} maxLength={4096} autoComplete="off" spellCheck={false} onChange={(event) => { setCode(event.target.value) }} /></label>

@@ -17,7 +17,10 @@ export function parseTailDevices(value: unknown): TailDevice[] {
     const item = raw as Record<string, unknown>
     const address = Array.isArray(item.TailscaleIPs) ? item.TailscaleIPs.find(ip => typeof ip === 'string' && /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.(\d{1,3})\.(\d{1,3})$/u.test(ip) && ip.split('.').every(part => Number(part) <= 255)) : undefined
     if (typeof address !== 'string' || typeof item.ID !== 'string') return []
-    return [{ id: item.ID.slice(0, 200), name: typeof item.HostName === 'string' ? item.HostName.slice(0, 200) : address,
+    // DNSName follows the Tailnet machine name; HostName is the OS hostname.
+    const machineName = typeof item.DNSName === 'string' ? item.DNSName.trim().split('.')[0] : ''
+    const hostName = typeof item.HostName === 'string' ? item.HostName.trim() : ''
+    return [{ id: item.ID.slice(0, 200), name: (machineName || hostName || address).slice(0, 200),
       address, os: typeof item.OS === 'string' ? item.OS.slice(0, 40) : '', online: item.Online === true, self: index === 0 }]
   }).slice(0, 512)
 }
