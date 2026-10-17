@@ -32,6 +32,8 @@ public final class MainActivity extends Activity {
  private boolean foreground;
  private String openedTailnetAuth="";
  private SecureStore accountStore;
+ private SecureStore computersStore;
+ private final java.util.LinkedHashMap<String,JSONObject> computerGrants=new java.util.LinkedHashMap<>();
  private AccountSignIn signIn;
  private boolean connectionFailed;
  private android.net.ConnectivityManager networkManager;
@@ -53,6 +55,8 @@ public final class MainActivity extends Activity {
   store = new SecureStore(this);
   tailnet = new TailnetClient(this);
   accountStore = new SecureStore(this,"account");
+  computersStore=new SecureStore(this,"computers");
+  try{String saved=computersStore.read();if(saved!=null){JSONObject root=new JSONObject(saved);if(root.getInt("version")!=1)throw new Exception("Unknown saved device version");org.json.JSONArray entries=root.getJSONArray("connections");if(entries.length()>32)throw new Exception("Too many saved devices");for(int i=0;i<entries.length();i++){JSONObject entry=entries.getJSONObject(i);new Pairing(entry,"token");computerGrants.put(entry.getString("nodeId"),entry);}}}catch(Exception error){Toast.makeText(this,"已保存设备列表暂不可读，可以重新授权连接",Toast.LENGTH_LONG).show();}
   showStart();
  }
  private String appVersion() {
@@ -151,7 +155,7 @@ public final class MainActivity extends Activity {
        String name=peer.optString("name");boolean self=peer.optBoolean("self");
        LinearLayout row=new LinearLayout(MainActivity.this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(dp(12),dp(12),dp(12),dp(12));
        row.addView(text(name,18));row.addView(text(peer.optString("os")+" · "+(self?"此应用":peer.optBoolean("online")?"在线":"离线"),14));
-       if(!self){Button connect=button("连接此电脑");row.addView(connect);connect.setOnClickListener(v->connectTailnetPeer(peer,progress,connect));}
+       if(!self){Button connect=button("连接此电脑");row.addView(connect);connect.setOnClickListener(v->connectTailnetPeer(peer,progress,connect));if(computerGrants.containsKey(peer.optString("id"))){Button renew=button("重新授权");row.addView(renew);renew.setOnClickListener(v->connectTailnetPeer(peer,progress,renew,true));}}
        rows.addView(row);
       }
      }
@@ -163,13 +167,33 @@ public final class MainActivity extends Activity {
   logout.setOnClickListener(v->new AlertDialog.Builder(this).setMessage("退出应用内 Tailscale 后，需重新登录才能显示设备列表和连接电脑。").setPositiveButton("退出",(d,w)->worker.execute(()->{try{tailnet.command("logout");runOnUiThread(()->{if(!disposed&&generation==current){tailnetLoginRequested=false;tailnetHandler.removeCallbacks(poll);tailnetHandler.post(poll);}});}catch(Exception error){runOnUiThread(()->{if(!disposed&&generation==current)progress.setText(error.getMessage());});}})).setNegativeButton("取消",null).show());
   login.setOnClickListener(v->{login.setEnabled(false);tailnetLoginRequested=true;openedTailnetAuth="";worker.execute(()->{try{tailnet.command("login");runOnUiThread(()->{if(!disposed&&generation==current){login.setEnabled(true);tailnetHandler.removeCallbacks(poll);tailnetHandler.post(poll);}});}catch(Exception error){runOnUiThread(()->{if(!disposed&&generation==current){login.setEnabled(true);progress.setText(error.getMessage());}});}});});
  }
- private void connectTailnetPeer(JSONObject peer,TextView progress,Button button) {
+ private void saveComputer(JSONObject saved) throws Exception {
+  String id=saved.getString("nodeId");
+  if(!computerGrants.containsKey(id) && computerGrants.size()>=32)throw new Exception("已保存 32 台电脑，请在连接设置中清理后重试");
+  org.json.JSONArray entries=new org.json.JSONArray();
+  for(java.util.Map.Entry<String,JSONObject> entry:computerGrants.entrySet())if(!entry.getKey().equals(id))entries.put(entry.getValue());
+  entries.put(saved);computersStore.save(new JSONObject().put("version",1).put("connections",entries).toString());
+  computerGrants.put(id,saved);store.save(saved.toString());
+ }
+ private JSONObject savedComputer(JSONObject peer) {
+  try{
+   JSONObject saved=computerGrants.get(peer.getString("id"));
+   if(saved==null){String previous=store.read();if(previous!=null)saved=new JSONObject(previous);}
+   if(saved==null)return null;
+   Pairing pairing=new Pairing(saved,"token");String host=Uri.parse(pairing.origin).getHost();org.json.JSONArray addresses=peer.getJSONArray("addresses");
+   for(int i=0;i<addresses.length();i++)if(addresses.getString(i).equals(host))return new JSONObject(saved.toString()).put("nodeId",peer.getString("id")).put("tailnet",true);
+  }catch(Exception error){/* A fresh, explicitly approved connection remains available. */}
+  return null;
+ }
+ private void connectTailnetPeer(JSONObject peer,TextView progress,Button button) {connectTailnetPeer(peer,progress,button,false);}
+ private void connectTailnetPeer(JSONObject peer,TextView progress,Button button,boolean renew) {
+  if(!renew){JSONObject saved=savedComputer(peer);if(saved!=null){try{saveComputer(saved);openSavedConnection(new Pairing(saved,"token"));return;}catch(Exception error){progress.setText(error.getMessage());return;}}}
   final int current=generation;button.setEnabled(false);progress.setText("正在联系 "+peer.optString("name")+"，请在电脑确认连接…");
   worker.execute(()->{try{
    if(disposed||generation!=current)return;
    JSONObject response=tailnet.command(new JSONObject().put("action","pair").put("id",peer.getString("id")));
-   JSONObject saved=response.getJSONObject("connection").put("tailnet",true);new Pairing(saved,"token");
-   runOnUiThread(()->{if(disposed||generation!=current)return;try{store.save(saved.toString());openSavedConnection(new Pairing(saved,"token"));}catch(Exception error){button.setEnabled(true);progress.setText(error.getMessage());}});
+   JSONObject saved=response.getJSONObject("connection").put("tailnet",true).put("nodeId",peer.getString("id"));new Pairing(saved,"token");
+   runOnUiThread(()->{if(disposed||generation!=current)return;try{saveComputer(saved);openSavedConnection(new Pairing(saved,"token"));}catch(Exception error){button.setEnabled(true);progress.setText(error.getMessage());}});
   }catch(Exception error){runOnUiThread(()->{if(!disposed&&generation==current){button.setEnabled(true);progress.setText("连接未完成："+error.getMessage());}});}});
  }
  private boolean automaticReconnect() { return getSharedPreferences("options",MODE_PRIVATE).getBoolean("autoReconnect",true); }
@@ -240,12 +264,12 @@ public final class MainActivity extends Activity {
  @Override protected void onStart() {
   super.onStart();foreground=true;networkManager=(android.net.ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
   networkCallback=new android.net.ConnectivityManager.NetworkCallback(){@Override public void onAvailable(android.net.Network network){runOnUiThread(()->{
-   refreshNetworkLabels();
+   refreshNetworkLabels();tailnet.networkChanged();
    if(!disposed && web!=null && connected!=null && connectionFailed && automaticReconnect() && signedIn() && System.currentTimeMillis()-lastReconnect>5000){lastReconnect=System.currentTimeMillis();connectionFailed=false;status.setText("网络已恢复，正在重连已授权电脑…");web.reload();}
   });}
-   @Override public void onLost(android.net.Network network){runOnUiThread(()->refreshNetworkLabels());}
-   @Override public void onCapabilitiesChanged(android.net.Network network,android.net.NetworkCapabilities capabilities){runOnUiThread(()->refreshNetworkLabels());}
-   @Override public void onLinkPropertiesChanged(android.net.Network network,android.net.LinkProperties properties){runOnUiThread(()->refreshNetworkLabels());}
+   @Override public void onLost(android.net.Network network){runOnUiThread(()->{refreshNetworkLabels();tailnet.networkChanged();});}
+   @Override public void onCapabilitiesChanged(android.net.Network network,android.net.NetworkCapabilities capabilities){runOnUiThread(()->{refreshNetworkLabels();tailnet.networkChanged();});}
+   @Override public void onLinkPropertiesChanged(android.net.Network network,android.net.LinkProperties properties){runOnUiThread(()->{refreshNetworkLabels();tailnet.networkChanged();});}
   };
   try { networkManager.registerNetworkCallback(new android.net.NetworkRequest.Builder().removeCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(),networkCallback); } catch(SecurityException unavailable){networkCallback=null;}
  }
@@ -389,7 +413,7 @@ public final class MainActivity extends Activity {
  }
  private int normalizedPort(Uri uri) { return uri.getPort()==-1?443:uri.getPort(); }
  private void forget() {
-  store.clear();
+  store.clear();computersStore.clear();computerGrants.clear();
   if (web!=null) { web.stopLoading(); web.clearCache(true); web.clearHistory(); }
   CookieManager.getInstance().removeAllCookies(null); WebStorage.getInstance().deleteAllData();
   showPairing("本机保存的授权已清除。需要立即撤销所有活动连接时，请在电脑的“手机控制”中移除设备。");

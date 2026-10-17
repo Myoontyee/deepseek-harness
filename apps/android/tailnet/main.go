@@ -18,7 +18,7 @@ import (
  "strings"
  "time"
 
- _ "tailscale.com/feature/androidbin"
+ "tailscale.com/net/netmon"
  "tailscale.com/tsnet"
  "tailscale.com/ipn/ipnstate"
 )
@@ -41,9 +41,11 @@ func view(p *ipnstate.PeerStatus, self bool) device {
 }
 func main() {
  state:=flag.String("state","","private node state directory")
+ interfaces:=flag.String("interfaces","","Android network snapshot")
  flag.Parse()
  if *state=="" {fmt.Fprintln(os.Stderr,"private state directory required");os.Exit(2)}
  if err:=os.MkdirAll(*state,0700);err!=nil {os.Exit(2)}
+ netmon.RegisterInterfaceGetter(func() ([]netmon.Interface,error) {return readInterfaces(*interfaces)})
  logf:=func(string,...any){}
  srv:=&tsnet.Server{Dir:*state,Hostname:"deepseek-harness-desktop-android",Logf:logf,UserLogf:logf}
  if err:=srv.Start();err!=nil {json.NewEncoder(os.Stdout).Encode(map[string]any{"ok":false,"error":"Tailscale startup failed: "+err.Error()});return}
@@ -77,6 +79,9 @@ func main() {
   ctx,cancel:=context.WithTimeout(context.Background(),65*time.Second)
   var result any
   switch request.Action {
+  case "network":
+   srv.Sys().NetMon.Get().InjectEvent()
+   result=map[string]any{"ok":true}
   case "login":
    err=client.StartLoginInteractive(ctx)
    result=map[string]any{"ok":err==nil}

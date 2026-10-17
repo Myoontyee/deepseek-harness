@@ -23,7 +23,9 @@ jobs:
           cache: false
       - name: Resolve pinned Tailscale dependency
         working-directory: apps/android/tailnet
-        run: go mod tidy
+        run: |
+          go mod tidy
+          go test ./...
       - name: Build Android native helpers
         working-directory: apps/android/tailnet
         shell: bash
@@ -34,7 +36,7 @@ jobs:
           for target in arm64-v8a x86_64; do
             if [ "$target" = arm64-v8a ]; then arch=arm64; cc=aarch64-linux-android26-clang; else arch=amd64; cc=x86_64-linux-android26-clang; fi
             mkdir -p "out/$target"
-            GOOS=android GOARCH=$arch CGO_ENABLED=1 CC="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/$cc" go build -trimpath -buildmode=pie -tags netgo,osusergo -ldflags '-s -w -extldflags=-Wl,-z,max-page-size=16384' -o "out/$target/libdsh_tailnet.so" .
+            GOOS=android GOARCH=$arch CGO_ENABLED=1 CC="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/$cc" go build -trimpath -buildmode=pie -tags osusergo -ldflags '-s -w -extldflags=-Wl,-z,max-page-size=16384' -o "out/$target/libdsh_tailnet.so" .
           done
           cp go.mod go.sum out/
           cp "$(go env GOMODCACHE)/tailscale.com@v1.104.1/LICENSE" out/Tailscale-LICENSE.txt

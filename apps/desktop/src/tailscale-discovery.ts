@@ -24,12 +24,26 @@ export function parseTailDevices(value: unknown): TailDevice[] {
       address, os: typeof item.OS === 'string' ? item.OS.slice(0, 40) : '', online: item.Online === true, self: index === 0 }]
   }).slice(0, 512)
 }
-/** Query the installed local client with bounded output and execution time. */
-export async function discoverTailDevices(): Promise<TailDevice[]> {
+function tailscaleExecutable(): string {
   const candidates = process.platform === 'win32'
     ? [join(process.env.ProgramFiles ?? 'C:/Program Files', 'Tailscale/tailscale.exe')]
     : ['/Applications/Tailscale.app/Contents/MacOS/Tailscale', '/usr/local/bin/tailscale', '/opt/homebrew/bin/tailscale', '/usr/bin/tailscale']
-  const executable = candidates.find(path => existsSync(path)) ?? 'tailscale'
-  const { stdout } = await promisify(execFile)(executable, ['status', '--json'], { windowsHide: true, timeout: 8000, maxBuffer: 2 * 1024 * 1024 })
+  return candidates.find(path => existsSync(path)) ?? 'tailscale'
+}
+/** Query the installed local client with bounded output and execution time. */
+export async function discoverTailDevices(): Promise<TailDevice[]> {
+  const { stdout } = await promisify(execFile)(tailscaleExecutable(), ['status', '--json'], { windowsHide: true, timeout: 8000, maxBuffer: 2 * 1024 * 1024 })
   return parseTailDevices(JSON.parse(stdout))
+}
+/** Verify the connection source against the local Tailscale daemon before presenting approval.
+ * @param address - Actual remote socket address, never a forwarded header.
+ * @returns The daemon-authenticated node name.
+ */
+export async function identifyTailnetPeer(address: string): Promise<string> {
+  if (!/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}$/u.test(address) || address.split('.').some(part => Number(part) > 255)) throw new Error('Not a Tailscale source')
+  const { stdout } = await promisify(execFile)(tailscaleExecutable(), ['whois', '--json', address], { windowsHide: true, timeout: 8000, maxBuffer: 128 * 1024 })
+  const value = JSON.parse(stdout) as { Node?: { Name?: unknown; Addresses?: unknown } }
+  const node = value.Node
+  if (typeof node?.Name !== 'string' || !Array.isArray(node.Addresses) || !node.Addresses.some(ip => typeof ip === 'string' && ip.split('/')[0] === address)) throw new Error('Unknown Tailscale peer')
+  return (node.Name.split('.')[0] ?? '').replace(/[\x00-\x1f\x7f]/gu, '').slice(0, 100)
 }

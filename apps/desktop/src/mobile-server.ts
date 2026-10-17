@@ -86,7 +86,7 @@ export interface MobileServerOptions {
   seal(value: string): Buffer
   unseal(value: Buffer): string
   host(): { url: string; cookie: string } | undefined
-  approve(label: string): Promise<boolean>
+  approve(label: string, options?: { switchingNetwork: boolean }): Promise<boolean>
 }
 /** Device-scoped HTTPS gateway with short-lived pairing and active-stream revocation. */
 export class MobileServer {
@@ -215,6 +215,31 @@ export class MobileServer {
     await this.stop()
     this.state.enabled = resume
     this.save()
+  }
+  /** Issue a grant after the caller’s Tailnet identity and local approval have both been verified.
+   * @param label - Node name verified by the local Tailscale daemon.
+   * @param signal - Cancels the request if the phone disconnects or the discovery listener closes.
+   * @param address - Selected local Tailnet address; changing networks requires explicit approval.
+   * @returns Pinned gateway connection and device-scoped token.
+   */
+  async authorizeTailnetPeer(label: string, signal: AbortSignal, address?: string): Promise<{ url: string; pin: string; token: string }> {
+    if (signal.aborted || !this.enabled || this.pairing || this.state.devices.length >= 8) throw new Error('Mobile authorization unavailable')
+    this.pairing = true
+    const name = `Tailscale · ${label}`.replace(/[\x00-\x1f\x7f]/gu, '').slice(0, 100)
+    try {
+      const origin = this.origin
+      if (origin === undefined) throw new Error('Mobile authorization unavailable')
+      const switchingNetwork = address !== undefined && new URL(origin).hostname !== address
+      if (!(await this.options.approve(name, { switchingNetwork })) || signal.aborted || !this.enabled) throw new Error('Connection not approved')
+      if (switchingNetwork && address !== undefined) await this.start(address)
+      if (signal.aborted || !this.enabled) throw new Error('Connection cancelled')
+      const token = random()
+      this.state.devices.push({ id: randomUUID(), label: name, hash: digest(token), createdAt: new Date().toISOString() })
+      try { this.save() } catch (error) { this.state.devices.pop(); throw error }
+      const grantedOrigin = this.origin
+      if (grantedOrigin === undefined) throw new Error('Mobile authorization unavailable')
+      return { url: grantedOrigin, pin: this.pin, token }
+    } finally { this.pairing = false }
   }
   /** Create a new random, single-use pairing invitation valid for five minutes. */
   pairingCode(): string {
