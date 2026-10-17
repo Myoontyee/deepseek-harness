@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-api-discussion-controller",
   "description": "Persistent discussion topics and explicitly managed assistant memory",
-  "version": "0.2.1-rc.1",
+  "version": "0.2.1-rc.2",
   "publishConfig": {
     "access": "public"
   },
