@@ -5,7 +5,7 @@ import { createServer, request } from 'node:http'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { join, resolve, sep } from 'node:path'
 import { createTailnetPairingHandler, TailnetPairingServer } from '../src/tailnet-pairing.ts'
-import { MobileServer } from '../src/mobile-server.ts'
+import { MobileServer, mobileAddresses } from '../src/mobile-server.ts'
 
 async function fixture(options) {
  let handler
@@ -54,5 +54,21 @@ test('cancelled approval creates no grant; accepted approval returns a revocable
   finish(true);const connection=await second
   assert.equal(connection.pin,server.pin);assert.equal(connection.url,server.origin);assert.match(connection.token,/^[\w-]{43}$/)
   assert.equal(server.devices.length,1);server.revoke(server.devices[0].id);assert.equal(server.devices.length,0)
+ }finally{await server.dispose();assert.ok(root.startsWith(resolve('.artifacts')+sep));await rm(root,{recursive:true,force:true})}
+})
+
+test('approved network change rebinds the gateway before returning its pinned origin',async(t)=>{
+ const address=mobileAddresses().find(value=>value!=='127.0.0.1')
+ if(!address){t.skip('No private adapter on this test host');return}
+ const root=await mkdtemp(join(resolve('.artifacts'),'tailnet-switch-'))
+ let approved=false
+ const server=await MobileServer.create({path:join(root,'state'),seal:value=>Buffer.from(value),unseal:value=>value.toString(),host:()=>undefined,approve:async(label,options)=>{assert.equal(options.switchingNetwork,true);return approved}})
+ try{
+  await server.start('127.0.0.1')
+  await assert.rejects(server.authorizeTailnetPeer('verified-phone',new AbortController().signal,address))
+  assert.equal(new URL(server.origin).hostname,'127.0.0.1');assert.equal(server.devices.length,0)
+  approved=true
+  const connection=await server.authorizeTailnetPeer('verified-phone',new AbortController().signal,address)
+  assert.equal(new URL(connection.url).hostname,address);assert.equal(server.devices.length,1)
  }finally{await server.dispose();assert.ok(root.startsWith(resolve('.artifacts')+sep));await rm(root,{recursive:true,force:true})}
 })

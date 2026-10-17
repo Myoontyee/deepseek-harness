@@ -231,7 +231,7 @@ export class MobileServer {
       if (origin === undefined) throw new Error('Mobile authorization unavailable')
       const switchingNetwork = address !== undefined && new URL(origin).hostname !== address
       if (!(await this.options.approve(name, { switchingNetwork })) || signal.aborted || !this.enabled) throw new Error('Connection not approved')
-      if (switchingNetwork && address !== undefined) await this.start(address)
+      if (switchingNetwork && address !== undefined) { await this.stop(); await this.start(address) }
       if (signal.aborted || !this.enabled) throw new Error('Connection cancelled')
       const token = random()
       this.state.devices.push({ id: randomUUID(), label: name, hash: digest(token), createdAt: new Date().toISOString() })
