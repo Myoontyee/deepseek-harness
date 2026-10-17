@@ -6,8 +6,8 @@ android {
   applicationId = 'io.jadegate.dsh.companion'
   minSdk = 26
   targetSdk = 35
-  versionCode = (System.getenv('DSH_ANDROID_VERSION_CODE') ?: '2026100803').toInteger()
-  versionName = System.getenv('DSH_ANDROID_VERSION_NAME') ?: '0.2.1-alpha.1.20261008.3'
+  versionCode = (System.getenv('DSH_ANDROID_VERSION_CODE') ?: '2026101701').toInteger()
+  versionName = System.getenv('DSH_ANDROID_VERSION_NAME') ?: '0.2.1-rc.2.20261017.1'
  }
  if (System.getenv('DSH_ANDROID_KEYSTORE')) {
   signingConfigs { release { storeFile file(System.getenv('DSH_ANDROID_KEYSTORE')); storePassword System.getenv('DSH_ANDROID_STORE_PASSWORD'); keyAlias 'dsh-companion'; keyPassword System.getenv('DSH_ANDROID_STORE_PASSWORD') } }
@@ -17,3 +17,19 @@ android {
 }
 
 dependencies { implementation 'com.journeyapps:zxing-android-embedded:4.3.0' }
+
+// Keep callback proof checks in every APK build without introducing a test dependency.
+tasks.register('compileAccountProof', JavaCompile) {
+ source files('src/main/java/io/jadegate/dsh/companion/AccountProof.java', '../tests/AccountProofCheck.java')
+ classpath = files()
+ destinationDirectory = layout.buildDirectory.dir('account-proof')
+ options.encoding = 'UTF-8'
+ sourceCompatibility = '17'
+ targetCompatibility = '17'
+}
+tasks.register('verifyAccountProof', JavaExec) {
+ dependsOn tasks.named('compileAccountProof')
+ classpath = files(layout.buildDirectory.dir('account-proof'))
+ mainClass = 'io.jadegate.dsh.companion.AccountProofCheck'
+}
+tasks.named('preBuild').configure { dependsOn tasks.named('verifyAccountProof') }

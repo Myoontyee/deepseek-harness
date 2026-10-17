@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.1-rc.2/android-account-signin/guide.md
+/:
+  en: 2c148fe507809f0e
+  zh: 66d5758fdfad00b5
+/android-account-sign-in-before-computer-access:
+  en: a75487641f6a4782
+  zh: ee9c74cc2c40581d
+/android-account-sign-in-before-computer-access/change:
+  en: 04f9bb21388f911f
+  zh: 87a45e8843777408
+/android-account-sign-in-before-computer-access/migration:
+  en: 51334e6e82c464c5
+  zh: b557a2ccd2747f50
