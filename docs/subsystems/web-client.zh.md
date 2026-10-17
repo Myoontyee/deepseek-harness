@@ -10,7 +10,7 @@ Web Client 是由独立加载插件组装而成的浏览器侧 Cordis 应用。�
 
 定制版已退役常驻助手和侧边讨论区。[历史服务](../../packages/api/discussion-controller/README.zh.md)保留只读记录，并在旧助手调用后恢复普通聊天。[兼容界面](../../packages/client/ui-discussions/README.zh.md)显示历史身份、关闭旧讨论标签，不删除原生会话。
 
-[types.ts](../../packages/api/discussion-controller/src/types.ts) 描述历史助手、记忆和话题记录。当前不提供设置页、助手提及来源或讨论创建操作，也不注入已保存的助手记忆。
+[types.ts](../../packages/api/discussion-controller/src/types.ts) 描述历史助手、记忆和话题记录。当前不提供设置页、可选择的助手提及或讨论创建操作，也不注入已保存的助手记忆。旧输入引用会序列化为普通文字。
 
 ## 分层与所有权
 

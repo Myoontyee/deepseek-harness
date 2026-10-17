@@ -3,7 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type { SessionReference } from '@deepseek-ai/dsh-api-session-controller/client'
 import { registerAssistantIdentities } from './assistant-identities.ts'
-import { assistantReferenceRule } from './assistant-mentions.ts'
+import { assistantReferenceRule, registerRetiredAssistantReferences } from './assistant-mentions.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -19,13 +19,14 @@ declare module '@deepseek-ai/dsh-api-session-controller/client' {
 }
 
 /** Only historical message rendering and obsolete-tab cleanup remain active. */
-export const inject = ['uiConversation', 'sidebarRight']
+export const inject = ['uiConversation', 'sidebarRight', 'inputTriggers']
 
 /** Preserve old reply labels and close obsolete discussion panels without deleting Sessions.
  * @param ctx - Current Client scope.
  */
 export function apply(ctx: Context): void {
   registerAssistantIdentities(ctx)
+  registerRetiredAssistantReferences(ctx)
   ctx.effect(() => ctx.uiConversation.userText.register(assistantReferenceRule))
   ctx.effect(() => {
     let live = true, queued = false

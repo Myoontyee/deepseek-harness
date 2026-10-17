@@ -10,7 +10,7 @@ The Web Client is a browser-side Cordis application assembled from independently
 
 Saved assistants and sidebar discussions are retired in the custom build. The [archive service](../../packages/api/discussion-controller/README.md) retains read-only records and restores ordinary chat after a previously active assistant. The [compatibility UI](../../packages/client/ui-discussions/README.md) renders historical identities and closes obsolete discussion tabs without deleting native Sessions.
 
-The types in [types.ts](../../packages/api/discussion-controller/src/types.ts) describe historical assistant, memory and topic records. No settings page, assistant mention source, discussion creation operation or saved-memory injection is active.
+The types in [types.ts](../../packages/api/discussion-controller/src/types.ts) describe historical assistant, memory and topic records. No settings page, selectable assistant mentions, discussion creation operation or saved-memory injection is active. Old composer references serialize as ordinary text.
 
 ## Layers and ownership
 

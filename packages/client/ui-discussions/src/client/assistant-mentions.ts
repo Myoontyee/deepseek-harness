@@ -18,6 +18,18 @@ export const assistantReferenceRule: UserTextRule = {
   },
 }
 
+/** Keep old composer references sendable as ordinary text, without offering assistant candidates.
+ * @param ctx - Client scope providing the reference serializer registry.
+ */
+export function registerRetiredAssistantReferences(ctx: Context): void {
+  const text = (ref: string): string => ref.replace(/\[(@[^\]\n]*)\]\(dsh-assistant:[a-zA-Z0-9-]+\)/gu, '$1')
+  ctx.effect(() => ctx.inputTriggers.registerSource({
+    trigger: '@', name: 'saved-assistants', order: -20, showGroupTitle: false,
+    candidates: async () => [], onPick: () => undefined,
+    codec: { clipboardText: text, serialize: async ref => text(ref) },
+  }))
+}
+
 /** Register saved identities alongside other @ candidates.
  * @param ctx - The authenticated Client plugin scope.
  */

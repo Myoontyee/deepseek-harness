@@ -32,7 +32,9 @@ The custom desktop no longer registers saved-assistant settings, @ candidates, d
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 
-Only historical reply identity projection and historical mention-label rendering remain registered. The plugin closes obsolete `discussionboard` tabs when their conversation becomes visible, without deleting Sessions or other tabs. No profile list, model catalog or memory service is queried for these operations.
+Historical reply identity projection and mention-label rendering remain registered. The plugin closes obsolete `discussionboard` tabs when their conversation becomes visible, without deleting Sessions or other tabs. No profile list, model catalog or memory service is queried for these operations.
+
+Existing composer drafts may still contain an old assistant chip. A compatibility serializer converts it to ordinary nickname text when copied or sent and returns no autocomplete candidates; it never selects a profile or model.
 
 -----
 
