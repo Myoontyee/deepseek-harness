@@ -120,7 +120,7 @@ public final class MainActivity extends Activity {
     android.net.LinkProperties properties=manager.getLinkProperties(network);
     if(capabilities==null || properties==null || !capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN))continue;
     for(android.net.LinkAddress address:properties.getLinkAddresses()) { byte[] raw=address.getAddress().getAddress();
-     if(raw.length==4 && (raw[0]&255)==100 && (raw[1]&255)>=64 && (raw[1]&255)<=127)return "已检测到 VPN 中的 100.x 私网地址，可用于 Tailscale 连接。已授权的电脑按自动重连设置连接。";
+     if(raw.length==4 && (raw[0]&255)==100 && (raw[1]&255)>=64 && (raw[1]&255)<=127)return "已检测到 VPN 中的 100.x 私网地址。接下来请开启电脑上的 DSH 手机控制，并确认首次配对。";
     }
    }
 
@@ -180,6 +180,8 @@ public final class MainActivity extends Activity {
   content.addView(text("设置 → 连接电脑", 26));
   Button back=button("返回");content.addView(back);back.setOnClickListener(v->showHome(""));
   content.addView(text(networkSummary(),14));
+  content.addView(text("下一步：在电脑开启手机控制，再扫描 DSH 二维码。网络连通和电脑授权是两个步骤。",16));
+  try { String saved=store.read();if(saved!=null){Pairing previous=new Pairing(new JSONObject(saved),"token");Button reopen=button("重连已配对电脑");content.addView(reopen);reopen.setOnClickListener(v->showConnection(previous));} } catch(Exception error) { /* A new pairing remains available if the saved grant is unreadable. */ }
   TextView instructions = text("电脑和 DSH 需要保持运行。\n在电脑的“应用 → 手机控制”生成二维码，优先扫码连接；配对码也可以粘贴到这里。手机可以查看对话、发送任务并处理确认。\n\n同一 Wi-Fi 或已连通的私有网络均可；请勿把配对码发给其他人。",16);
   instructions.setPadding(0,dp(18),0,dp(18)); content.addView(instructions);
   EditText code = new EditText(this); code.setHint("粘贴电脑生成的配对码"); code.setMinLines(3); code.setMaxLines(6); code.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS); content.addView(code);

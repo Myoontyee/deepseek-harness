@@ -6,8 +6,8 @@ android {
   applicationId = 'io.jadegate.dsh.companion'
   minSdk = 26
   targetSdk = 35
-  versionCode = (System.getenv('DSH_ANDROID_VERSION_CODE') ?: '2026101701').toInteger()
-  versionName = System.getenv('DSH_ANDROID_VERSION_NAME') ?: '0.2.1-rc.2.20261017.1'
+  versionCode = (System.getenv('DSH_ANDROID_VERSION_CODE') ?: '2026101702').toInteger()
+  versionName = System.getenv('DSH_ANDROID_VERSION_NAME') ?: '0.2.1-rc.2.20261017.2'
  }
  if (System.getenv('DSH_ANDROID_KEYSTORE')) {
   signingConfigs { release { storeFile file(System.getenv('DSH_ANDROID_KEYSTORE')); storePassword System.getenv('DSH_ANDROID_STORE_PASSWORD'); keyAlias 'dsh-companion'; keyPassword System.getenv('DSH_ANDROID_STORE_PASSWORD') } }

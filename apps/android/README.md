@@ -4,6 +4,8 @@ English | [中文](README.zh.md)
 
 A personal Android companion for the opt-in Desktop phone-control gateway. This is not an official DeepSeek Android release. The PC and DSH must remain running. Android 8.0 or later is required; a recent Android System WebView is recommended.
 
+The launcher reuses the Desktop whale logo and supplies Android adaptive and round icon resources.
+
 ## Connect
 
 1. Sign in to DeepSeek in the system browser. The app uses the Platform PKCE authorization flow; passwords stay on the official page. The phone does not run an independent chat model. Existing computer grants survive an APK upgrade, but account sign-in is required before reopening them.

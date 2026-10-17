@@ -3,8 +3,8 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write apps/android/README.md
 /dsh-android-companion:
-  en: cfb0b30b971e61f2
-  zh: 21ce49d5bc0373fb
+  en: f248724f39dd4a58
+  zh: a3b4ea5f3b490618
 /dsh-android-companion/connect:
   en: 504661a8f5073217
   zh: eccde2393ab48f69
