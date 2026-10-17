@@ -32,7 +32,7 @@ export const connectionStyles = `
 .dsh-device-status { display:inline-flex; align-items:center; gap:8px; font-size:.9em; }
 .dsh-device-status-dot { width:7px; height:7px; flex-shrink:0; border-radius:50%; background:var(--dsw-alias-label-secondary); }
 .dsh-device-status[data-online=true] .dsh-device-status-dot { background:var(--dsw-alias-state-success-primary); }
-.dsh-device-table .dsh-device-actions { text-align:right; }
+.dsh-device-table thead th:last-child,.dsh-device-table .dsh-device-actions { text-align:center; }
 .dsh-device-actions button { white-space:nowrap; }
 .dsh-device-muted { color:var(--dsw-alias-label-secondary); font-size:.9em; }
 .dsh-device-empty { padding:0 20px 20px; }
