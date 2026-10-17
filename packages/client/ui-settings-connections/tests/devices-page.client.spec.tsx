@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import type { ComponentProps } from 'react'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { DevicesPage } from '../src/client/DevicesPage.tsx'
+import type {} from '../src/client/index.ts'
 import { zh } from '../src/client/locales.ts'
 
 afterEach(cleanup)

@@ -7,7 +7,7 @@ import { IconGlobeOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { DeviceActions } from './devices.ts'
 
 /** @param props - Device state and native commands. @returns The paired conversation hub. */
-export function DevicesPage({ useDevices, deviceCommand, watchDevices, t }: PropsRuntime<'main'> & PropsLocale<'settings.connections'> & InjectFace<DeviceActions>) {
+export function DevicesPage({ useDevices, deviceCommand, watchDevices, t }: PropsLocale<'settings.connections'> & InjectFace<DeviceActions>) {
   const state = useDevices(value => value)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
