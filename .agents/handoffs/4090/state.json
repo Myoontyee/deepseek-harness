@@ -1,7 +1,7 @@
 {
   "date": "2026-10-18",
   "timezone": "Asia/Shanghai",
-  "version": "0.2.1-rc.2.20261018.5",
+  "version": "0.2.1-rc.2.20261018.6",
   "officialBase": "dsh-v0.2.1-rc.2",
   "branch": "codex/android-tailnet-20261018",
   "android": {
@@ -13,16 +13,18 @@
     "licensesBundled": true,
     "sameSigningCertificate": true,
     "physicalPhoneTested": false,
-    "uiAssetsVerified": 65
+    "uiAssetsVerified": 65,
+    "version": "0.2.1-rc.2.20261018.5"
   },
   "windows": {
-    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.3-win-x64-unsigned.exe",
-    "bytes": 296434950,
-    "sha256": "32034a10c66e9b9ce8858caea9f6b2e41f918a664237028cd02f477b94290432",
+    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.6-win-x64-unsigned.exe",
+    "bytes": 296438549,
+    "sha256": "07748E0E2FAD6335001E8BA098FA1254E5E9B56144F80202D11F09870E890F2D",
     "buildGatesPassed": 9,
     "preparedRuntimeSmokePassed": true,
     "packagedRuntimeSmokePassed": true,
-    "featuresInPackagedMain": true
+    "featuresInPackagedMain": true,
+    "version": "0.2.1-rc.2.20261018.6"
   },
   "androidSigningCertificate": "e7f22b5b96df116121f091ad59eda08e7ce33225e39bebd89532660ce2949940",
   "checks": {
@@ -41,7 +43,20 @@
     "legacyRouteTestsPassed": 3,
     "nativeSelectionBrowserPassed": true,
     "nativeSelectionInstrumentationCompiled": true,
-    "nativeSelectionInstrumentationPassed": true
+    "nativeSelectionInstrumentationPassed": true,
+    "desktopPairingTransportTestsPassed": 13,
+    "desktopPairingViewStateTestsPassed": 8,
+    "desktopPairingReadinessBothComputersPassed": true,
+    "desktopPairingNativeApprovalValidated": false,
+    "desktopPairingPrePushTypecheckPassed": true,
+    "docsQuickPassed": 18,
+    "docsQuickFailed": 3,
+    "docsGraphRecheckPassed": true,
+    "docsGraphHeapMB": 3072,
+    "docsSyncInitialPassed": 37,
+    "docsSyncInitialFailed": 6,
+    "docsOutstandingFailures": 5,
+    "desktopPairingChangedHelpersClientStrictLintPassed": true
   },
   "androidCloud": {
     "run": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39129299532",
@@ -53,13 +68,19 @@
     "currentVersionValidated": true
   },
   "remoteTransfer": {
-    "completed": false,
-    "reason": "SSH now works; both bootstrap listeners respond. Existing 4090 workspace/toolchain cache must be inspected before transfer. Current connection uses Tailnet relay."
+    "completed": true,
+    "path": "D:/DeepseekHarness/handoff-20261018",
+    "localBranch": "codex/laptop-handoff-20261018",
+    "originalPath": "D:/DeepseekHarness/deepseek-harness",
+    "originalChangesPreserved": 1,
+    "checksumVerified": true,
+    "dependenciesInstalled": false,
+    "node": "24.14.0"
   },
   "remainingRepositoryChecks": [
-    "Existing discussion documentation: broken anchors, model-experience/limitations sections and missing routing return type",
-    "Existing client UI localization literals",
-    "CLI help reference timed out in the documentation batch; not an installer runtime failure",
-    "Full lint reports pre-existing issues in other UI plugins; changed device/phone files pass focused strict lint"
+    "Existing removed-discussion documentation: broken anchors, Model Experience and limitations entries, plus assistantReturnRoute return annotation",
+    "CLI help generation failed in the complete documentation batch; no installer runtime failure",
+    "Full documentation run initially exhausted the 2 GB graph-process heap; isolated graph verification passed at 3 GB",
+    "Legacy Desktop type-aware lint findings remain outside the new helper/client scope; new helpers and changed client files pass focused strict lint"
   ]
 }
