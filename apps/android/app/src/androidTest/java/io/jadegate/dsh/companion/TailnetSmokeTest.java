@@ -32,7 +32,8 @@ public final class TailnetSmokeTest {
   UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
   assertTrue(device.wait(Until.hasObject(By.textContains("你好，今天想聊些什么")),15000));
   assertFalse(device.hasObject(By.text("登录 Tailscale，自动发现设备")));
-  androidx.test.uiautomator.UiObject2 history=device.wait(Until.findObject(By.desc("对话记录")),5000);
+  androidx.test.uiautomator.UiObject2 history=device.wait(Until.findObject(By.text("对话记录")),5000);
+  if(history==null)history=device.wait(Until.findObject(By.desc("对话记录")),3000);
   assertNotNull("History must open the Desktop-style sidebar",history);history.click();
   androidx.test.uiautomator.UiObject2 settings=device.wait(Until.findObject(By.text("设置")),5000);
   if(settings==null)settings=device.wait(Until.findObject(By.descContains("设置")),3000);

@@ -34,13 +34,34 @@ public final class SelectionSmokeTest {
    UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
    UiObject2 text=device.wait(Until.findObject(By.text(quotation)),15000);assertNotNull("The fixture quotation must render",text);text.longClick();
    UiObject2 annotate=device.wait(Until.findObject(By.text("添加批注")),5000);assertNotNull("Android selection menu must offer Add annotation",annotate);annotate.click();
-   assertTrue("The inline comment editor must open",device.wait(Until.hasObject(By.desc("批注评论")),5000));
-   assertTrue("Original text must remain beside the comment field",device.hasObject(By.text(quotation)));
+   JSONObject state=pageState();
+   assertTrue("The inline comment editor must open: "+state,state.getBoolean("open"));
+   String selected=state.getString("quote").trim();
+   assertTrue("Android's selected word must remain beside the comment field: "+state,!selected.isEmpty()&&quotation.contains(selected));
   }finally{
    InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
     for(Stage stage:Stage.values())for(android.app.Activity activity:new java.util.ArrayList<>(ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(stage)))if(activity instanceof MainActivity)activity.finish();
    });
    PhoneChatScreen.testConnections=previousConnections;if(previous==null)account.clear();else account.save(previous);
   }
+ }
+ private static JSONObject pageState() throws Exception {
+  java.util.concurrent.CountDownLatch done=new java.util.concurrent.CountDownLatch(1);
+  java.util.concurrent.atomic.AtomicReference<String> result=new java.util.concurrent.atomic.AtomicReference<>();
+  InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
+   for(android.app.Activity activity:ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)){
+    android.webkit.WebView view=findWeb(activity.findViewById(android.R.id.content));if(view==null)continue;
+    view.evaluateJavascript("JSON.stringify({open:document.querySelector('#annotation')?.open===true,quote:document.querySelector('#quote')?.textContent||'',helper:typeof window.dshNativeAnnotate})",value->{result.set(value);done.countDown();});return;
+   }
+   done.countDown();
+  });
+  assertTrue("WebView must respond after the native menu action",done.await(5,java.util.concurrent.TimeUnit.SECONDS));
+  assertNotNull("The foreground Activity must contain its chat WebView",result.get());
+  return new JSONObject((String)new org.json.JSONTokener(result.get()).nextValue());
+ }
+ private static android.webkit.WebView findWeb(android.view.View root){
+  if(root instanceof android.webkit.WebView)return (android.webkit.WebView)root;
+  if(root instanceof android.view.ViewGroup){android.view.ViewGroup group=(android.view.ViewGroup)root;for(int i=0;i<group.getChildCount();i++){android.webkit.WebView view=findWeb(group.getChildAt(i));if(view!=null)return view;}}
+  return null;
  }
 }
