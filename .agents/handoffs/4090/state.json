@@ -32,13 +32,15 @@
     "prePushTypecheckPassed": true,
     "physicalCrossDeviceValidated": false,
     "affectedStrictLintPassed": true,
-    "latestSourceBuildGatesPassed": 9
+    "latestSourceBuildGatesPassed": 9,
+    "androidEmulatorPassed": true
   },
   "androidCloud": {
     "run": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39110781782",
-    "status": "in-progress-after-settings-locator-fix",
+    "status": "success",
     "nativeNodeAndDatabasePassed": true,
-    "chatHomePassed": true
+    "chatHomePassed": true,
+    "testsPassed": 3
   },
   "remoteTransfer": {
     "completed": false,
