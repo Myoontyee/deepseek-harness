@@ -2,7 +2,9 @@
 import { CredentialScanner } from './credential-scanner.ts'
 import { formatTables } from './format-tables.ts'
 
-/** @returns A synchronous text masker with its own bounded scanner cache. */
+/** Create an independent credential masker for content-only previews.
+ * @returns A synchronous text masker with its own bounded scanner cache.
+ */
 export function createCredentialTextMask(): (text: string) => string {
   const scanner = new CredentialScanner(formatTables())
   return (text) => {

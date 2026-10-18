@@ -30,6 +30,7 @@ export interface DeviceActions {
 /**
  * Create one plugin-lifetime owner; polling runs only while the device panel is mounted.
  * @param invoke - Validated local Desktop IPC operations.
+ * @param maskPhoneText - Credential masking supplied by the conversation service.
  * @returns Device commands, observable display state and owner teardown.
  */
 export function createDeviceActions(

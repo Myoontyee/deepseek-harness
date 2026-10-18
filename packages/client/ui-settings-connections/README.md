@@ -9,9 +9,9 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Connections settings for saved OpenSSH servers. Displays discovered aliases, saves names and POSIX directories, tests authentication, and opens a remote terminal or dedicated SSH conversation.
+Manage OpenSSH servers, test authentication and open remote terminals or SSH conversations.
 
-Desktop also provides a Devices and conversations sidebar entry. Optional Tailscale discovery lists visible peers without granting access. Device names follow the Tailscale machine name, falling back to the OS hostname or address. The responsive table separates names, addresses, systems, connection states and pairing actions. A one-use invitation and approval on the other computer authorize connection; device credentials stay in local OS-encrypted storage. The panel polls paired computers while open and groups their conversations by device. Opening a conversation uses an isolated, certificate-pinned remote window without local Desktop APIs.
+Desktop's Devices and conversations panel lists Tailscale peers by their configured names and separates discovery from authorization. One-use invitations require approval on the other computer; credentials stay in local OS-encrypted storage. While open, the panel refreshes paired computers and opens their conversations in certificate-pinned windows without local Desktop APIs. It also previews phone transcripts and annotations synchronized by authorized phones; continue those replies on the phone. Credential masking follows the conversation service.
 
 ## Table of Contents
 

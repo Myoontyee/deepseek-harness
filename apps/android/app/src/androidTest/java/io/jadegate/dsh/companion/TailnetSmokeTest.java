@@ -33,7 +33,11 @@ public final class TailnetSmokeTest {
   assertTrue(device.wait(Until.hasObject(By.text("DeepSeek Harness Desktop")),15000));
   assertTrue(device.wait(Until.hasObject(By.textContains("你好，今天想聊些什么")),15000));
   assertFalse(device.hasObject(By.text("登录 Tailscale，自动发现设备")));
-  device.findObject(By.desc("设置")).click();
+  androidx.test.uiautomator.UiObject2 settings=device.wait(Until.findObject(By.text("设置")),5000);
+  if(settings==null)settings=device.wait(Until.findObject(By.descContains("设置")),3000);
+  if(settings==null)settings=device.wait(Until.findObject(By.text("⚙")),3000);
+  if(settings==null)device.dumpWindowHierarchy(System.out);
+  assertNotNull("The phone chat must expose a Settings button",settings);settings.click();
   assertTrue(device.wait(Until.hasObject(By.text("登录 Tailscale，自动发现设备")),15000));
   assertTrue(device.takeScreenshot(new java.io.File(context.getCacheDir(),"tailnet-home.png")));
  }

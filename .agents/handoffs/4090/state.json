@@ -1,32 +1,50 @@
 {
-  "androidBehaviorSource": "4ee06df05afd9f73e47d63052b8ff4adc11f0f6a",
-  "version": "0.2.1-rc.2.20261018.2",
+  "date": "2026-10-18",
+  "timezone": "Asia/Shanghai",
+  "version": "0.2.1-rc.2.20261018.3",
+  "officialBase": "dsh-v0.2.1-rc.2",
+  "branch": "codex/android-tailnet-20261018",
   "android": {
-    "passed": true,
-    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.2-android-arm64.apk",
-    "bytes": 9072490,
-    "sha256": "724ffd59c60c2137218321e79069214e913721b72240f5f893c67fabfdca6b1c",
+    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.3-android-arm64.apk",
+    "bytes": 10131407,
+    "sha256": "A24E505CC724C76732ECCC2A618A9D86D165D623D9A3D6FEF27D87958525F907",
     "abi": "arm64-v8a",
     "nativeMatchesLocalBuild": true,
     "licensesBundled": true,
     "sameSigningCertificate": true,
     "physicalPhoneTested": false
   },
-  "remoteTransfer": {
-    "reason": "4090-server Tailnet node key expired; checkout/toolchain unverified",
-    "completed": false
-  },
   "windows": {
-    "Path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.2-win-x64-unsigned.exe",
-    "Bytes": 296428569,
-    "SHA256": "E542AE3B9F9289231F3349A7E3526F3A6041D43B125095AACED5B50938DAD5A6"
+    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.3-win-x64-unsigned.exe",
+    "bytes": 296434950,
+    "sha256": "32034a10c66e9b9ce8858caea9f6b2e41f918a664237028cd02f477b94290432",
+    "buildGatesPassed": 9,
+    "preparedRuntimeSmokePassed": true,
+    "packagedRuntimeSmokePassed": true,
+    "featuresInPackagedMain": true
   },
-  "androidCloudRun": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39056040708",
-  "windowsSource": "0b97f14299910b0877e992e1827946d600d7f450",
-  "timezone": "Asia/Shanghai",
-  "branch": "codex/android-tailnet-20261018",
-  "physicalPhoneValidated": false,
-  "date": "2026-10-18",
   "androidSigningCertificate": "e7f22b5b96df116121f091ad59eda08e7ce33225e39bebd89532660ce2949940",
-  "officialBase": "dsh-v0.2.1-rc.2"
+  "checks": {
+    "modelProtocolTestsPassed": 6,
+    "phoneBrowserSmokePassed": true,
+    "desktopBootstrapAndPhoneStoragePassed": true,
+    "devicePreviewAndMaskingTestsPassed": 5,
+    "prePushTypecheckPassed": true,
+    "physicalCrossDeviceValidated": false
+  },
+  "androidCloud": {
+    "run": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39109227783",
+    "status": "settings-locator-fixed-rerun-pending",
+    "nativeNodeAndDatabasePassed": true,
+    "chatHomePassed": true
+  },
+  "remoteTransfer": {
+    "completed": false,
+    "reason": "Last check: 4090-server Tailnet node key expired; checkout/toolchain unverified"
+  },
+  "remainingRepositoryChecks": [
+    "Existing discussion documentation: broken anchors, model-experience/limitations sections and missing routing return type",
+    "Existing client UI localization literals",
+    "CLI help reference timed out in the documentation batch; not an installer runtime failure"
+  ]
 }

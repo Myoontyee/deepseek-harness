@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-This is the owner's development handoff dated 2026-10-18 (Asia/Shanghai). Read the repository [AGENTS.md](../../../AGENTS.md) before editing. [state.json](state.json) records exact build inputs, checksums and delivery status.
+This is the owner's development handoff dated 2026-10-18 (Asia/Shanghai). Read the repository [AGENTS.md](../../../AGENTS.md) before editing. [state.json](state.json) records installer versions, checksums and delivery status.
 
 ## Scope
 
@@ -10,11 +10,11 @@ Move subsequent development to the 4090 machine to reduce laptop load. The owner
 
 The latest owner request explicitly supersedes the previous phone scope: Android must open independent account-authenticated chat; computer access is optional in Settings. Phone history includes approved computer conversations with a globe icon. Phones synchronize content-only transcript and annotation copies to Desktop, where they are read-only previews. Resident assistants and side discussions remain removed. Preserve existing annotation drafts, inline editing, scrolling, keyboard shortcuts, Markdown links/formulas, secret redaction and the separate official/custom update indicators. Do not silently disable mandatory-update or package-verification protections.
 
-## Previously delivered
+## Current installers
 
-Windows and Android version **0.2.1-rc.2.20261018.2** use official base **dsh-v0.2.1-rc.2**. Both installers are in the laptop's `D:/DeepseekHarness/SetupBackage`. Android ARM64 matches the owner's vivo phone and uses the existing signing certificate, so it can upgrade the previous installation.
+Windows and Android version **0.2.1-rc.2.20261018.3** use official base **dsh-v0.2.1-rc.2**. Both installers are in the laptop's `D:/DeepseekHarness/SetupBackage`. Android ARM64 matches the owner's vivo phone and uses the existing signing certificate, so it can upgrade the previous installation.
 
-The next local build opens phone chat after official DeepSeek sign-in. Embedded Tailscale starts only for optional connection management or previously approved remote access. First use requires its own official Tailscale browser authorization; it cannot read another Android app's private credentials. It then lists account-visible devices automatically. Selecting a matching Desktop requests approval on that computer without QR or IP entry. The computer and app must remain running. QR pairing remains a backup.
+Android opens phone chat after official DeepSeek sign-in. Embedded Tailscale starts only for optional connection management or previously approved remote access. First use requires its own official Tailscale browser authorization; it cannot read another Android app's private credentials. It then lists account-visible devices automatically. Selecting a matching Desktop requests approval on that computer without QR or IP entry. The computer and app must remain running. QR pairing remains a backup.
 
 ## Start on 4090
 
@@ -34,13 +34,13 @@ For Windows, the laptop has an offline packaging adapter and caches outside trac
 
 ## Verification
 
-The cloud Android build passed native Go tests and Android 35 emulator tests under a normal app UID, including a real official Tailscale login URL and home-page name. The local ARM64 binary was built with the pinned Go/NDK toolchain; local network tests, PKCE rejection tests, APK signature/certificate checks, ABI/name/version checks and 16KB ELF segment alignment passed. Physical-phone login and the complete cross-device connection still need owner validation.
+Current checks cover native Go tests, six model-protocol tests, browser annotation/Markdown/remote-row behavior, and Android emulator checks for native node startup, database persistence and the independent chat home. The Settings accessibility locator was repaired after its first emulator run; see state.json for the latest full run status. The local ARM64 binary was built with the pinned Go/NDK toolchain; local network tests, PKCE rejection tests, APK signature/certificate checks, ABI/name/version checks and 16KB ELF segment alignment passed. Physical-phone login and the complete cross-device connection still need owner validation.
 
 Eight Desktop bootstrap/transport tests passed. An isolated test also used the laptop's real Tailscale daemon identity and private address to obtain and revoke a grant. Windows compiler/bundle gates and final packaged runtime checks passed. The packaged main was checked for the new bootstrap and daemon identity logic. These results do not mean every pre-existing UI test passes.
 
 ## Current local changes
 
-The current source adds phone model/effort selection, streamed Messages requests, account-scoped compressed transcripts/drafts, Markdown/TeX annotations and optional mirrored history. QR-free approval cancellation releases old pending requests; service probes distinguish DSH readiness from Tailnet online state. The remote operator toolbar is removed, remote conversation rows show a globe, and unrelated subresource errors do not revoke device authorization. Build and delivery evidence for this work must be recorded in state.json after verification.
+The current source adds phone model/effort selection, streamed Messages requests, account-scoped compressed transcripts/drafts, Markdown/TeX annotations and optional mirrored history. QR-free approval cancellation releases old pending requests; service probes distinguish DSH readiness from Tailnet online state. The remote operator toolbar is removed, remote conversation rows show a globe, and unrelated subresource errors do not revoke device authorization. Build and delivery evidence is recorded in state.json.
 
 ## Important implementation boundaries
 
