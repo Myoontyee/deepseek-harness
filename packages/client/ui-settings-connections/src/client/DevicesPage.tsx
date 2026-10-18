@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
-import { IconGlobeOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconGlobeOutlineRegular, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { DeviceActions } from './devices.ts'
+import { createCredentialTextMask } from '@deepseek-ai/dsh-client-ui-secret-mask/src/client/masked-text.ts'
 
 /** @param props - Device state and native commands. @returns The paired conversation hub. */
 export function DevicesPage({ useDevices, deviceCommand, watchDevices, t }: PropsLocale<'settings.connections'> & InjectFace<DeviceActions>) {
@@ -13,6 +14,8 @@ export function DevicesPage({ useDevices, deviceCommand, watchDevices, t }: Prop
   const [code, setCode] = useState('')
   const [pairing, setPairing] = useState(false)
   const [search, setSearch] = useState('')
+  const labels = { code: { copyLabel: t('phone.copy'), copiedLabel: t('phone.copied') }, footnotes: t('phone.footnotes') }
+  const [mask] = useState(createCredentialTextMask)
   useEffect(watchDevices, [watchDevices])
   return <section className="dsh-connections dsh-device-hub">
     <h2>{t('devices.title')}</h2><p>{t('devices.hint')}</p>
@@ -57,6 +60,26 @@ export function DevicesPage({ useDevices, deviceCommand, watchDevices, t }: Prop
       </details>
     </fieldset>
     {state.error && <p role="alert" className="error">{state.error}</p>}
+    <section className="card">
+      <h3>{t('phone.title')}</h3><p>{t('phone.hint')}</p>
+      {state.phones.length === 0 && <p>{t('phone.empty')}</p>}
+      {state.phones.filter(row => row.title.toLocaleLowerCase().includes(search.toLocaleLowerCase())).map(row =>
+        <button key={row.id} className="dsh-device-session" onClick={() => { void deviceCommand('readPhoneConversation', { id: row.id }) }}>
+          <span>{row.title}</span><span>{row.device} · {new Date(row.updated).toLocaleString()}</span>
+        </button>)}
+      {state.phone && <section className="dsh-phone-transcript">
+        <h3>{state.phone.title}</h3><button onClick={() => { void deviceCommand('closePhoneConversation') }}>{t('phone.close')}</button>
+        {state.phone.messages.map((turn, index) => <article key={index}>
+          <h4>{turn.role === 'user' ? t('phone.user') : turn.model}</h4>
+          <MarkdownText text={mask(turn.text)} labels={labels} />
+        </article>)}
+        <h4>{t('phone.annotations')}</h4>
+        {state.phone.annotations.map((note, index) => <article key={index}>
+          <blockquote><MarkdownText text={mask(note.quote)} labels={labels} /></blockquote>
+          <MarkdownText text={mask(note.comment)} labels={labels} />
+        </article>)}
+      </section>}
+    </section>
     <label>{t('devices.search')}<input value={search} onChange={(event) => { setSearch(event.target.value) }} /></label>
     {state.catalog.paired.length === 0 && <p>{t('devices.empty')}</p>}
     {state.catalog.paired.map(device => <section className="card" key={device.id}>

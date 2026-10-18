@@ -40,7 +40,7 @@ final class Pairing {
   try { cert.checkValidity(); return MessageDigest.isEqual(pin.getBytes(StandardCharsets.US_ASCII), fingerprint(cert).getBytes(StandardCharsets.US_ASCII)); }
   catch (Exception error) { return false; }
  }
- JSONObject pair(String label) throws Exception {
+ private HttpsURLConnection open(String path) throws Exception {
   SSLContext tls = SSLContext.getInstance("TLS");
   tls.init(null, new TrustManager[]{new X509TrustManager() {
    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
@@ -49,11 +49,25 @@ final class Pairing {
     if (chain.length == 0 || !accepts(chain[0])) throw new java.security.cert.CertificateException("电脑证书已改变，请重新配对");
    }
   }}, null);
-  HttpsURLConnection connection = (HttpsURLConnection) new URL(origin + "/_dsh_mobile/pair").openConnection();
+  HttpsURLConnection connection = (HttpsURLConnection) new URL(origin + path).openConnection();
   connection.setSSLSocketFactory(tls.getSocketFactory());
   connection.setHostnameVerifier((name, session) -> { try { return name.equals(new URI(origin).getHost()) && accepts((X509Certificate)session.getPeerCertificates()[0]); } catch(Exception e) { return false; } });
-  connection.setConnectTimeout(15000); connection.setReadTimeout(20000); connection.setInstanceFollowRedirects(false);
+  connection.setConnectTimeout(15000); connection.setReadTimeout(65000); connection.setInstanceFollowRedirects(false);
   connection.setRequestMethod("POST"); connection.setDoOutput(true); connection.setRequestProperty("Content-Type", "application/json");
+  return connection;
+ }
+ void sync(JSONObject body) throws Exception {
+  HttpsURLConnection connection=open("/_dsh_mobile/phone-sync");connection.setRequestProperty("Cookie","__Host-dsh-device="+secret);
+  byte[] bytes=body.toString().getBytes(StandardCharsets.UTF_8);if(bytes.length>4*1024*1024)throw new Exception("同步内容过大");connection.setFixedLengthStreamingMode(bytes.length);
+  try{try(java.io.OutputStream out=connection.getOutputStream()){out.write(bytes);}if(connection.getResponseCode()!=200)throw new Exception("电脑没有确认同步，请更新电脑客户端或检查授权（"+connection.getResponseCode()+"）");}finally{connection.disconnect();}
+ }
+ JSONObject sessions() throws Exception {
+  HttpsURLConnection connection=open("/api/session/list");connection.setRequestProperty("Cookie","__Host-dsh-device="+secret);connection.setReadTimeout(10000);
+  byte[] bytes=new JSONObject().put("type","client-request").put("rpcId",java.util.UUID.randomUUID().toString()).put("method","session/list").put("payload",new JSONObject().put("args",new JSONObject().put("_request",new JSONObject()))).toString().getBytes(StandardCharsets.UTF_8);connection.setFixedLengthStreamingMode(bytes.length);
+  try{try(java.io.OutputStream out=connection.getOutputStream()){out.write(bytes);}if(connection.getResponseCode()!=200)throw new Exception("电脑对话暂不可用（"+connection.getResponseCode()+"）");java.io.ByteArrayOutputStream result=new java.io.ByteArrayOutputStream();try(java.io.InputStream in=connection.getInputStream()){byte[] block=new byte[4096];int count;while((count=in.read(block))!=-1){if(result.size()+count>4*1024*1024)throw new Exception("电脑列表过大");result.write(block,0,count);}}return new JSONObject(result.toString("UTF-8"));}finally{connection.disconnect();}
+ }
+ JSONObject pair(String label) throws Exception {
+  HttpsURLConnection connection=open("/_dsh_mobile/pair");
   byte[] body = new JSONObject().put("code", secret).put("label", label).toString().getBytes(StandardCharsets.UTF_8);
   connection.setFixedLengthStreamingMode(body.length);
   try {

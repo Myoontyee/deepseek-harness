@@ -3,14 +3,14 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.1-rc.2/android-account-signin/guide.md
 /:
-  en: 2c148fe507809f0e
-  zh: 66d5758fdfad00b5
-/android-account-sign-in-before-computer-access:
-  en: a75487641f6a4782
-  zh: ee9c74cc2c40581d
-/android-account-sign-in-before-computer-access/change:
-  en: 04f9bb21388f911f
-  zh: 87a45e8843777408
-/android-account-sign-in-before-computer-access/migration:
-  en: 51334e6e82c464c5
-  zh: b557a2ccd2747f50
+  en: 52c8833a70ea748b
+  zh: fbc569f31b52f33b
+/android-phone-chat-and-optional-computer-access:
+  en: f20f4ae6507a0150
+  zh: 06d0e82690bfc821
+/android-phone-chat-and-optional-computer-access/change:
+  en: 876c336308f66e12
+  zh: 87c808c669561f86
+/android-phone-chat-and-optional-computer-access/migration:
+  en: 650d6cf50f8f1e43
+  zh: 76cc4835640aab9a

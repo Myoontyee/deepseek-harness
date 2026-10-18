@@ -51,18 +51,26 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Build phone chat assets
+        run: |
+          pnpm install --frozen-lockfile
+          node apps/android/ui/build.mjs
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
       - name: Build unsigned Android app
         env:
-          DSH_ANDROID_VERSION_NAME: 0.2.1-rc.2.20261018.2
-          DSH_ANDROID_VERSION_CODE: '2026101802'
+          DSH_ANDROID_VERSION_NAME: 0.2.1-rc.2.20261018.3
+          DSH_ANDROID_VERSION_CODE: '2026101803'
         run: |
           mkdir -p apps/android/app/src/main/jniLibs apps/android/app/src/main/assets/licenses
           cp -r apps/android/tailnet/out/arm64-v8a apps/android/tailnet/out/x86_64 apps/android/app/src/main/jniLibs/
           cp apps/android/tailnet/out/Tailscale-LICENSE.txt apps/android/app/src/main/assets/licenses/
-          gradle --no-daemon --max-workers=2 -p apps/android :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest
+          gradle --no-daemon --max-workers=2 -p apps/android :app:testReleaseUnitTest :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
       - uses: reactivecircus/android-emulator-runner@v2

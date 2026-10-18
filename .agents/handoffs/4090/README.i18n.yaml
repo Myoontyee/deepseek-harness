@@ -6,11 +6,11 @@
   en: 503d524d6b4ea0c7
   zh: a7a9d6b5dc1cff53
 /deepseek-harness-desktop-4090-handoff/scope:
-  en: 68c14792e0f83c80
-  zh: 1d7c68f1fd05cb27
-/deepseek-harness-desktop-4090-handoff/delivered:
-  en: fd1ffb6f8dbeff2e
-  zh: cf0569e2cd2f8cc4
+  en: d8d8bec961839e54
+  zh: b0bc0e0486900640
+/deepseek-harness-desktop-4090-handoff/previously-delivered:
+  en: 575f7905d724c75b
+  zh: 15bed7754eb61b56
 /deepseek-harness-desktop-4090-handoff/start-on-4090:
   en: ed9ef3efd22fbaec
   zh: dc1410c65594767a
@@ -20,6 +20,9 @@
 /deepseek-harness-desktop-4090-handoff/verification:
   en: 2d1cf8cdfe066c59
   zh: f95f402923639d3d
+/deepseek-harness-desktop-4090-handoff/current-local-changes:
+  en: 500612272c80adc6
+  zh: ce8f904ed0e5b131
 /deepseek-harness-desktop-4090-handoff/important-implementation-boundaries:
   en: c52ae011f14d2cd5
   zh: dfcb7317d5ad532b

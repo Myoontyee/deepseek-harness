@@ -38,6 +38,10 @@ test('pairing authenticates each request, isolates Host credentials, persists gr
   const response=await pair();assert.equal(response.status,200);const token=JSON.parse(response.body).token
   assert.equal(approvals,1);assert.equal((await pair()).status,403)
   const headers={cookie:`__Host-dsh-device=${token}`}
+  const phone={id:'33333333-3333-4333-8333-333333333333',title:'Phone note',updated:1,messages:[{role:'user',text:'Question'}],annotations:[{quote:'$x$',comment:'Review'}]}
+  assert.equal((await exchange(server,'/_dsh_mobile/phone-sync',{method:'POST',headers:{...headers,'content-type':'application/json'},body:JSON.stringify({source:'b'.repeat(64),chats:[phone]})})).status,200)
+  assert.equal(server.phoneConversations.list(server.devices)[0].title,'Phone note')
+  assert.equal((await exchange(server,'/_dsh_mobile/phone-sync',{method:'POST',headers:{...headers,'content-type':'application/json'},body:JSON.stringify({source:'../escape',chats:[phone]})})).status,400)
   assert.equal((await exchange(server,'/',{headers:{...headers,origin:'https://evil.invalid'}})).status,403)
   assert.equal((await exchange(server,'/?token=anything',{headers})).status,400)
   const proxied=await exchange(server,'/api/test?q=1',{headers});assert.equal(proxied.body,'host-ok');assert.equal(proxied.headers['set-cookie'],undefined)
@@ -51,6 +55,7 @@ test('pairing authenticates each request, isolates Host credentials, persists gr
   const stream=await exchange(server,'/stream',{headers,stream:true});stream.res.resume()
   const closed=new Promise(resolve=>stream.res.once('close',resolve));server.revoke(server.devices[0].id);await Promise.all([closed,socketClosed])
   assert.equal((await exchange(server,'/',{headers})).status,401)
+  assert.equal(server.phoneConversations.list(server.devices).length,0)
   const expired=JSON.parse(Buffer.from(server.pairingCode().slice(12),'base64url').toString());server.code.expires=0
   assert.equal((await exchange(server,'/_dsh_mobile/pair',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code:expired.code})})).status,403)
  }finally {await server?.stop();for(const socket of webSocketHost.clients)socket.terminate();await new Promise(resolve=>webSocketHost.close(resolve));host.closeAllConnections();await new Promise(resolve=>host.close(resolve));rmSync(root,{recursive:true})}

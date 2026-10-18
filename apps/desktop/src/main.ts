@@ -1233,6 +1233,8 @@ async function main(): Promise<void> {
     const devices = pairedDevices ??= new PairedDevices()
     const data = args && typeof args === 'object' ? args as Record<string, unknown> : {}
     const id = typeof data.id === 'string' ? data.id : ''
+    if (action === 'phoneConversations') return mobileControl.phoneConversations()
+    if (action === 'readPhoneConversation' && id.length <= 200) return mobileControl.phoneConversations(id)
     if (action === 'list') return devices.list()
     if (action === 'detect' && typeof data.enabled === 'boolean') { devices.detect(data.enabled); return devices.list() }
     if (action === 'invitation') { await mobileControl.show(); return }

@@ -41,7 +41,7 @@ test('unknown Tailnet sources cannot reach operator approval',async()=>{
 test('bootstrap cannot bind a LAN or wildcard address',async()=>{
  for(const address of ['0.0.0.0','127.0.0.1','192.168.1.1']) await assert.rejects(new TailnetPairingServer(address,{verify:async()=>'',authorize:async()=>{throw new Error('unexpected')}}).start())
 })
-test('cancelled approval creates no grant; accepted approval returns a revocable pinned connection',async()=>{
+test('cancelled approval releases its slot before the operator answers; late answers create no grant',async()=>{
  const root=await mkdtemp(join(resolve('.artifacts'),'tailnet-grant-'))
  let finish
  const server=await MobileServer.create({path:join(root,'state'),seal:value=>Buffer.from(value),unseal:value=>value.toString(),host:()=>undefined,approve:()=>new Promise(done=>{finish=done})})
@@ -49,12 +49,35 @@ test('cancelled approval creates no grant; accepted approval returns a revocable
   await server.start('127.0.0.1')
   const cancelled=new AbortController()
   const first=server.authorizeTailnetPeer('verified-phone',cancelled.signal)
-  cancelled.abort();finish(true);await assert.rejects(first);assert.equal(server.devices.length,0)
+  const abandoned=finish
+  cancelled.abort();await assert.rejects(first);assert.equal(server.devices.length,0)
   const second=server.authorizeTailnetPeer('verified-phone',new AbortController().signal)
   finish(true);const connection=await second
+  abandoned(true);await Promise.resolve();assert.equal(server.devices.length,1)
   assert.equal(connection.pin,server.pin);assert.equal(connection.url,server.origin);assert.match(connection.token,/^[\w-]{43}$/)
   assert.equal(server.devices.length,1);server.revoke(server.devices[0].id);assert.equal(server.devices.length,0)
  }finally{await server.dispose();assert.ok(root.startsWith(resolve('.artifacts')+sep));await rm(root,{recursive:true,force:true})}
+})
+
+test('an unanswered approval times out and permits a fresh connection',async(t)=>{
+ let entered
+ const began=new Promise(resolve=>{entered=resolve})
+ let calls=0
+ const app=await fixture({verify:async()=> 'phone',authorize:async()=>{
+  if(++calls===1){entered();return new Promise(()=>{})}
+  return {url:'https://100.80.1.1:4444',pin:'a'.repeat(64),token:'b'.repeat(43)}
+ }})
+ t.mock.timers.enable({apis:['setTimeout']})
+ try{
+  const first=send(app.authority)
+  await began
+  const busy=await send(app.authority)
+  assert.equal(busy.status,429);assert.equal(busy.body.code,'approval_busy')
+  t.mock.timers.tick(55001)
+  const expired=await first
+  assert.equal(expired.status,408);assert.equal(expired.body.code,'approval_timeout')
+  assert.equal((await send(app.authority)).status,200)
+ }finally{t.mock.timers.reset();await app.close()}
 })
 
 test('approved network change rebinds the gateway before returning its pinned origin',async(t)=>{

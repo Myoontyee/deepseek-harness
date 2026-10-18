@@ -67,7 +67,7 @@ final class TailnetClient implements AutoCloseable {
   Thread reader=new Thread(()->{
    try(Reader source=new InputStreamReader(child.getInputStream(),StandardCharsets.UTF_8)) {
     StringBuilder line=new StringBuilder(); int value;
-    while((value=source.read())!=-1){if(value=='\n'){queue.put(line.toString());line.setLength(0);}else{line.append((char)value);if(line.length()>524288)throw new IOException("Response too large");}}
+    while((value=source.read())!=-1){if(value=='\n'){queue.put(line.toString());line.setLength(0);}else{line.append((char)value);if(line.length()>8*1024*1024)throw new IOException("Response too large");}}
    } catch(Exception error) { /* Request receives the bounded process-exit response below. */ }
    finally {queue.offer("{\"ok\":false,\"error\":\"Tailscale 组件已退出，请重试\"}");}
   },"tailnet-response");reader.setDaemon(true);reader.start();

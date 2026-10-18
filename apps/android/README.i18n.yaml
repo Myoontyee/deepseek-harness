@@ -3,17 +3,17 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write apps/android/README.md
 /deepseek-harness-desktop-for-android:
-  en: 73c5920dd85812c9
-  zh: d3ed7c03a2d43c51
-/deepseek-harness-desktop-for-android/connect:
-  en: b02befe5630b8982
-  zh: 08fdf073b920cd0c
+  en: 79b553ae41a0b9e8
+  zh: 946b861dce47a17d
+/deepseek-harness-desktop-for-android/chat-and-annotations:
+  en: 51b3cdae605eb930
+  zh: 518f82d7bad04f07
+/deepseek-harness-desktop-for-android/optional-computer-access:
+  en: 0f666e33af3bf212
+  zh: 3ac5ad6c0adf287c
 /deepseek-harness-desktop-for-android/trust-and-storage:
-  en: 97ba87bda6ed7779
-  zh: 5e174680053e7ed7
-/deepseek-harness-desktop-for-android/build:
-  en: e5e909ddd71e0d02
-  zh: 62aaa337f61500b7
-/deepseek-harness-desktop-for-android/validation-and-limits:
-  en: 3f4abcde9acabf6f
-  zh: ff39c23a8a9210dc
+  en: 557370e50e9ca319
+  zh: 57d568560a26fe7b
+/deepseek-harness-desktop-for-android/build-and-validation:
+  en: d8b583a524c4a02b
+  zh: 3bb61e2ebb848e39

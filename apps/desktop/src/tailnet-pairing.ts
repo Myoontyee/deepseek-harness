@@ -16,19 +16,29 @@ export interface TailnetPairingOptions {
 export function createTailnetPairingHandler(
   authority: string, options: TailnetPairingOptions,
 ): (req: IncomingMessage, res: ServerResponse) => void {
-  let pending = false
+  let active: AbortController | undefined
   let attempts: number[] = []
   return (req, res) => {
     const reply = (status: number, value: unknown): void => { if (!res.destroyed) { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(value)) } }
     if (req.headers.host !== authority || req.headers.origin) { reply(403, { error: 'Untrusted origin' }); return }
+    if (req.method === 'GET' && req.url === '/v1/status') {
+      reply(200, { service: 'deepseek-harness-desktop', protocol: 1 })
+      return
+    }
     if (req.method !== 'POST' || req.url !== '/v1/pair') { reply(404, { error: 'Unknown request' }); return }
     if (req.headers['content-type'] !== 'application/json') { reply(415, { error: 'JSON required' }); return }
     attempts = attempts.filter(time => time > Date.now() - 60000)
-    if (pending || attempts.length >= 20) { reply(429, { error: 'Approval busy; retry later' }); return }
-    attempts.push(Date.now()); pending = true
+    if (active) { res.setHeader('retry-after', '3'); reply(429, { code: 'approval_busy', error: 'Waiting for approval on the computer' }); return }
+    if (attempts.length >= 20) { res.setHeader('retry-after', '60'); reply(429, { code: 'rate_limited', error: 'Too many connection attempts' }); return }
+    attempts.push(Date.now())
     const controller = new AbortController()
-    const timer = setTimeout(() => { controller.abort(); res.destroy() }, 55000)
-    res.once('close', () => { controller.abort(); clearTimeout(timer) })
+    active = controller
+    const release = (): void => { if (active === controller) active = undefined }
+    const timer = setTimeout(() => {
+      controller.abort(); release()
+      reply(408, { code: 'approval_timeout', error: 'Computer approval timed out' })
+    }, 55000)
+    res.once('close', () => { controller.abort(); release(); clearTimeout(timer) })
     void (async () => {
       let size = 0
       for await (const chunk of req) { size += Buffer.byteLength(chunk); if (size > 256) { reply(413, { error: 'Request too large' }); return } }
@@ -37,7 +47,9 @@ export function createTailnetPairingHandler(
       if (controller.signal.aborted) return
       const connection = await options.authorize(name, controller.signal)
       if (!controller.signal.aborted) reply(200, connection)
-    })().catch(() => { reply(403, { error: 'Device identity or local approval failed' }) }).finally(() => { pending = false; clearTimeout(timer) })
+    })().catch(() => {
+      if (!controller.signal.aborted) reply(403, { code: 'approval_rejected', error: 'Device identity or local approval failed' })
+    }).finally(() => { release(); clearTimeout(timer) })
   }
 }
 /** One small bootstrap listener bound exclusively to a concrete Tailnet IPv4 address. */

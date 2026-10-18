@@ -25,6 +25,7 @@ export async function openPeerWindow(
   await remote.cookies.set({ url: origin.origin, name: '__Host-dsh-device', value: grant.token, secure: true, httpOnly: true, path: '/', sameSite: 'strict' })
   const window = new BrowserWindow({ width: 1280, height: 880, title: `${grant.name} · DSH`,
     webPreferences: { session: remote, sandbox: true, contextIsolation: true, nodeIntegration: false } })
+  window.webContents.setUserAgent(window.webContents.getUserAgent() + ' DSH-Remote/1')
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-attach-webview', (event) => { event.preventDefault() })
   window.webContents.on('will-navigate', (event, url) => { if (new URL(url).origin !== origin.origin) event.preventDefault() })

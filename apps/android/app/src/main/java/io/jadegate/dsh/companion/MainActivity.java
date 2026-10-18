@@ -32,6 +32,14 @@ public final class MainActivity extends Activity {
  private boolean foreground;
  private String openedTailnetAuth="";
  private SecureStore accountStore;
+ private PhoneChatStore phoneStore;
+ private PhoneChatScreen phoneChat;
+ private final ExecutorService syncWorker=Executors.newSingleThreadExecutor();
+ private final java.util.concurrent.atomic.AtomicBoolean syncing=new java.util.concurrent.atomic.AtomicBoolean();
+ private String syncNotice="手机对话与批注在授权后自动同步；电脑离线时先保存在本机。";
+ private Runnable syncLater;
+ private final java.util.concurrent.atomic.AtomicBoolean readingRemotes=new java.util.concurrent.atomic.AtomicBoolean();
+ private String requestedSession="";
  private SecureStore computersStore;
  private final java.util.LinkedHashMap<String,JSONObject> computerGrants=new java.util.LinkedHashMap<>();
  private AccountSignIn signIn;
@@ -55,6 +63,7 @@ public final class MainActivity extends Activity {
   store = new SecureStore(this);
   tailnet = new TailnetClient(this);
   accountStore = new SecureStore(this,"account");
+  phoneStore=new PhoneChatStore(this);
   computersStore=new SecureStore(this,"computers");
   try{String saved=computersStore.read();if(saved!=null){JSONObject root=new JSONObject(saved);if(root.getInt("version")!=1)throw new Exception("Unknown saved device version");org.json.JSONArray entries=root.getJSONArray("connections");if(entries.length()>32)throw new Exception("Too many saved devices");for(int i=0;i<entries.length();i++){JSONObject entry=entries.getJSONObject(i);new Pairing(entry,"token");computerGrants.put(entry.getString("nodeId"),entry);}}}catch(Exception error){Toast.makeText(this,"已保存设备列表暂不可读，可以重新授权连接",Toast.LENGTH_LONG).show();}
   showStart();
@@ -69,7 +78,25 @@ public final class MainActivity extends Activity {
  }
  private void showStart() {
   if(!signedIn()) { showLogin(""); return; }
-  showHome("");
+  showPhoneChat();
+ }
+ private void showPhoneChat() {
+  if(!signedIn()){showLogin("");return;}
+  generation++;connected=null;if(web!=null){web.stopLoading();web.destroy();web=null;}
+  try{
+   if(phoneChat==null)phoneChat=new PhoneChatScreen(this,phoneStore,new JSONObject(accountStore.read()),new PhoneChatScreen.Host(){
+    public void settings(){showHome("");}
+    public void changed(){syncPhoneChats();}
+    public void remoteChats(){readRemoteChats();}
+    public void remoteOpen(String id,String session){
+     try{JSONObject grant=computerGrants.get(id);if(grant==null&&id.equals("saved")){String value=store.read();if(value!=null)grant=new JSONObject(value);}if(grant==null)throw new Exception("此电脑尚未授权，请在设置连接");requestedSession=session;generation++;openSavedConnection(new Pairing(grant,"token"));}
+     catch(Exception error){Toast.makeText(MainActivity.this,error.getMessage(),Toast.LENGTH_LONG).show();}
+    }
+   });
+   if(phoneChat.view.getParent() instanceof ViewGroup)((ViewGroup)phoneChat.view.getParent()).removeView(phoneChat.view);
+   phoneChat.view.setPadding(0,0,0,0);
+   installContent(phoneChat.view);
+  }catch(Exception error){LinearLayout content=page("DeepSeek Harness Desktop");content.addView(text("手机聊天未能打开："+error.getMessage(),16));Button retry=button("重试");content.addView(retry);retry.setOnClickListener(v->{phoneChat=null;showPhoneChat();});Button settings=button("设置");content.addView(settings);settings.setOnClickListener(v->showHome(""));}
  }
  private LinearLayout page(String title) {
   LinearLayout content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(24),dp(32),dp(24),dp(24));
@@ -77,11 +104,12 @@ public final class MainActivity extends Activity {
  }
  private void showLogin(String notice) {
   generation++; final int current=generation;
+  if(phoneChat!=null){phoneChat.close();phoneChat=null;}
   if(web!=null) { web.stopLoading();web.destroy();web=null; }
   connected=null; connectionFailed=false;
   LinearLayout content=page("DeepSeek Harness Desktop");
   TextView intro=text("登录 DeepSeek，继续处理你的工作",21);intro.setPadding(0,dp(28),0,dp(16));content.addView(intro);
-  content.addView(text("查看电脑上的对话和文件，选中文字，添加备注与批示。任务由你连接的电脑执行。",16));
+  content.addView(text("登录后可直接与 DeepSeek 对话、保存记录和批注。连接电脑是设置中的可选功能。",16));
   TextView privacy=text("登录在 DeepSeek 官方浏览器页面完成，本应用不收集账号密码。首次控制电脑仍需在电脑上确认授权。",14);privacy.setPadding(0,dp(18),0,dp(18));content.addView(privacy);
   Button login=button("登录 DeepSeek 官方账号");content.addView(login);
   Button cancel=button("取消本次登录");cancel.setVisibility(View.GONE);content.addView(cancel);
@@ -99,6 +127,7 @@ public final class MainActivity extends Activity {
       try { startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url))); }
       catch(Exception error) { attempt.close();progress.setText("没有可用浏览器，请安装或启用系统浏览器后重试。"); }
      }),device);
+     PhoneChatScreen.identify(result);
      runOnUiThread(()->{
       if(disposed || generation!=current || signIn!=attempt)return;
       try { accountStore.save(result.toString());signIn=null;attempt.close();showStart(); }
@@ -109,10 +138,14 @@ public final class MainActivity extends Activity {
   });
  }
  private void showHome(String notice) {
+  requestedSession="";
   if(web!=null){web.stopLoading();web.destroy();web=null;}connected=null;
-  generation++; LinearLayout content=page("DeepSeek Harness Desktop");
-  TextView intro=text("连接电脑后，可以阅读对话和文件、选中文字并添加备注批示。",18);intro.setPadding(0,dp(24),0,dp(20));content.addView(intro);
+  generation++; LinearLayout content=page("设置 → 设备与对话");
+  Button back=button("返回手机聊天");content.addView(back);back.setOnClickListener(v->showPhoneChat());
+  TextView intro=text("手机聊天无需连接电脑。授权连接后，可查看电脑对话；手机记录与批注可同步到已授权电脑。",16);intro.setPadding(0,dp(18),0,dp(16));content.addView(intro);
   content.addView(text("已登录 DeepSeek",14));
+  Switch sync=new Switch(this);sync.setText("同步手机对话与批注到已授权电脑");sync.setChecked(getSharedPreferences("options",MODE_PRIVATE).getBoolean("phoneSync",true));content.addView(sync);sync.setOnCheckedChangeListener((v,checked)->{getSharedPreferences("options",MODE_PRIVATE).edit().putBoolean("phoneSync",checked).apply();if(checked)syncPhoneChats();});
+  TextView syncStatus=text(syncNotice,14);content.addView(syncStatus);Button syncNow=button("立即同步手机记录");content.addView(syncNow);syncNow.setOnClickListener(v->{syncPhoneChats();syncStatus.setText("正在同步，请稍后重新打开设置查看结果");});
   addTailnetPanel(content);
   Button settings=button("备用：扫码连接电脑");content.addView(settings);settings.setOnClickListener(v->showPairing(""));
   try {
@@ -155,7 +188,7 @@ public final class MainActivity extends Activity {
        String name=peer.optString("name");boolean self=peer.optBoolean("self");
        LinearLayout row=new LinearLayout(MainActivity.this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(dp(12),dp(12),dp(12),dp(12));
        row.addView(text(name,18));row.addView(text(peer.optString("os")+" · "+(self?"此应用":peer.optBoolean("online")?"在线":"离线"),14));
-       if(!self){Button connect=button("连接此电脑");row.addView(connect);connect.setOnClickListener(v->connectTailnetPeer(peer,progress,connect));if(computerGrants.containsKey(peer.optString("id"))){Button renew=button("重新授权");row.addView(renew);renew.setOnClickListener(v->connectTailnetPeer(peer,progress,renew,true));}}
+       if(!self){Button connect=button(computerGrants.containsKey(peer.optString("id"))?"查看电脑对话":"连接此电脑");connect.setEnabled(peer.optBoolean("online")&&(peer.optBoolean("ready")||computerGrants.containsKey(peer.optString("id"))));row.addView(connect);connect.setOnClickListener(v->connectTailnetPeer(peer,progress,connect));if(!peer.optBoolean("ready")&&peer.optBoolean("online"))row.addView(text("未检测到可连接的 DSH；请更新电脑客户端并开启设备连接",14));if(computerGrants.containsKey(peer.optString("id"))){Button renew=button("重新授权");row.addView(renew);renew.setOnClickListener(v->connectTailnetPeer(peer,progress,renew,true));}}
        rows.addView(row);
       }
      }
@@ -193,7 +226,7 @@ public final class MainActivity extends Activity {
    if(disposed||generation!=current)return;
    JSONObject response=tailnet.command(new JSONObject().put("action","pair").put("id",peer.getString("id")));
    JSONObject saved=response.getJSONObject("connection").put("tailnet",true).put("nodeId",peer.getString("id"));new Pairing(saved,"token");
-   runOnUiThread(()->{if(disposed||generation!=current)return;try{saveComputer(saved);openSavedConnection(new Pairing(saved,"token"));}catch(Exception error){button.setEnabled(true);progress.setText(error.getMessage());}});
+   runOnUiThread(()->{if(disposed||generation!=current)return;try{saveComputer(saved);syncPhoneChats();showHome("已连接，手机聊天仍可独立使用。点“查看电脑对话”进入电脑。");}catch(Exception error){button.setEnabled(true);progress.setText(error.getMessage());}});
   }catch(Exception error){runOnUiThread(()->{if(!disposed&&generation==current){button.setEnabled(true);progress.setText("连接未完成："+error.getMessage());}});}});
  }
  private boolean automaticReconnect() { return getSharedPreferences("options",MODE_PRIVATE).getBoolean("autoReconnect",true); }
@@ -238,7 +271,51 @@ public final class MainActivity extends Activity {
   Button refresh=button("刷新网络状态");actions.addView(refresh,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));refresh.setOnClickListener(v->refreshNetworkLabels());
   content.addView(actions);
  }
- @Override protected void onResume(){super.onResume();refreshNetworkLabels();if(tailnetPoll!=null){tailnetHandler.removeCallbacks(tailnetPoll);tailnetHandler.post(tailnetPoll);}}
+ @Override protected void onResume(){super.onResume();refreshNetworkLabels();syncPhoneChats();if(tailnetPoll!=null){tailnetHandler.removeCallbacks(tailnetPoll);tailnetHandler.post(tailnetPoll);}}
+ private void syncPhoneChats(){
+  runOnUiThread(()->{
+   if(disposed||!foreground||!signedIn()||!getSharedPreferences("options",MODE_PRIVATE).getBoolean("phoneSync",true))return;
+   if(syncLater!=null)tailnetHandler.removeCallbacks(syncLater);
+   syncLater=()->{
+    if(!syncing.compareAndSet(false,true))return;
+    final java.util.ArrayList<JSONObject> targets=new java.util.ArrayList<>(computerGrants.values());
+    try{String legacy=store.read();if(targets.isEmpty()&&legacy!=null)targets.add(new JSONObject(legacy));}catch(Exception error){syncNotice="保存的电脑授权暂不可读，请重新授权。";}
+    syncWorker.execute(()->{try{
+     JSONObject account=new JSONObject(accountStore.read());String scope=PhoneChatScreen.scope(account),source=hash(scope);
+     for(JSONObject target:targets){Pairing pairing=new Pairing(target,"token");String cursorKey=hash(source+pairing.pin+pairing.secret);
+      long cursor=getSharedPreferences("phone-sync",MODE_PRIVATE).getLong(cursorKey,0);
+      for(int page=0;page<5;page++){
+       org.json.JSONArray changes=phoneStore.changes(scope,cursor);if(changes.length()==0)break;
+       org.json.JSONArray portable=new org.json.JSONArray();
+       for(int i=0;i<changes.length();i++){JSONObject original=changes.getJSONObject(i),copy=new JSONObject();for(String key:new String[]{"id","title","updated","deleted","messages","annotations"})if(original.has(key))copy.put(key,original.get(key));
+        org.json.JSONArray turns=copy.getJSONArray("messages");for(int j=0;j<turns.length();j++)turns.getJSONObject(j).remove("blocks");portable.put(copy);}
+       JSONObject body=new JSONObject().put("source",source).put("chats",portable);
+       if(pairing.embedded)tailnet.command(new JSONObject().put("action","request").put("origin",pairing.origin).put("pin",pairing.pin).put("token",pairing.secret).put("body",body));
+       else pairing.sync(body);
+       for(int i=0;i<changes.length();i++)cursor=Math.max(cursor,changes.getJSONObject(i).getLong("updated"));
+       if(!getSharedPreferences("phone-sync",MODE_PRIVATE).edit().putLong(cursorKey,cursor).commit())throw new Exception("无法保存同步进度");
+      }
+     }
+     syncNotice=targets.isEmpty()?"尚未连接电脑；手机聊天可正常使用。":"手机记录已同步到已授权电脑，可在电脑的“设备与对话”查看。";
+    }catch(Exception error){syncNotice="手机记录已保存在本机，同步未完成："+error.getMessage();}finally{syncing.set(false);}});
+   };tailnetHandler.postDelayed(syncLater,2500);
+  });
+ }
+ private static String hash(String value)throws Exception{StringBuilder hex=new StringBuilder();for(byte item:java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)))hex.append(String.format(java.util.Locale.ROOT,"%02x",item));return hex.toString();}
+ private void readRemoteChats(){
+  if(disposed||phoneChat==null||!readingRemotes.compareAndSet(false,true))return;
+  final java.util.LinkedHashMap<String,JSONObject> targets=new java.util.LinkedHashMap<>(computerGrants);
+  try{String saved=store.read();if(targets.isEmpty()&&saved!=null)targets.put("saved",new JSONObject(saved));}catch(Exception error){Toast.makeText(this,"保存的电脑授权暂不可读",Toast.LENGTH_SHORT).show();}
+  worker.execute(()->{try{for(java.util.Map.Entry<String,JSONObject> entry:targets.entrySet()){
+   JSONObject grant=entry.getValue();String name=grant.optString("name","已授权电脑");org.json.JSONArray rows=new org.json.JSONArray();String error="";
+   try{
+    Pairing pairing=new Pairing(grant,"token");JSONObject response=pairing.embedded?tailnet.command(new JSONObject().put("action","request").put("operation","sessions").put("origin",pairing.origin).put("pin",pairing.pin).put("token",pairing.secret)).getJSONObject("sessions"):pairing.sessions();
+    org.json.JSONArray items=response.getJSONObject("result").getJSONObject("value").getJSONArray("items");
+    for(int i=0;i<items.length()&&rows.length()<500;i++){JSONObject item=items.getJSONObject(i);String id=item.optString("sessionId");JSONObject origin=item.optJSONObject("origin");if(id.isEmpty()||id.length()>512||(origin!=null&&origin.optString("kind").equals("subagent")))continue;JSONObject projections=item.optJSONObject("projections"),values=projections==null?null:projections.optJSONObject("values");rows.put(new JSONObject().put("id",id).put("title",values==null?id:values.optString("title",id)).put("running",item.optBoolean("running")));}
+   }catch(Exception failure){error="暂未连接，手机聊天仍可使用。";}
+   PhoneChatScreen screen=phoneChat;if(screen!=null)screen.remote(entry.getKey(),name,rows,error);
+  }}finally{readingRemotes.set(false);}});
+ }
  private void accountSettings() {
   new AlertDialog.Builder(this).setTitle("DeepSeek 账号").setMessage("已保存官方授权登录。电脑控制授权独立管理。退出账号前，请先保存未发送的备注。")
    .setPositiveButton("保留登录",null).setNeutralButton("退出本机账号",(dialog,which)->{
@@ -347,17 +424,14 @@ public final class MainActivity extends Activity {
  @android.annotation.SuppressLint("SetJavaScriptEnabled")
  private void showConnection(Pairing pairing) {
   generation++; connected = pairing; pairingInput = null; connectionFailed=false;
-  LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(0,dp(8),0,0);
-  LinearLayout toolbar = new LinearLayout(this); toolbar.setGravity(android.view.Gravity.CENTER_VERTICAL);
-  status = text("正在连接电脑",14); status.setPadding(dp(12),0,0,0); toolbar.addView(status,new LinearLayout.LayoutParams(0,dp(48),1));
-  Button annotate = button("批注");toolbar.addView(annotate);annotate.setOnClickListener(v->annotateSelection());
-  Button reload = button("重连"); toolbar.addView(reload); Button options = button("设置"); toolbar.addView(options);
-  root.addView(toolbar);
+  final String session=requestedSession;requestedSession="";
+  LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+  status = text("正在连接电脑",14);
   web = new WebView(this); root.addView(web,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1)); installContent(root);
   WebSettings settings = web.getSettings(); settings.setJavaScriptEnabled(true); settings.setDomStorageEnabled(true);
   settings.setAllowFileAccess(false); settings.setAllowContentAccess(false); settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
   settings.setJavaScriptCanOpenWindowsAutomatically(false); settings.setSupportMultipleWindows(false);
-  settings.setUserAgentString(settings.getUserAgentString()+" DSH-Companion/1");
+  settings.setUserAgentString(settings.getUserAgentString()+" DSH-Companion/1 DSH-Remote/1");
   CookieManager.getInstance().setAcceptThirdPartyCookies(web,false);
   web.setWebChromeClient(new WebChromeClient() {
    @Override public void onPermissionRequest(PermissionRequest request) { request.deny(); }
@@ -393,18 +467,16 @@ public final class MainActivity extends Activity {
      }
     } catch(Exception ignored) {}
     if (accepted) handler.proceed();
-    else { handler.cancel(); status.setText("电脑身份验证失败，请重新配对"); }
+    else { handler.cancel(); Toast.makeText(MainActivity.this,"电脑身份已改变，请在设置重新授权",Toast.LENGTH_LONG).show(); }
    }
    @Override public void onPageFinished(WebView view,String url) { if (sameOrigin(Uri.parse(url),pairing)) {connectionFailed=false;status.setText("已连接电脑");} }
-   @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error) { if(request.isForMainFrame()) {connectionFailed=true;status.setText("电脑未连接 · 网络恢复后自动重连");} }
-   @Override public void onReceivedHttpError(WebView view,WebResourceRequest request,WebResourceResponse response) { if(response.getStatusCode()==401 || response.getStatusCode()==403) status.setText("授权失效 · 请重新配对"); }
+   @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error) { if(request.isForMainFrame()) {connectionFailed=true;Toast.makeText(MainActivity.this,"电脑暂未连接，网络恢复后自动重连；返回可继续手机聊天",Toast.LENGTH_LONG).show();} }
+   @Override public void onReceivedHttpError(WebView view,WebResourceRequest request,WebResourceResponse response) { if(request.isForMainFrame()&&(response.getStatusCode()==401 || response.getStatusCode()==403)) Toast.makeText(MainActivity.this,"电脑授权已失效，请返回设置重新授权",Toast.LENGTH_LONG).show(); }
   });
-  reload.setOnClickListener(v -> { status.setText("正在重新连接…"); web.reload(); });
-  options.setOnClickListener(v -> connectionSettings());
   CookieManager.getInstance().setCookie(pairing.origin,"__Host-dsh-device="+pairing.secret+"; Path=/; Secure; HttpOnly; SameSite=Strict", ok -> {
    if (disposed || web==null || connected!=pairing) return;
    if (!ok) { status.setText("无法保存连接凭据，请重新配对"); return; }
-   CookieManager.getInstance().flush(); web.loadUrl(pairing.origin+"/");
+   CookieManager.getInstance().flush(); web.loadUrl(pairing.origin+"/"+(session.isEmpty()?"":"#dsh-session="+Uri.encode(session)));
   });
  }
  private boolean sameOrigin(Uri uri, Pairing pairing) {
@@ -430,6 +502,6 @@ public final class MainActivity extends Activity {
   super.onActivityResult(requestCode,resultCode,data);
   if (requestCode==FILE_REQUEST && fileCallback!=null) { fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode,data)); fileCallback=null; }
  }
- @Override public void onBackPressed() { if (web!=null && web.canGoBack()) web.goBack(); else super.onBackPressed(); }
- @Override protected void onDestroy() { disposed=true; generation++;if(tailnet!=null)tailnet.close();tailnetHandler.removeCallbacksAndMessages(null); if(signIn!=null)signIn.close(); if(fileCallback!=null)fileCallback.onReceiveValue(null); if(web!=null)web.destroy(); worker.shutdownNow(); super.onDestroy(); }
+ @Override public void onBackPressed() { if (web!=null && web.canGoBack()) web.goBack(); else if(signedIn()&&phoneChat!=null&&phoneChat.view.getParent()==null)showPhoneChat();else if(web!=null)showPhoneChat();else super.onBackPressed(); }
+ @Override protected void onDestroy() { disposed=true; generation++;if(phoneChat!=null)phoneChat.close();if(tailnet!=null)tailnet.close();tailnetHandler.removeCallbacksAndMessages(null); if(signIn!=null)signIn.close(); if(fileCallback!=null)fileCallback.onReceiveValue(null); if(web!=null)web.destroy(); worker.shutdownNow();syncWorker.shutdownNow(); super.onDestroy(); }
 }

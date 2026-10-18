@@ -1,5 +1,14 @@
 /** Connections settings copy. */
 export const en = {
+  'phone.title': 'Phone conversations',
+  'phone.hint': 'Read-only copies of conversations and annotations synchronized by authorized phones. Open the phone to send replies. Revoking authorization hides its copies.',
+  'phone.empty': 'No phone conversations have synchronized yet.',
+  'phone.close': 'Close preview',
+  'phone.user': 'You',
+  'phone.annotations': 'Annotations',
+  'phone.copy': 'Copy',
+  'phone.copied': 'Copied',
+  'phone.footnotes': 'Footnotes',
   'devices.title': 'Devices and conversations',
   'devices.hint': 'Conversations stay on their own computers, where tasks run. Keep each computer and DSH running.',
   'devices.detect': 'Automatically discover Tailscale devices',
@@ -60,6 +69,15 @@ export const en = {
 export type ConnectionKey = keyof typeof en
 /** Simplified Chinese copy. */
 export const zh: Record<ConnectionKey, string> = {
+  'phone.title': '手机对话',
+  'phone.hint': '已授权手机同步的对话与批注副本。此处可预览，请在手机上继续发送。撤销手机授权后隐藏其副本。',
+  'phone.empty': '尚未收到手机同步的对话。',
+  'phone.close': '关闭预览',
+  'phone.user': '你',
+  'phone.annotations': '批注',
+  'phone.copy': '复制',
+  'phone.copied': '已复制',
+  'phone.footnotes': '脚注',
   'devices.title': '设备与对话',
   'devices.hint': '对话保留在各自电脑上，任务在对应设备执行。电脑和 DSH 需保持运行。',
   'devices.detect': '自动检测 Tailscale 设备',

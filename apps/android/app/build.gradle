@@ -2,14 +2,16 @@ plugins { id 'com.android.application' }
 android {
  namespace 'io.jadegate.dsh.companion'
  compileSdk 35
+ buildFeatures { buildConfig true }
  packagingOptions { jniLibs { useLegacyPackaging true } }
  defaultConfig {
   applicationId = 'io.jadegate.dsh.companion'
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
   minSdk = 26
   targetSdk = 35
-  versionCode = (System.getenv('DSH_ANDROID_VERSION_CODE') ?: '2026101802').toInteger()
-  versionName = System.getenv('DSH_ANDROID_VERSION_NAME') ?: '0.2.1-rc.2.20261018.2'
+  versionCode = (System.getenv('DSH_ANDROID_VERSION_CODE') ?: '2026101803').toInteger()
+  versionName = System.getenv('DSH_ANDROID_VERSION_NAME') ?: '0.2.1-rc.2.20261018.3'
+  buildConfigField 'String', 'HARNESS_VERSION', '"' + new groovy.json.JsonSlurper().parse(file('../../../package.json')).version + '"'
  }
  if (System.getenv('DSH_ANDROID_KEYSTORE')) {
   signingConfigs { release { storeFile file(System.getenv('DSH_ANDROID_KEYSTORE')); storePassword System.getenv('DSH_ANDROID_STORE_PASSWORD'); keyAlias 'dsh-companion'; keyPassword System.getenv('DSH_ANDROID_STORE_PASSWORD') } }
@@ -19,6 +21,8 @@ android {
 }
 
 dependencies {
+ testImplementation 'junit:junit:4.13.2'
+ testImplementation 'org.json:json:20240303'
  implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
  implementation 'androidx.webkit:webkit:1.12.1'
  androidTestImplementation 'androidx.test:runner:1.6.2'

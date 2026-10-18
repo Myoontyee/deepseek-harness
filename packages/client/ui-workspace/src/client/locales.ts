@@ -6,6 +6,7 @@
 
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
+  'session.remote': '远程设备上的对话',
   'relay.menu': '发送会话消息…',
   'relay.title': '发送会话消息',
   'relay.from': '来自会话',
@@ -156,6 +157,7 @@ export type WorkspaceKey = keyof typeof zh
 
 /** English dictionary, checked complete against the zh key set. */
 export const en = {
+  'session.remote': 'Conversation on a remote device',
   'relay.menu': 'Send session message…',
   'relay.title': 'Send session message',
   'relay.from': 'From session',

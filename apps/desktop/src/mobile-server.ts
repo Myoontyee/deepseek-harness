@@ -9,6 +9,7 @@ import { randomBytes, randomUUID, createHash, timingSafeEqual, X509Certificate }
 import { readFileSync, writeFileSync, renameSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { networkInterfaces } from 'node:os'
+import { PhoneConversations } from './phone-conversations.ts'
 import {
   X509CertificateGenerator,
   BasicConstraintsExtension,
@@ -86,10 +87,11 @@ export interface MobileServerOptions {
   seal(value: string): Buffer
   unseal(value: Buffer): string
   host(): { url: string; cookie: string } | undefined
-  approve(label: string, options?: { switchingNetwork: boolean }): Promise<boolean>
+  approve(label: string, options?: { switchingNetwork: boolean; signal?: AbortSignal }): Promise<boolean>
 }
 /** Device-scoped HTTPS gateway with short-lived pairing and active-stream revocation. */
 export class MobileServer {
+  readonly phoneConversations: PhoneConversations
   private server: Server | undefined
   private code: { secret: string; expires: number } | undefined
   private readonly active = new Map<string, Set<() => void>>()
@@ -119,6 +121,7 @@ export class MobileServer {
     private readonly state: StoredState,
   ) {
     this.pin = new X509Certificate(state.cert).fingerprint256.replaceAll(':', '').toLowerCase()
+    this.phoneConversations = new PhoneConversations(options.path + '.phone-chats', options.seal, options.unseal)
   }
   private save(): void {
     mkdirSync(dirname(this.options.path), { recursive: true })
@@ -230,7 +233,17 @@ export class MobileServer {
       const origin = this.origin
       if (origin === undefined) throw new Error('Mobile authorization unavailable')
       const switchingNetwork = address !== undefined && new URL(origin).hostname !== address
-      if (!(await this.options.approve(name, { switchingNetwork })) || signal.aborted || !this.enabled) throw new Error('Connection not approved')
+      let cancel = (): void => { /* Assigned before awaiting approval. */ }
+      const aborted = new Promise<never>((_resolve, reject) => {
+        cancel = () => { reject(new Error('Phone connection cancelled')) }
+        signal.addEventListener('abort', cancel, { once: true })
+        if (signal.aborted) cancel()
+      })
+      let approved: boolean
+      try {
+        approved = await Promise.race([aborted, this.options.approve(name, { switchingNetwork, signal })])
+      } finally { signal.removeEventListener('abort', cancel) }
+      if (!approved || signal.aborted || !this.enabled) throw new Error('Connection not approved')
       if (switchingNetwork && address !== undefined) { await this.stop(); await this.start(address) }
       if (signal.aborted || !this.enabled) throw new Error('Connection cancelled')
       const token = random()
@@ -307,6 +320,21 @@ export class MobileServer {
     }
     if (parsed.pathname === '/_dsh_mobile/status') {
       this.reply(res, 200, { connected: true, label: device.label })
+      return
+    }
+    if (parsed.pathname === '/_dsh_mobile/phone-sync' && req.method === 'POST') {
+      const chunks: Buffer[] = []
+      let length = 0
+      for await (const part of req) {
+        const chunk = Buffer.isBuffer(part) ? part : Buffer.from(part)
+        length += chunk.length
+        if (length > 4 * 1024 * 1024) { this.reply(res, 413, { error: 'Phone upload too large' }); return }
+        chunks.push(chunk)
+      }
+      if (!this.state.devices.some(item => item.id === device.id)) { this.reply(res, 401, { error: 'Phone authorization revoked' }); return }
+      try { this.phoneConversations.receive(device.id, device.label, JSON.parse(Buffer.concat(chunks).toString('utf8'))) }
+      catch (error) { this.reply(res, 400, { error: error instanceof Error ? error.message : 'Invalid phone sync' }); return }
+      this.reply(res, 200, { saved: true })
       return
     }
     if (parsed.pathname === '/_dsh_mobile/revoke' && req.method === 'POST') {
@@ -527,8 +555,16 @@ export class MobileServer {
     }
     const label = typeof value.label === 'string' ? value.label.replace(/[\x00-\x1f\x7f]/g, '').slice(0, 100) : 'Android device'
     this.pairing = true
+    const controller = new AbortController()
+    let cancel = (): void => { /* Assigned before awaiting operator approval. */ }
+    const cancelled = new Promise<never>((_resolve, reject) => {
+      cancel = () => { controller.abort(); reject(new Error('Phone pairing cancelled')) }
+    })
+    const timer = setTimeout(cancel, 55000)
+    res.once('close', cancel)
     try {
-      if (!(await this.options.approve(label)) || this.code !== code || code.expires < Date.now() || !this.enabled) {
+      const approved = await Promise.race([cancelled, this.options.approve(label, { switchingNetwork: false, signal: controller.signal })])
+      if (!approved || controller.signal.aborted || this.code !== code || code.expires < Date.now() || !this.enabled) {
         this.reply(res, 403, { error: 'Pairing not approved' })
         return
       }
@@ -537,7 +573,11 @@ export class MobileServer {
       this.state.devices.push({ id: randomUUID(), label, hash: digest(token), createdAt: new Date().toISOString() })
       this.save()
       this.reply(res, 200, { token })
+    } catch (error) {
+      if (!controller.signal.aborted) throw error
+      if (!res.destroyed && !res.headersSent) this.reply(res, 408, { code: 'approval_timeout', error: 'Phone approval timed out' })
     } finally {
+      clearTimeout(timer); res.off('close', cancel)
       this.pairing = false
     }
   }

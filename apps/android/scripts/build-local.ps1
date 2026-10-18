@@ -4,8 +4,8 @@ param(
  [string]$KeyStore,
  [string]$PasswordFile,
  [string]$ProxyUrl='http://127.0.0.1:17897',
- [string]$Version='0.2.1-rc.2.20261018.2',
- [int]$VersionCode=2026101802,
+ [string]$Version='0.2.1-rc.2.20261018.3',
+ [int]$VersionCode=2026101803,
  [switch]$Unsigned
 )
 $ErrorActionPreference='Stop'
@@ -38,7 +38,7 @@ try {
  & $taskGo mod tidy
  if ($LASTEXITCODE -ne 0) { throw 'Go dependency resolution failed' }
  $env:CGO_ENABLED='0';$env:GOOS='windows';$env:GOARCH='amd64'
- & $taskGo test interfaces.go interfaces_test.go route_other.go
+ & $taskGo test ./...
  if ($LASTEXITCODE -ne 0) { throw 'Android network bridge tests failed' }
  if (!(Test-Path -LiteralPath (Join-Path $taskNdk 'aarch64-linux-android26-clang.cmd'))) { throw 'Android NDK 28.2.13676358 is not ready' }
  $env:GOOS='android';$env:GOARCH='arm64';$env:CGO_ENABLED='1'
@@ -57,8 +57,11 @@ try {
  & (Join-Path $PSScriptRoot 'collect-notices.ps1') -GoExe $taskGo -ModuleCache $env:GOMODCACHE -GoRoot (Join-Path $ToolsRoot 'go-1.27.1\go') -OutputDirectory $taskLicenses
 } finally { Pop-Location }
 $env:DSH_ANDROID_VERSION_NAME=$Version;$env:DSH_ANDROID_VERSION_CODE=[string]$VersionCode
+Write-Output 'Building packaged phone chat interface'
+Push-Location $taskRepo
+try { node apps/android/ui/build.mjs; if ($LASTEXITCODE -ne 0) { throw 'Phone chat interface build failed' } } finally { Pop-Location }
 Write-Output 'Building APK with cached Android dependencies'
-& (Join-Path $ToolsRoot 'gradle-8.11.1\bin\gradle.bat') --no-daemon --max-workers=2 @taskProxyArguments -p (Join-Path $taskRepo 'apps\android') :app:assembleRelease
+& (Join-Path $ToolsRoot 'gradle-8.11.1\bin\gradle.bat') --no-daemon --max-workers=2 @taskProxyArguments -p (Join-Path $taskRepo 'apps\android') :app:testReleaseUnitTest :app:assembleRelease
 if ($LASTEXITCODE -ne 0) { throw 'APK build failed' }
 $taskInput=Join-Path $taskRepo 'apps\android\app\build\outputs\apk\release\app-release-unsigned.apk'
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null

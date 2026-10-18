@@ -1,5 +1,5 @@
 /** Native phone-pairing controls; the authenticated Host URL never enters the dialog. */
-import { app, clipboard, dialog, safeStorage } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, safeStorage, type MessageBoxOptions } from 'electron'
 import { showPairingQr } from './pairing-qr.ts'
 import { join } from 'node:path'
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -70,7 +70,8 @@ export class DesktopMobileControl {
       host: this.host,
       approve: async (label, options) => {
         if (this.isDisposed()) return false
-        const result = await dialog.showMessageBox({
+        const parent = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows().find(window => !window.isDestroyed())
+        const prompt: MessageBoxOptions = {
           type: 'question',
           title: 'DSH 手机控制',
           message: `允许“${label}”控制此电脑上的 DSH？`,
@@ -80,13 +81,23 @@ export class DesktopMobileControl {
           defaultId: 1,
           cancelId: 1,
           noLink: true,
-        })
-        return !this.isDisposed() && result.response === 0
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }
+        parent?.flashFrame(true)
+        try {
+          const result = await (parent ? dialog.showMessageBox(parent, prompt) : dialog.showMessageBox(prompt))
+          return !this.isDisposed() && result.response === 0
+        } finally { if (!parent?.isDestroyed()) parent?.flashFrame(false) }
       },
     }).catch((error: unknown) => {
       this.server = undefined
       throw error
     }))
+  }
+  /** Content-only phone transcripts, limited to active device authorizations. */
+  async phoneConversations(id?: string): Promise<unknown> {
+    const gateway = await this.gateway()
+    return id ? gateway.phoneConversations.read(id, gateway.devices) : gateway.phoneConversations.list(gateway.devices)
   }
   /** Restore a previously enabled listener after the Desktop Host has started. */
   async restore(): Promise<void> {

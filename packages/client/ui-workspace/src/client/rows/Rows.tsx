@@ -17,7 +17,7 @@ import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import {
   HoverCard, IconArchiveOutlineRegular, IconEditOutlineRegular,
   IconEllipsisOutlineRegular, IconFolderCloseRegular, IconFolderOpenRegular,
-  IconNewChatOutlineRegular, IconPinFillRegular, IconTrashOutlineRegular,
+  IconNewChatOutlineRegular, IconPinFillRegular, IconTrashOutlineRegular, IconGlobeOutlineRegular,
   IconTriangleRightFillRegular, IconUnarchiveOutlineRegular, Menu, relativeTime, StateDot, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ShortcutCatalogEntry } from '@deepseek-ai/dsh-client-shortcuts/client'
@@ -650,6 +650,9 @@ export function SessionNodeItem({
       >
         {title}
       </span>
+      {navigator.userAgent.includes('DSH-Remote/1') && <span title={t('session.remote')} style={{ color: '#74b6a3', display: 'flex', marginRight: 8 }}>
+        <IconGlobeOutlineRegular size={14} />
+      </span>}
       {/* A blank New Session row is a provisional placeholder: nothing has
           happened in it yet, so a "now" timestamp and the row verbs
           (rename/fork/archive) would all act on content that does not
