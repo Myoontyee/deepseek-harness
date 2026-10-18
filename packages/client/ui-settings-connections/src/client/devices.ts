@@ -39,10 +39,11 @@ export function createDeviceActions(
 ): DeviceActions & { dispose(): void } {
   const state = createSnapshotStore<DevicesState>({ catalog: { detect: false, peers: [], paired: [], warning: '' }, sessions: {}, failures: {}, busy: false, error: '', phones: [], phone: undefined })
   let disposed = false
+  const isDisposed = (): boolean => disposed
   let loading: Promise<void> | undefined
   const refresh = (): Promise<void> => loading ??= (async () => {
     const catalog = await invoke('list') as Catalog
-    if (disposed) return
+    if (isDisposed()) return
     const phones = await invoke('phoneConversations') as PhoneSummary[]
     const sessions: Record<string, Conversation[]> = {}
     const failures: Record<string, string> = {}
@@ -52,29 +53,29 @@ export function createDeviceActions(
         try { sessions[device.id] = await invoke('conversations', { id: device.id }) as Conversation[] }
         catch (error) { failures[device.id] = error instanceof Error ? error.message : String(error) }
       }))
-      if (disposed) return
+      if (isDisposed()) return
     }
-    if (!disposed) state.update((value) => {
+    if (!isDisposed()) state.update((value) => {
       value.catalog = catalog; value.sessions = sessions; value.failures = failures; value.phones = phones
       if (value.phone && !phones.some(item => item.id === value.phone?.id)) value.phone = undefined
     })
   })().finally(() => { loading = undefined })
   const deviceCommand: DeviceActions['deviceCommand'] = async (action, args) => {
-    if (disposed || state.getSnapshot().busy) return false
+    if (isDisposed() || state.getSnapshot().busy) return false
     state.update((value) => { value.busy = true; value.error = '' })
     try {
       if (action === 'readPhoneConversation') {
         const transcript = await invoke(action, args) as PhoneTranscript
-        if (!disposed) state.update((value) => { value.phone = transcript })
+        if (!isDisposed()) state.update((value) => { value.phone = transcript })
       } else if (action === 'closePhoneConversation') state.update((value) => { value.phone = undefined })
       else { if (action !== 'refresh') await invoke(action, args); await refresh() }
       return true
     }
     catch (error) {
-      if (!disposed) state.update((value) => { value.error = error instanceof Error ? error.message : String(error) })
+      if (!isDisposed()) state.update((value) => { value.error = error instanceof Error ? error.message : String(error) })
       return false
     }
-    finally { if (!disposed) state.update((value) => { value.busy = false }) }
+    finally { if (!isDisposed()) state.update((value) => { value.busy = false }) }
   }
   return { hooks: { devices: state }, deviceCommand, maskPhoneText,
     watchDevices: () => {
@@ -82,7 +83,7 @@ export function createDeviceActions(
       let timer: ReturnType<typeof setTimeout> | undefined
       const tick = async (): Promise<void> => {
         await deviceCommand('refresh')
-        if (active && !disposed) timer = setTimeout(() => { void tick() }, 15000)
+        if (active && !isDisposed()) timer = setTimeout(() => { void tick() }, 15000)
       }
       void tick()
       return () => { active = false; clearTimeout(timer) }

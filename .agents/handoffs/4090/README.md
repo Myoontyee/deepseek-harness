@@ -12,7 +12,7 @@ The latest owner request explicitly supersedes the previous phone scope: Android
 
 ## Current installers
 
-Windows and Android version **0.2.1-rc.2.20261018.3** use official base **dsh-v0.2.1-rc.2**. Both installers are in the laptop's `D:/DeepseekHarness/SetupBackage`. Android ARM64 matches the owner's vivo phone and uses the existing signing certificate, so it can upgrade the previous installation.
+Windows and Android version **0.2.1-rc.2.20261018.3** use official base **dsh-v0.2.1-rc.2**. Both installers are in the laptop's `D:/DeepseekHarness/SetupBackage`. Android ARM64 matches the owner's vivo phone and uses the existing signing certificate, so it can upgrade the previous installation. The installer About/build record owns its exact source revision; the delivery branch also includes subsequent test, documentation and equivalent lint corrections.
 
 Android opens phone chat after official DeepSeek sign-in. Embedded Tailscale starts only for optional connection management or previously approved remote access. First use requires its own official Tailscale browser authorization; it cannot read another Android app's private credentials. It then lists account-visible devices automatically. Selecting a matching Desktop requests approval on that computer without QR or IP entry. The computer and app must remain running. QR pairing remains a backup.
 

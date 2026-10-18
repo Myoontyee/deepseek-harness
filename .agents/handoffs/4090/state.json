@@ -30,11 +30,13 @@
     "desktopBootstrapAndPhoneStoragePassed": true,
     "devicePreviewAndMaskingTestsPassed": 5,
     "prePushTypecheckPassed": true,
-    "physicalCrossDeviceValidated": false
+    "physicalCrossDeviceValidated": false,
+    "affectedStrictLintPassed": true,
+    "latestSourceBuildGatesPassed": 9
   },
   "androidCloud": {
-    "run": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39109227783",
-    "status": "settings-locator-fixed-rerun-pending",
+    "run": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39110781782",
+    "status": "in-progress-after-settings-locator-fix",
     "nativeNodeAndDatabasePassed": true,
     "chatHomePassed": true
   },
@@ -45,6 +47,7 @@
   "remainingRepositoryChecks": [
     "Existing discussion documentation: broken anchors, model-experience/limitations sections and missing routing return type",
     "Existing client UI localization literals",
-    "CLI help reference timed out in the documentation batch; not an installer runtime failure"
+    "CLI help reference timed out in the documentation batch; not an installer runtime failure",
+    "Full lint reports pre-existing issues in other UI plugins; changed device/phone files pass focused strict lint"
   ]
 }

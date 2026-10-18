@@ -89,7 +89,7 @@ export class PhoneConversations {
     const parts = id.split('/'), [device, source, chat] = parts
     if (parts.length !== 3 || !device || !source || !chat || !uuid.test(device) || !/^[a-f0-9]{64}$/.test(source)
       || !uuid.test(chat) || !devices.some(item => item.id === device)) throw new Error('Phone conversation unavailable')
-    const sealed = readFileSync(join(this.root, ...parts.slice(0, 2), parts[2] + '.dat'))
+    const sealed = readFileSync(join(this.root, device, source, chat + '.dat'))
     if (sealed.length > 16 * 1024 * 1024) throw new Error('Phone conversation too large')
     return JSON.parse(gunzipSync(Buffer.from(this.unseal(sealed), 'base64'), { maxOutputLength: 8 * 1024 * 1024 }).toString('utf8')) as PhoneConversation
   }
