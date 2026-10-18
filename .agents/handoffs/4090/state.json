@@ -74,7 +74,8 @@
     "fullGuiRunCompleted": false,
     "fullGuiRunStoppedAfterFailures": true,
     "focusedStyleTestsPassed": 28,
-    "focusedStyleTestsFailed": 3
+    "focusedStyleTestsFailed": 3,
+    "latestPrePushTypecheckPassed": true
   },
   "androidCloud": {
     "run": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39129299532",
@@ -94,7 +95,8 @@
     "checksumVerified": true,
     "dependenciesInstalled": false,
     "node": "24.14.0",
-    "latestWorkspaceUpdateTransferred": false
+    "latestWorkspaceUpdateTransferred": true,
+    "workspaceSourceCommit": "a1a9fdd17262f6c5371acd75f11644f7e5a9035c"
   },
   "remainingRepositoryChecks": [
     "Existing removed-discussion documentation: broken anchors, Model Experience and limitations entries, plus assistantReturnRoute return annotation",
