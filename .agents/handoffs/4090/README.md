@@ -20,7 +20,7 @@ Android opens phone chat after official DeepSeek sign-in. Embedded Tailscale sta
 
 Use branch `codex/android-tailnet-20261018` in `Myoontyee/deepseek-harness`, not an assumed default branch. The laptop checkout is `D:/DeepseekHarness/raw/deepseek-harness`; its local branch is `custom/content-only-copy`. Preserve existing changes before updating any 4090 checkout.
 
-Remote transfer was not completed: Tailscale reported an expired node key for `4090-server`, and SSH closed before authentication. The machine must reauthenticate before transfer. Its checkout path and installed toolchain have not been verified. Do not claim the code is already copied there. The committed handoff can be read after cloning or fetching the delivery branch.
+Remote transfer is not completed. A fresh check now confirms SSH access to `4090-server`, both computers' bootstrap services respond, and the local daemon verifies both identities. Tailscale currently relays traffic with roughly 0.8-second latency. Node, Git and PowerShell are installed on 4090; the laptop's `raw/deepseek-harness` path and dependency cache do not exist at that location there. Inspect its existing workspaces before copying. The committed handoff can be read after cloning or fetching the delivery branch.
 
 ## Local Android build
 

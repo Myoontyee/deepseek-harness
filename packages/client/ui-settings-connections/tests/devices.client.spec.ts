@@ -50,3 +50,30 @@ it('does not publish a delayed inventory after disposal', async () => {
   expect(actions.hooks.devices.getSnapshot().catalog.detect).toBe(false)
   unsubscribe()
 })
+
+it('probes without refreshing and cancels an approval request while the owner is busy', async () => {
+  let rejectPair!: (error: Error) => void
+  const invoke = vi.fn(async (action: string) => {
+    if (action === 'pairTailnet') return new Promise((_resolve, reject) => { rejectPair = reject })
+    if (action === 'cancelPairTailnet') rejectPair(new Error('Cancelled'))
+  })
+  const actions = createDeviceActions(invoke, text => text)
+  try {
+    expect(await actions.deviceCommand('probeTailnet', { id: 'server' })).toBe(true)
+    expect(invoke.mock.calls.map(([action]) => action)).toEqual(['probeTailnet'])
+    const request = actions.deviceCommand('pairTailnet', { id: 'server' })
+    expect(actions.hooks.devices.getSnapshot().busy).toBe(true)
+    expect(await actions.deviceCommand('refresh')).toBe(false)
+    expect(await actions.deviceCommand('cancelPairTailnet')).toBe(true)
+    expect(await request).toBe(false)
+    expect(actions.hooks.devices.getSnapshot()).toMatchObject({ busy: false, error: 'Cancelled' })
+  } finally { actions.dispose() }
+})
+
+it('contains a failed cancel operation instead of rejecting the UI event handler', async () => {
+  const actions = createDeviceActions(async () => { throw new Error('IPC closed') }, text => text)
+  try {
+    expect(await actions.deviceCommand('cancelPairTailnet')).toBe(false)
+    expect(actions.hooks.devices.getSnapshot().error).toBe('IPC closed')
+  } finally { actions.dispose() }
+})

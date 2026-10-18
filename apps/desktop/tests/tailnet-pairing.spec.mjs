@@ -36,7 +36,7 @@ test('requires verified source and local approval, rejecting browser origins and
 test('unknown Tailnet sources cannot reach operator approval',async()=>{
  let called=false
  const app=await fixture({verify:async()=>{throw new Error('not a peer')},authorize:async()=>{called=true;throw new Error('unexpected')}})
- try{assert.equal((await send(app.authority)).status,403);assert.equal(called,false)}finally{await app.close()}
+ try{const response=await send(app.authority);assert.equal(response.status,403);assert.equal(response.body.code,'identity_rejected');assert.equal(called,false)}finally{await app.close()}
 })
 test('bootstrap cannot bind a LAN or wildcard address',async()=>{
  for(const address of ['0.0.0.0','127.0.0.1','192.168.1.1']) await assert.rejects(new TailnetPairingServer(address,{verify:async()=>'',authorize:async()=>{throw new Error('unexpected')}}).start())

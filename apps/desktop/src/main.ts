@@ -1228,6 +1228,7 @@ async function main(): Promise<void> {
   }
   let pairedDevices: PairedDevices | undefined
   const peerWindows = new Map<string, Set<BrowserWindow>>()
+  const devicePairings = new Map<number, AbortController>()
   ipcMain.handle(DESKTOP_IPC.devices, async (event, action: unknown, args: unknown) => {
     assertProductSender(event)
     const devices = pairedDevices ??= new PairedDevices()
@@ -1238,6 +1239,16 @@ async function main(): Promise<void> {
     if (action === 'list') return devices.list()
     if (action === 'detect' && typeof data.enabled === 'boolean') { devices.detect(data.enabled); return devices.list() }
     if (action === 'invitation') { await mobileControl.show(); return }
+    if (action === 'probeTailnet' && id.length > 0 && id.length <= 200) { await devices.probeTailnet(id); return }
+    if (action === 'cancelPairTailnet') { devicePairings.get(event.sender.id)?.abort(); return }
+    if (action === 'pairTailnet' && id.length > 0 && id.length <= 200) {
+      const sender = event.sender, controller = new AbortController()
+      devicePairings.get(sender.id)?.abort(); devicePairings.set(sender.id, controller)
+      const cancel = (): void => { controller.abort() }
+      sender.once('destroyed', cancel)
+      try { await devices.pairTailnet(id, controller.signal); return await devices.list() }
+      finally { sender.off('destroyed', cancel); if (devicePairings.get(sender.id) === controller) devicePairings.delete(sender.id) }
+    }
     if (action === 'pair' && typeof data.code === 'string' && typeof data.name === 'string') { await devices.pair(data.code, data.name); return devices.list() }
     if (action === 'conversations') return devices.conversations(id)
     if (action === 'forget') {

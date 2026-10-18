@@ -6,9 +6,11 @@ import { readFileSync, writeFileSync, renameSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { hostname } from 'node:os'
 import { discoverTailDevices } from './tailscale-discovery.ts'
+import { probeTailnetConnection, requestTailnetConnection } from './tailnet-connect.ts'
 
 interface Grant { id: string; name: string; url: string; pin: string; token: string }
 interface State { version: 1; detect: boolean; grants: Grant[] }
+function assertConnecting(signal: AbortSignal): void { if (signal.aborted) throw new Error('已取消连接申请') }
 /** Manage encrypted local grants and explicit remote reads. */
 export class PairedDevices {
   private state: State = { version: 1, detect: false, grants: [] }
@@ -33,6 +35,29 @@ export class PairedDevices {
   }
   /** Persist the user's discovery preference; discovering never grants access. */
   detect(enabled: boolean): void { this.save({ ...this.state, detect: enabled }) }
+  private async peer(id: string) {
+    const peer = (await discoverTailDevices()).find(item => item.id === id)
+    if (!peer || peer.self || !peer.online) throw new Error('所选设备不在线或不在当前 Tailscale 列表中，请刷新后重试')
+    return peer
+  }
+  /** Check the selected peer's service; discovering a machine alone never grants access.
+   * @param id - Current local Tailscale daemon's opaque device ID.
+   */
+  async probeTailnet(id: string): Promise<void> { await probeTailnetConnection((await this.peer(id)).address) }
+  /** Request approval on a freshly discovered computer and encrypt its validated grant.
+   * @param id - Current local Tailscale daemon's opaque device ID.
+   * @param signal - Cancels approval when the requesting view closes or its operator cancels.
+   */
+  async pairTailnet(id: string, signal: AbortSignal): Promise<void> {
+    const peer = await this.peer(id)
+    assertConnecting(signal)
+    if (this.state.grants.length >= 32) throw new Error('请先移除不再使用的设备')
+    const connection = await requestTailnetConnection(peer.address, signal)
+    assertConnecting(signal)
+    this.save({ ...this.state, grants: [...this.state.grants.filter(item => item.url !== connection.url), {
+      id: randomUUID(), name: peer.name, ...connection,
+    }] })
+  }
   /** List public device metadata, separating discovery from paired authorization. */
   async list() {
     let warning = ''

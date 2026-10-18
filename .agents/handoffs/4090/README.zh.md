@@ -20,7 +20,7 @@
 
 使用 `Myoontyee/deepseek-harness` 的 `codex/android-tailnet-20261018` 分支，不要直接假设默认分支包含本次改动。笔记本仓库为 `D:/DeepseekHarness/raw/deepseek-harness`，本地分支 `custom/content-only-copy`。更新 4090 上已有 checkout 前先保护未提交修改。
 
-尚未完成远程复制：Tailscale 返回 `4090-server` 节点密钥过期，SSH 在认证前关闭。须先在该机重新登录；其 checkout 路径与工具链尚未核查。不能声称已复制到 4090。此交接已提交仓库，拉取交付分支后即可读取。
+尚未完成远程复制。最新检查确认可 SSH 访问 `4090-server`，两台电脑的引导连接服务均有响应，本机 daemon 能核验双方身份；Tailscale 当前经中继通信，延迟约 0.8 秒。4090 已安装 Node、Git 和 PowerShell，但笔记本的 `raw/deepseek-harness` 路径及对应依赖缓存不在该机相同位置；复制前先核查已有工作区。此交接已提交仓库，拉取交付分支后即可读取。
 
 ## 本地安卓构建
 

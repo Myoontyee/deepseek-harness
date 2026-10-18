@@ -33,6 +33,7 @@ export function createTailnetPairingHandler(
     attempts.push(Date.now())
     const controller = new AbortController()
     active = controller
+    let verified = false
     const release = (): void => { if (active === controller) active = undefined }
     const timer = setTimeout(() => {
       controller.abort(); release()
@@ -44,11 +45,12 @@ export function createTailnetPairingHandler(
       for await (const chunk of req) { size += Buffer.byteLength(chunk); if (size > 256) { reply(413, { error: 'Request too large' }); return } }
       const address = (req.socket.remoteAddress ?? '').replace(/^::ffff:/u, '')
       const name = await options.verify(address)
+      verified = true
       if (controller.signal.aborted) return
       const connection = await options.authorize(name, controller.signal)
       if (!controller.signal.aborted) reply(200, connection)
     })().catch(() => {
-      if (!controller.signal.aborted) reply(403, { code: 'approval_rejected', error: 'Device identity or local approval failed' })
+      if (!controller.signal.aborted) reply(403, { code: verified ? 'approval_rejected' : 'identity_rejected', error: 'Device identity or local approval failed' })
     }).finally(() => { release(); clearTimeout(timer) })
   }
 }

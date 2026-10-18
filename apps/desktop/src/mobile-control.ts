@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { discoverTailDevices, identifyTailnetPeer } from './tailscale-discovery.ts'
 import { TailnetPairingServer } from './tailnet-pairing.ts'
 import { MobileServer, mobileAddresses } from './mobile-server.ts'
+import { deviceApprovalCopy } from './device-approval-copy.ts'
 
 /** Owns the opt-in listener and native approval dialogs for paired Android devices. */
 export class DesktopMobileControl {
@@ -71,19 +72,24 @@ export class DesktopMobileControl {
       approve: async (label, options) => {
         if (this.isDisposed()) return false
         const parent = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows().find(window => !window.isDestroyed())
+        const copy = deviceApprovalCopy(app.getLocale())
         const prompt: MessageBoxOptions = {
           type: 'question',
-          title: 'DSH 手机控制',
-          message: `允许“${label}”控制此电脑上的 DSH？`,
+          title: copy.title,
+          message: copy.message(label),
           detail:
-            '此手机可以查看对话、发送任务、停止任务和处理工具确认。只允许你信任的设备。你可以随时在“应用 → 手机控制”撤销授权。' + (options?.switchingNetwork ? '\n允许后将切换为 Tailscale 连接，现有局域网手机连接会断开。' : ''),
-          buttons: ['允许', '拒绝'],
+            copy.detail + (options?.switchingNetwork ? copy.switching : ''),
+          buttons: [copy.allow, copy.reject],
           defaultId: 1,
           cancelId: 1,
           noLink: true,
           ...(options?.signal ? { signal: options.signal } : {}),
         }
-        parent?.flashFrame(true)
+        if (parent) {
+          if (parent.isMinimized()) parent.restore()
+          if (!parent.isVisible()) parent.show()
+          parent.focus(); parent.flashFrame(true)
+        }
         try {
           const result = await (parent ? dialog.showMessageBox(parent, prompt) : dialog.showMessageBox(prompt))
           return !this.isDisposed() && result.response === 0

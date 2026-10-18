@@ -54,7 +54,7 @@
   },
   "remoteTransfer": {
     "completed": false,
-    "reason": "Last check: 4090-server Tailnet node key expired; checkout/toolchain unverified"
+    "reason": "SSH now works; both bootstrap listeners respond. Existing 4090 workspace/toolchain cache must be inspected before transfer. Current connection uses Tailnet relay."
   },
   "remainingRepositoryChecks": [
     "Existing discussion documentation: broken anchors, model-experience/limitations sections and missing routing return type",

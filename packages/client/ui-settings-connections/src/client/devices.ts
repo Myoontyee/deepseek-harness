@@ -61,10 +61,18 @@ export function createDeviceActions(
     })
   })().finally(() => { loading = undefined })
   const deviceCommand: DeviceActions['deviceCommand'] = async (action, args) => {
+    if (!isDisposed() && action === 'cancelPairTailnet') {
+      try { await invoke(action, args); return true }
+      catch (error) {
+        if (!isDisposed()) state.update((value) => { value.error = error instanceof Error ? error.message : String(error) })
+        return false
+      }
+    }
     if (isDisposed() || state.getSnapshot().busy) return false
     state.update((value) => { value.busy = true; value.error = '' })
     try {
-      if (action === 'readPhoneConversation') {
+      if (action === 'probeTailnet') await invoke(action, args)
+      else if (action === 'readPhoneConversation') {
         const transcript = await invoke(action, args) as PhoneTranscript
         if (!isDisposed()) state.update((value) => { value.phone = transcript })
       } else if (action === 'closePhoneConversation') state.update((value) => { value.phone = undefined })

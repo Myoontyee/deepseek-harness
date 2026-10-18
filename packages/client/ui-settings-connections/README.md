@@ -11,7 +11,7 @@ English | [中文](README.zh.md)
 
 Manage OpenSSH servers, test authentication and open remote terminals or SSH conversations.
 
-Desktop's Devices and conversations panel lists Tailscale peers by their configured names and separates discovery from authorization. One-use invitations require approval on the other computer; credentials stay in local OS-encrypted storage. While open, the panel refreshes paired computers and opens their conversations in certificate-pinned windows without local Desktop APIs. It also previews phone transcripts and annotations synchronized by authorized phones; continue those replies on the phone. Credential masking follows the conversation service.
+Desktop's Devices and conversations panel lists Tailscale peers by their configured names. Selecting an online computer probes its DSH service and requests approval there, with a visible waiting state and cancellation. Approval persists in local OS-encrypted storage; manual invitation codes remain a backup. While open, the panel refreshes paired computers and opens their conversations in certificate-pinned windows without local Desktop APIs. It also previews phone transcripts and annotations synchronized by authorized phones; continue those replies on the phone. Credential masking follows the conversation service.
 
 ## Table of Contents
 

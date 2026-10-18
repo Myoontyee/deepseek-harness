@@ -14,11 +14,26 @@ PropsLocale<'settings.connections'> & InjectFace<DeviceActions>) {
   const [code, setCode] = useState('')
   const [pairing, setPairing] = useState(false)
   const [search, setSearch] = useState('')
+  const [pending, setPending] = useState<{ name: string; phase: 'contacting' | 'awaiting' } | null>(null)
+  const connect = async (id: string, peerName: string): Promise<void> => {
+    setPending({ name: peerName, phase: 'contacting' })
+    try {
+      if (!await deviceCommand('probeTailnet', { id })) return
+      setPending({ name: peerName, phase: 'awaiting' })
+      await deviceCommand('pairTailnet', { id })
+    } finally { setPending(null) }
+  }
   const labels = { code: { copyLabel: t('phone.copy'), copiedLabel: t('phone.copied') }, footnotes: t('phone.footnotes') }
-  useEffect(watchDevices, [watchDevices])
+  useEffect(() => {
+    const stop = watchDevices()
+    return () => { stop(); void deviceCommand('cancelPairTailnet') }
+  }, [watchDevices, deviceCommand])
   return <section className="dsh-connections dsh-device-hub">
     <h2>{t('devices.title')}</h2><p>{t('devices.hint')}</p>
-    <fieldset disabled={state.busy}>
+    {pending && <div role="status"><p>{t(`devices.${pending.phase}`)} {pending.name}</p>
+      {pending.phase === 'awaiting' && <button onClick={() => { void deviceCommand('cancelPairTailnet') }}>{t('cancel')}</button>}
+    </div>}
+    <fieldset disabled={state.busy || pending !== null}>
       <label className="check"><input type="checkbox" checked={state.catalog.detect}
         onChange={(event) => { void deviceCommand('detect', { enabled: event.target.checked }) }} />{t('devices.detect')}</label>
       <div className="actions"><button onClick={() => { void deviceCommand('refresh') }}>{t('refresh')}</button>
@@ -44,7 +59,8 @@ PropsLocale<'settings.connections'> & InjectFace<DeviceActions>) {
                 <td data-label={t('devices.action')} className="dsh-device-actions">
                   {peer.self ? <span className="dsh-device-muted">{t('devices.self')}</span> : paired ?
                     <span className="dsh-device-muted">{t('devices.paired')}</span> :
-                    <button onClick={() => { setName(peer.name); setPairing(true) }}>{t('devices.choose')}</button>}
+                    /^(android|ios)$/iu.test(peer.os) ? <span className="dsh-device-muted">{t('devices.fromPhone')}</span> :
+                      <button disabled={!peer.online} onClick={() => { void connect(peer.id, peer.name) }}>{t('devices.choose')}</button>}
                 </td>
               </tr>
             })}</tbody>
