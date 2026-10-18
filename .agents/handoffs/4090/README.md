@@ -12,7 +12,7 @@ The latest owner request explicitly supersedes the previous phone scope: Android
 
 ## Current installers
 
-Windows and Android version **0.2.1-rc.2.20261018.3** use official base **dsh-v0.2.1-rc.2**. Both installers are in the laptop's `D:/DeepseekHarness/SetupBackage`. Android ARM64 matches the owner's vivo phone and uses the existing signing certificate, so it can upgrade the previous installation. The installer About/build record owns its exact source revision; the delivery branch also includes subsequent test, documentation and equivalent lint corrections.
+Android **0.2.1-rc.2.20261018.4** and Windows **0.2.1-rc.2.20261018.3** use official base **dsh-v0.2.1-rc.2**. Both installers are in the laptop's `D:/DeepseekHarness/SetupBackage`. Android ARM64 matches the owner's vivo phone and uses the existing signing certificate, so it can upgrade the previous installation. The Android package contains the Desktop-style responsive layout; Windows does not need rebuilding for this phone-only change. The delivery branch and build records identify the source.
 
 Android opens phone chat after official DeepSeek sign-in. Embedded Tailscale starts only for optional connection management or previously approved remote access. First use requires its own official Tailscale browser authorization; it cannot read another Android app's private credentials. It then lists account-visible devices automatically. Selecting a matching Desktop requests approval on that computer without QR or IP entry. The computer and app must remain running. QR pairing remains a backup.
 
@@ -34,13 +34,13 @@ For Windows, the laptop has an offline packaging adapter and caches outside trac
 
 ## Verification
 
-Current checks cover native Go tests, six model-protocol tests, browser annotation/Markdown/remote-row behavior, and Android emulator checks for native node startup, database persistence and the independent chat home. The Settings accessibility locator was repaired after its first emulator run; see state.json for the latest full run status. The local ARM64 binary was built with the pinned Go/NDK toolchain; local network tests, PKCE rejection tests, APK signature/certificate checks, ABI/name/version checks and 16KB ELF segment alignment passed. Physical-phone login and the complete cross-device connection still need owner validation.
+Current local checks cover native Go tests, six model-protocol tests, browser annotation/Markdown/remote-row behavior, six viewport sizes, visual-viewport-only keyboard resizing and dark mode. All 64 phone UI assets in the APK match the tested build. The earlier Android emulator run covers native node startup, database persistence and the independent chat home; its version and run status are in state.json. The local ARM64 binary uses the pinned Go/NDK toolchain; local network tests, PKCE rejection tests, APK signature/certificate checks, ABI/name/version checks and 16KB ELF segment alignment passed. Physical-phone login and the complete cross-device connection still need owner validation.
 
 Eight Desktop bootstrap/transport tests passed. An isolated test also used the laptop's real Tailscale daemon identity and private address to obtain and revoke a grant. Windows compiler/bundle gates and final packaged runtime checks passed. The packaged main was checked for the new bootstrap and daemon identity logic. These results do not mean every pre-existing UI test passes.
 
 ## Current local changes
 
-The current source adds phone model/effort selection, streamed Messages requests, account-scoped compressed transcripts/drafts, Markdown/TeX annotations and optional mirrored history. QR-free approval cancellation releases old pending requests; service probes distinguish DSH readiness from Tailnet online state. The remote operator toolbar is removed, remote conversation rows show a globe, and unrelated subresource errors do not revoke device authorization. Build and delivery evidence is recorded in state.json.
+Phone chat uses Desktop's icon artwork and theme colors, a left history drawer with Settings at the bottom, a conversation header and a rounded composer with model/effort controls below its message field. Long tables, code, math and quotation previews scroll locally; short keyboard viewports retain Send and annotation actions. Native settings use compact outlined buttons and device cards. Model/effort selection, streamed Messages requests, compressed account-scoped drafts, Markdown/TeX annotations, optional mirrored history and pinned/revocable remote access remain in place. Build and delivery evidence is recorded in state.json.
 
 ## Important implementation boundaries
 

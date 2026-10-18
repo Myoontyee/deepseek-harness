@@ -8,6 +8,8 @@ A custom Android client with account-authenticated phone chat and optional compu
 
 Sign in through DeepSeek's official browser authorization page. Phone chat uses the same account grant, model listing and Messages endpoint as Desktop; it does not require a paired computer or an API key. Choose the account model and thinking effort before sending. Only explicit messages invoke a model. This text-only chat does not execute Desktop tools or synchronize DeepSeek's cloud chat history.
 
+The phone interface uses Desktop's theme colors and icon artwork. Conversation history opens on the left, Settings stays at its bottom, and the composer keeps model and thinking controls below the message field with Send on the right. Narrow screens overlay the history drawer; wider screens can keep it alongside chat. Keyboard resizing preserves the composer, while long formulas, code, tables and annotation quotations scroll within their own areas. Computer access remains under Settings.
+
 Phone transcripts, partial replies, drafts and annotations are stored in account-scoped SQLite rows with gzip-compressed bodies. Long-press rendered text to add a source quotation and a separate comment. Markdown links, tables and original TeX formulas survive selection. Recognized credentials are masked before display, copy and annotation. Annotation drafts are saved automatically; Escape closes the editor without deleting the draft and Ctrl+Enter saves the annotation. Pending annotations become part of the visible, saved user message when sent.
 
 ## Optional computer access

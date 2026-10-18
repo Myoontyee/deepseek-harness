@@ -53,9 +53,54 @@ try {
   await page.getByRole('button', { name: '电脑上的研究' }).click()
   const opened = await page.evaluate(() => window.commands.findLast(item => item.action === 'remoteOpen'))
   assert.deepEqual(opened, { action: 'remoteOpen', device: 'computer-one', id: 'remote-conversation' })
-  await page.locator('#closeHistory').click()
+  assert.equal(await page.locator('#drawer').isVisible(), false)
   assert.equal(await page.evaluate(() => window.commands.some(item => ['pair', 'login', 'status'].includes(item.action))), false)
   await page.screenshot({ path: '.artifacts/android-phone-chat-ui.png' })
+  // Geometry fixtures cover phone portrait, landscape, keyboard-height and tablet widths.
+  await page.evaluate(() => {
+    window.fixture.chat.id = 'long-layout-fixture'
+    window.fixture.chat.title = '用于验证窄屏标题与远程会话布局的超长对话标题'.repeat(5)
+    window.fixture.models[0].name = 'DeepSeek 长模型名称 '.repeat(12)
+    window.fixture.chat.draft = '很长的输入草稿\n'.repeat(20)
+    window.fixture.chat.annotations = [{ id: 'note', quote: '长引用'.repeat(500), comment: '批注'.repeat(500) }]
+    window.fixture.chat.messages[1].text += '\n\n$$' + 'x_1 + '.repeat(50) + 'x_n$$\n\n```text\n' + 'long-code-'.repeat(100) + '\n```\n\n| ' + Array(12).fill('长表格列').join(' | ') + ' |\n| ' + Array(12).fill('---').join(' | ') + ' |\n| ' + Array(12).fill('数据').join(' | ') + ' |'
+    window.phone.onmessage({ data: JSON.stringify(window.fixture) })
+  })
+  async function fits(selector) {
+    const geometry = await page.locator(selector).evaluate(node => {
+      const r = node.getBoundingClientRect()
+      return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height, vw: innerWidth, vh: visualViewport.height }
+    })
+    assert.ok(geometry.width > 0 && geometry.height > 0 && geometry.x >= -1 && geometry.y >= -1 && geometry.right <= geometry.vw + 1 && geometry.bottom <= geometry.vh + 1, `${selector}: ${JSON.stringify(geometry)}`)
+  }
+  for (const [width, height] of [[320, 640], [360, 740], [412, 900], [360, 360], [740, 360], [1024, 768]]) {
+    await page.setViewportSize({ width, height }); await page.waitForTimeout(100)
+    await fits('header'); await fits('footer'); await fits('#send'); await fits('#model'); await fits('#effort')
+    assert.ok(await page.locator('#messages').evaluate(node => node.clientHeight >= 50 && node.scrollWidth <= node.clientWidth + 1), `chat overflow ${width}x${height}`)
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `page overflow ${width}x${height}`)
+    await page.locator('#history').click(); await fits('#drawer'); await fits('#settings')
+    await page.keyboard.press('Escape'); assert.equal(await page.locator('#drawer').isVisible(), false)
+    await page.evaluate(() => { const root = document.querySelector('article.assistant .markdown'), range = document.createRange(); range.selectNodeContents(root); getSelection().removeAllRanges(); getSelection().addRange(range) })
+    await page.locator('#selection').click(); await fits('#annotation')
+    await page.locator('#comment').fill('超长批注'.repeat(1000))
+    await page.locator('#saveNote').scrollIntoViewIfNeeded(); await fits('#saveNote')
+    await page.keyboard.press('Escape')
+    await page.screenshot({ path: `.artifacts/android-layout-${width}x${height}.png` })
+  }
+  await page.setViewportSize({ width: 412, height: 900 })
+  // Some WebViews shrink only the visual viewport for the keyboard.
+  await page.evaluate(() => {
+    Object.defineProperty(visualViewport, 'height', { configurable: true, get: () => 360 })
+    visualViewport.dispatchEvent(new Event('resize'))
+  })
+  await fits('#send'); await fits('footer')
+  await page.evaluate(() => { const root = document.querySelector('article.assistant .markdown'), range = document.createRange(); range.selectNodeContents(root); getSelection().removeAllRanges(); getSelection().addRange(range) })
+  await page.locator('#selection').click(); await fits('#annotation')
+  await page.keyboard.press('Escape')
+  await page.evaluate(() => { delete visualViewport.height; visualViewport.dispatchEvent(new Event('resize')) })
+  await page.emulateMedia({ colorScheme: 'dark' }); await page.waitForTimeout(50)
+  assert.equal(await page.locator('body').getAttribute('data-ds-dark-theme'), '')
+  await page.screenshot({ path: '.artifacts/android-phone-chat-dark.png' })
   assert.deepEqual(errors, [])
-  console.log('Phone chat: independent entry, model/effort, Markdown/TeX/link selection, secret masking and annotation draft shortcuts passed.')
+  console.log('Phone chat: model/effort, safe Markdown selection, draft shortcuts, desktop navigation, six responsive sizes, long content, keyboard-height viewport and dark theme passed.')
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)) }

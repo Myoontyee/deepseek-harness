@@ -99,8 +99,8 @@ public final class MainActivity extends Activity {
   }catch(Exception error){LinearLayout content=page("DeepSeek Harness Desktop");content.addView(text("手机聊天未能打开："+error.getMessage(),16));Button retry=button("重试");content.addView(retry);retry.setOnClickListener(v->{phoneChat=null;showPhoneChat();});Button settings=button("设置");content.addView(settings);settings.setOnClickListener(v->showHome(""));}
  }
  private LinearLayout page(String title) {
-  LinearLayout content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(24),dp(32),dp(24),dp(24));
-  ScrollView scroll=new ScrollView(this);scroll.addView(content);installContent(scroll);content.addView(text(title,26));return content;
+  LinearLayout content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(dp(16),dp(16),dp(16),dp(20));content.setBackgroundColor(Color.WHITE);
+  ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(content);installContent(scroll);TextView heading=text(title,22);heading.setPadding(0,0,0,dp(12));content.addView(heading);return content;
  }
  private void showLogin(String notice) {
   generation++; final int current=generation;
@@ -187,7 +187,9 @@ public final class MainActivity extends Activity {
        JSONObject peer=peers.optJSONObject(i);if(peer==null)continue;
        String name=peer.optString("name");boolean self=peer.optBoolean("self");
        LinearLayout row=new LinearLayout(MainActivity.this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(dp(12),dp(12),dp(12),dp(12));
-       row.addView(text(name,18));row.addView(text(peer.optString("os")+" · "+(self?"此应用":peer.optBoolean("online")?"在线":"离线"),14));
+       android.graphics.drawable.GradientDrawable card=new android.graphics.drawable.GradientDrawable();card.setColor(Color.rgb(249,250,251));card.setCornerRadius(dp(14));card.setStroke(dp(1),Color.rgb(225,229,238));row.setBackground(card);
+       LinearLayout.LayoutParams cardParams=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);cardParams.topMargin=dp(10);row.setLayoutParams(cardParams);
+       row.addView(text(name,16));row.addView(text(peer.optString("os")+" · "+(self?"此应用":peer.optBoolean("online")?"在线":"离线"),13));
        if(!self){Button connect=button(computerGrants.containsKey(peer.optString("id"))?"查看电脑对话":"连接此电脑");connect.setEnabled(peer.optBoolean("online")&&(peer.optBoolean("ready")||computerGrants.containsKey(peer.optString("id"))));row.addView(connect);connect.setOnClickListener(v->connectTailnetPeer(peer,progress,connect));if(!peer.optBoolean("ready")&&peer.optBoolean("online"))row.addView(text("未检测到可连接的 DSH；请更新电脑客户端并开启设备连接",14));if(computerGrants.containsKey(peer.optString("id"))){Button renew=button("重新授权");row.addView(renew);renew.setOnClickListener(v->connectTailnetPeer(peer,progress,renew,true));}}
        rows.addView(row);
       }
@@ -366,8 +368,13 @@ public final class MainActivity extends Activity {
   setContentView(view); view.requestApplyInsets();
  }
  private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
- private TextView text(String value, int size) { TextView view = new TextView(this); view.setText(value); view.setTextSize(size); view.setTextColor(Color.rgb(30,35,45)); return view; }
- private Button button(String value) { Button view = new Button(this); view.setText(value); view.setAllCaps(false); return view; }
+ private TextView text(String value, int size) { TextView view = new TextView(this); view.setText(value); view.setTextSize(size); view.setTextColor(Color.rgb(30,35,45));view.setLineSpacing(dp(3),1.1f); return view; }
+ private Button button(String value) {
+  Button view = new Button(this); view.setText(value); view.setAllCaps(false);view.setTextSize(14);view.setTextColor(Color.rgb(30,35,45));view.setMinHeight(dp(44));view.setMinimumHeight(dp(44));view.setPadding(dp(14),dp(10),dp(14),dp(10));view.setElevation(0);
+  android.graphics.drawable.GradientDrawable surface=new android.graphics.drawable.GradientDrawable();surface.setColor(Color.WHITE);surface.setCornerRadius(dp(12));surface.setStroke(dp(1),Color.rgb(225,229,238));
+  view.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(Color.rgb(233,236,242)),surface,null));
+  LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.WRAP_CONTENT);params.topMargin=dp(8);params.bottomMargin=dp(4);view.setLayoutParams(params);return view;
+ }
  private void showPairing(String notice) {
   generation++;
   if (web != null) { web.stopLoading(); web.destroy(); web = null; }
@@ -429,6 +436,7 @@ public final class MainActivity extends Activity {
   status = text("正在连接电脑",14);
   web = new WebView(this); root.addView(web,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1)); installContent(root);
   WebSettings settings = web.getSettings(); settings.setJavaScriptEnabled(true); settings.setDomStorageEnabled(true);
+  settings.setUseWideViewPort(true);settings.setLoadWithOverviewMode(true);
   settings.setAllowFileAccess(false); settings.setAllowContentAccess(false); settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
   settings.setJavaScriptCanOpenWindowsAutomatically(false); settings.setSupportMultipleWindows(false);
   settings.setUserAgentString(settings.getUserAgentString()+" DSH-Companion/1 DSH-Remote/1");

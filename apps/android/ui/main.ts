@@ -4,6 +4,7 @@ import katex from 'katex'
 import { parseGfmWithMath } from '../../../packages/client/ui-primitives/src/markdown/parse.ts'
 import { annotationSelectionMarkdown, registerMarkdownCopy, renderedClipboardText } from '../../../packages/client/ui-primitives/src/markdown/copy-selection.ts'
 import { createCredentialTextMask } from '../../../packages/client/ui-secret-mask/src/client/masked-text.ts'
+import icons from 'virtual:phone-icons'
 
 declare const phone: { postMessage(message: string): void; onmessage: (event: { data: string }) => void }
 type Note = { id?: string; quote: string; comment: string; sent?: boolean }
@@ -23,6 +24,37 @@ const input = el<HTMLTextAreaElement>('input'), model = el<HTMLSelectElement>('m
 const dialog = el<HTMLDialogElement>('annotation'), comment = el<HTMLTextAreaElement>('comment')
 let chat: Chat | undefined, draft: Note = { quote: '', comment: '' }, selected = '', generating = false, saveTimer: ReturnType<typeof setTimeout>
 const mask = createCredentialTextMask()
+for (const node of document.querySelectorAll<HTMLElement>('[data-icon]')) node.innerHTML = icons[node.dataset.icon!]
+const theme = matchMedia('(prefers-color-scheme: dark)')
+const applyTheme = () => document.body.toggleAttribute('data-ds-dark-theme', theme.matches)
+theme.addEventListener('change', applyTheme); applyTheme()
+function viewport() {
+  const height = window.visualViewport?.scale === 1 ? window.visualViewport.height : innerHeight
+  if (!window.visualViewport || window.visualViewport.scale === 1) {
+    document.documentElement.style.setProperty('--phone-height', `${height}px`)
+    document.body.toggleAttribute('data-compact-height', height <= 500)
+  }
+  document.documentElement.style.setProperty('--selection-bottom', `${el('input').closest('footer')!.getBoundingClientRect().height + 8}px`)
+}
+window.visualViewport?.addEventListener('resize', viewport)
+window.addEventListener('resize', viewport)
+new ResizeObserver(viewport).observe(el('input').closest('footer')!)
+function growInput() { input.style.height = 'auto'; input.style.height = `${input.scrollHeight}px` }
+let drawerReturn: HTMLElement | null = null
+function drawerLayout() {
+  const modal = !el('drawer').hidden && matchMedia('(max-width: 899px)').matches
+  if (modal) { el('drawer').setAttribute('role', 'dialog'); el('drawer').setAttribute('aria-modal', 'true') }
+  else { el('drawer').removeAttribute('role'); el('drawer').removeAttribute('aria-modal') }
+  document.querySelector<HTMLElement>('.conversation')!.inert = modal
+}
+matchMedia('(max-width: 899px)').addEventListener('change', drawerLayout)
+function drawer(open: boolean) {
+  if (open) drawerReturn = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  el('drawer').hidden = !open; el('drawerBackdrop').hidden = !open
+  el('history').setAttribute('aria-expanded', String(open))
+  drawerLayout()
+  if (open) el('closeHistory').focus(); else drawerReturn?.focus()
+}
 const send = (action: string, fields: Record<string, unknown> = {}) => phone.postMessage(JSON.stringify({ action, ...fields }))
 function notice(text: string) { el('notice').textContent = text; el('notice').hidden = !text }
 const button = (text: string, click: () => void) => { const node = document.createElement('button'); node.textContent = text; node.onclick = click; return node }
@@ -60,7 +92,7 @@ function renderTurns() {
     if (turn.status === 'generating') { content.textContent = mask(turn.text || '正在思考…'); content.classList.add('streaming') } else markdown(content, turn.text)
     row.append(content); copies.push(registerMarkdownCopy(content))
     if (turn.error) { const error = document.createElement('p'); error.className = 'error'; error.textContent = turn.error; row.append(error) }
-    row.append(button('复制', () => send('copy', { text: renderedClipboardText(content) })))
+    const copy = button('', () => send('copy', { text: renderedClipboardText(content) })); copy.className = 'icon-button'; copy.setAttribute('aria-label', '复制消息'); copy.innerHTML = icons.copy; row.append(copy)
     owner.append(row)
   })
   if (bottom) owner.scrollTop = owner.scrollHeight
@@ -99,18 +131,28 @@ document.addEventListener('selectionchange', () => {
   }
   el('selection').hidden = !selected
 })
-el('settings').onclick = () => { persist(); send('settings') }
-el('new').onclick = () => { persist(); send('new') }
-el('history').onclick = () => { el('drawer').hidden = false; send('remoteChats') }
+el('settings').onclick = () => { persist(); drawer(false); send('settings') }
+el('new').onclick = el('sidebarNew').onclick = () => { persist(); drawer(false); send('new') }
+el('history').onclick = () => { const open = el('drawer').hidden; drawer(open); if (open) send('remoteChats') }
 el('refreshRemote').onclick = () => send('remoteChats')
-el('closeHistory').onclick = () => { el('drawer').hidden = true }
-el('delete').onclick = () => { if (confirm('删除当前手机对话？已同步电脑的副本也将在下次同步时删除。')) { send('delete'); el('drawer').hidden = true } }
+el('closeHistory').onclick = el('drawerBackdrop').onclick = () => drawer(false)
+el('delete').onclick = () => { if (confirm('删除当前手机对话？已同步电脑的副本也将在下次同步时删除。')) { send('delete'); drawer(false) } }
 el('refreshModels').onclick = () => send('models')
 el('stop').onclick = () => send('stop')
 function submit() { if (!generating) { persist(); send('send', { text: input.value, model: model.value, effort: effort.value }) } }
 el('send').onclick = submit
-input.oninput = schedule; model.onchange = schedule; effort.onchange = schedule
+input.oninput = () => { growInput(); schedule() }; model.onchange = schedule; effort.onchange = schedule
 document.addEventListener('keydown', (event) => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); if (dialog.open) saveNote(); else submit() } })
+document.addEventListener('keydown', (event) => {
+  if (dialog.open || el('drawer').hidden) return
+  if (event.key === 'Escape') { event.preventDefault(); drawer(false); return }
+  if (event.key !== 'Tab' || !matchMedia('(max-width: 899px)').matches) return
+  const controls = Array.from(el('drawer').querySelectorAll<HTMLElement>('button:not(:disabled)'))
+  const first = controls[0], last = controls.at(-1)
+  const target = event.shiftKey && document.activeElement === first ? last
+    : !event.shiftKey && document.activeElement === last ? first : undefined
+  if (target) { event.preventDefault(); target.focus() }
+})
 window.addEventListener('pagehide', persist)
 phone.onmessage = (event) => {
   const update = JSON.parse(event.data)
@@ -121,9 +163,9 @@ phone.onmessage = (event) => {
     group.replaceChildren(); const heading = document.createElement('small'); heading.textContent = update.name; group.append(heading)
     if (update.error) { const error = document.createElement('small'); error.textContent = update.error; group.append(error) }
     for (const item of update.sessions) {
-      const row = button('', () => { persist(); send('remoteOpen', { device: update.device, id: item.id }) })
-      const title = document.createElement('span'); title.textContent = item.title
-      const globe = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); globe.setAttribute('viewBox', '0 0 24 24'); globe.setAttribute('width', '16'); globe.setAttribute('height', '16'); globe.setAttribute('fill', 'none'); globe.setAttribute('stroke', 'currentColor'); globe.setAttribute('aria-label', '远程对话'); globe.innerHTML = '<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/>'
+      const row = button('', () => { persist(); drawer(false); send('remoteOpen', { device: update.device, id: item.id }) })
+      const title = document.createElement('span'); title.textContent = item.title; title.className = 'chat-title'
+      const globe = document.createElement('span'); globe.innerHTML = icons.globe; globe.setAttribute('aria-label', '远程对话')
       row.title = `${update.name} · 远程对话`; row.className = 'remote-row'; row.append(title, globe); group.append(row)
     }
     return
@@ -142,6 +184,7 @@ phone.onmessage = (event) => {
   if (update.type !== 'state') return
   const changed = !chat || chat.id !== update.chat.id, prior = chat
   chat = update.chat; generating = update.generating
+  el('title').textContent = chat?.title || '新对话'; el('title').title = chat?.title || '新对话'
   const currentModel = changed ? chat?.model : model.value
   model.replaceChildren()
   for (const item of update.models) { const option = document.createElement('option'); option.value = item.id; option.textContent = item.available ? item.name : `${item.name} · 需更新`; option.disabled = !item.available; model.append(option) }
@@ -151,7 +194,14 @@ phone.onmessage = (event) => {
   else if (chat && prior && chat.messages.length > prior.messages.length && chat.messages.at(-1)?.status === 'generating') input.value = ''
   el('notice').onclick = () => { if (draft.quote) openNote(draft) }
   el('stop').hidden = !generating; el('send').hidden = generating; el<HTMLButtonElement>('send').disabled = !model.value
-  el('chats').replaceChildren(...update.chats.map((item: { id: string; title: string }) => button(item.title, () => { persist(); send('open', { id: item.id }); el('drawer').hidden = true })))
-  renderTurns(); renderNotes()
+  el('chats').replaceChildren(...update.chats.map((item: { id: string; title: string }) => {
+    const row = button('', () => { persist(); send('open', { id: item.id }); drawer(false) })
+    const title = document.createElement('span'); title.className = 'chat-title'; title.textContent = item.title; row.title = item.title; row.append(title)
+    if (item.id === chat?.id) row.setAttribute('aria-current', 'page')
+    return row
+  }))
+  growInput(); renderTurns(); renderNotes()
 }
+viewport()
+if (matchMedia('(min-width: 900px)').matches) drawer(true)
 send('init')

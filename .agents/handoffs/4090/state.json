@@ -1,18 +1,19 @@
 {
   "date": "2026-10-18",
   "timezone": "Asia/Shanghai",
-  "version": "0.2.1-rc.2.20261018.3",
+  "version": "0.2.1-rc.2.20261018.4",
   "officialBase": "dsh-v0.2.1-rc.2",
   "branch": "codex/android-tailnet-20261018",
   "android": {
-    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.3-android-arm64.apk",
-    "bytes": 10131407,
-    "sha256": "A24E505CC724C76732ECCC2A618A9D86D165D623D9A3D6FEF27D87958525F907",
+    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.4-android-arm64.apk",
+    "bytes": 10139599,
+    "sha256": "F2E318531AC78970F40AAA5909CA4CE3E9A23626B6328E0C59FC0FD9AB3E9637",
     "abi": "arm64-v8a",
     "nativeMatchesLocalBuild": true,
     "licensesBundled": true,
     "sameSigningCertificate": true,
-    "physicalPhoneTested": false
+    "physicalPhoneTested": false,
+    "uiAssetsVerified": 64
   },
   "windows": {
     "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.3-win-x64-unsigned.exe",
@@ -33,14 +34,19 @@
     "physicalCrossDeviceValidated": false,
     "affectedStrictLintPassed": true,
     "latestSourceBuildGatesPassed": 9,
-    "androidEmulatorPassed": true
+    "androidEmulatorPassed": true,
+    "responsiveViewportSizes": 6,
+    "visualKeyboardViewportPassed": true,
+    "darkThemePassed": true
   },
   "androidCloud": {
     "run": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39110781782",
     "status": "success",
     "nativeNodeAndDatabasePassed": true,
     "chatHomePassed": true,
-    "testsPassed": 3
+    "testsPassed": 3,
+    "testedVersion": "0.2.1-rc.2.20261018.3",
+    "currentVersionValidated": false
   },
   "remoteTransfer": {
     "completed": false,

@@ -3,9 +3,18 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { tsImport } from 'tsx/esm/api'
 const root = fileURLToPath(new URL('.', import.meta.url))
 const primitive = createRequire(new URL('../../../packages/client/ui-primitives/package.json', import.meta.url))
-await build({ root, base: './', configFile: false, plugins: [{ name: 'phone-license-notices', writeBundle() {
+const artwork = await tsImport('../../../packages/client/ui-primitives/src/icons/index.tsx', { parentURL: import.meta.url, tsconfig: join(root, '../../../tsconfig.base.client.json') })
+const { createElement } = primitive('react')
+const { renderToStaticMarkup } = primitive('react-dom/server')
+const iconNames = { sidebar: 'PanelLeftOutline', new: 'NewChatOutline', settings: 'SettingsOutline', close: 'CloseOutline', refresh: 'RefreshOutline', send: 'SendOutline', stop: 'StopFill', copy: 'CopyOutline', globe: 'GlobeOutline' }
+const icons = Object.fromEntries(Object.entries(iconNames).map(([name, glyph]) => [name, renderToStaticMarkup(createElement(artwork[`Icon${glyph}Regular`], { size: 20 }))]))
+await build({ root, base: './', configFile: false, plugins: [{ name: 'phone-desktop-icons',
+  resolveId(id) { if (id === 'virtual:phone-icons') return '\0phone-icons' },
+  load(id) { if (id === '\0phone-icons') return `export default ${JSON.stringify(icons)}` },
+}, { name: 'phone-license-notices', writeBundle() {
   const seen = new Set(), notices = []
   for (const id of this.getModuleIds()) {
     if (!id.includes('node_modules')) continue
