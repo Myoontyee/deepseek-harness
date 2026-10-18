@@ -1,5 +1,5 @@
 /** All paired computers remain visibly separated by device and connection state. */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
@@ -15,18 +15,20 @@ PropsLocale<'settings.connections'> & InjectFace<DeviceActions>) {
   const [pairing, setPairing] = useState(false)
   const [search, setSearch] = useState('')
   const [pending, setPending] = useState<{ name: string; phase: 'contacting' | 'awaiting' } | null>(null)
+  const connectionRun = useRef(0)
   const connect = async (id: string, peerName: string): Promise<void> => {
+    const run = ++connectionRun.current
     setPending({ name: peerName, phase: 'contacting' })
     try {
-      if (!await deviceCommand('probeTailnet', { id })) return
+      if (!await deviceCommand('probeTailnet', { id }) || connectionRun.current !== run) return
       setPending({ name: peerName, phase: 'awaiting' })
       await deviceCommand('pairTailnet', { id })
-    } finally { setPending(null) }
+    } finally { if (connectionRun.current === run) setPending(null) }
   }
   const labels = { code: { copyLabel: t('phone.copy'), copiedLabel: t('phone.copied') }, footnotes: t('phone.footnotes') }
   useEffect(() => {
     const stop = watchDevices()
-    return () => { stop(); void deviceCommand('cancelPairTailnet') }
+    return () => { connectionRun.current++; stop(); void deviceCommand('cancelPairTailnet') }
   }, [watchDevices, deviceCommand])
   return <section className="dsh-connections dsh-device-hub">
     <h2>{t('devices.title')}</h2><p>{t('devices.hint')}</p>

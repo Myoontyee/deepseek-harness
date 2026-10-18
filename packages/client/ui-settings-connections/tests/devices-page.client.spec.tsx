@@ -1,12 +1,18 @@
 // @vitest-environment jsdom
 /** Device rows preserve machine names, status distinctions and pairing targets. */
-import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { ComponentProps } from 'react'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { DevicesPage } from '../src/client/DevicesPage.tsx'
 import type {} from '../src/client/index.ts'
 import { zh } from '../src/client/locales.ts'
+
+const useUnpairedServer: ComponentProps<typeof DevicesPage>['useDevices'] = selector => selector({
+  catalog: { detect: true, warning: '', peers: [
+    { id: 'server', name: '4090-server', address: '100.80.1.2', os: 'windows', online: true, self: false },
+  ], paired: [] }, sessions: {}, failures: {}, busy: false, error: '', phones: [], phone: undefined,
+})
 
 afterEach(cleanup)
 it('shows named peers and only offers computer-initiated pairing for online computers', async () => {
@@ -49,16 +55,24 @@ it('shows the approval wait and lets the operator cancel without entering a code
     if (action === 'cancelPairTailnet') finish(false)
     return true
   })
-  const useDevices: ComponentProps<typeof DevicesPage>['useDevices'] = selector => selector({
-    catalog: { detect: true, warning: '', peers: [
-      { id: 'server', name: '4090-server', address: '100.80.1.2', os: 'windows', online: true, self: false },
-    ], paired: [] }, sessions: {}, failures: {}, busy: false, error: '', phones: [], phone: undefined,
-  })
-  const view = render(<DevicesPage useDevices={useDevices} deviceCommand={deviceCommand}
+  const view = render(<DevicesPage useDevices={useUnpairedServer} deviceCommand={deviceCommand}
     watchDevices={() => () => {}} maskPhoneText={text => text} t={makeTranslate(zh)} />)
   fireEvent.click(view.getByRole('button', { name: '配对此设备' }))
   await waitFor(() => { expect(view.getByRole('status').textContent).toMatch(/等待.*4090-server/u) })
   fireEvent.click(view.getByRole('button', { name: '取消' }))
   await waitFor(() => { expect(view.queryByRole('status')).toBeNull() })
   expect(deviceCommand).toHaveBeenCalledWith('cancelPairTailnet')
+})
+
+it('does not launch an approval after the device panel closes during its readiness probe', async () => {
+  let finish!: (ok: boolean) => void
+  const deviceCommand: ComponentProps<typeof DevicesPage>['deviceCommand'] = vi.fn(async action =>
+    action === 'probeTailnet' ? new Promise<boolean>((resolve) => { finish = resolve }) : true)
+  const view = render(<DevicesPage useDevices={useUnpairedServer} deviceCommand={deviceCommand}
+    watchDevices={() => () => {}} maskPhoneText={text => text} t={makeTranslate(zh)} />)
+  fireEvent.click(view.getByRole('button', { name: '配对此设备' }))
+  view.unmount()
+  await act(async () => { finish(true) })
+  expect(deviceCommand).toHaveBeenCalledWith('cancelPairTailnet')
+  expect(deviceCommand).not.toHaveBeenCalledWith('pairTailnet', { id: 'server' })
 })
