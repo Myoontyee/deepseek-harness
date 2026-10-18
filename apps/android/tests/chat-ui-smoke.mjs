@@ -43,6 +43,22 @@ try {
   assert.ok(note.quote.includes('|'))
   assert.equal(note.comment, '很长的批注草稿，点击旁边也不能丢失')
   assert.equal(note.quote.includes('abcdefghijklmnopqrstuvwxyz1234567890'), false)
+  await page.addScriptTag({ url: `http://127.0.0.1:${server.address().port}/native-selection.js` })
+  const nativeAccepted = await page.evaluate(() => {
+    const body = document.querySelector('article.assistant .markdown'), range = document.createRange()
+    range.selectNodeContents(body); getSelection().removeAllRanges(); getSelection().addRange(range)
+    document.dispatchEvent(new Event('selectionchange'))
+    // Android may clear its active DOM selection while the native menu closes.
+    getSelection().removeAllRanges()
+    return window.dshNativeAnnotate()
+  })
+  assert.equal(nativeAccepted, true)
+  await page.locator('#annotation').waitFor({ state: 'visible' })
+  assert.ok((await page.locator('#quote').textContent()).includes('链接'))
+  assert.equal((await page.locator('#quote').textContent()).includes('abcdefghijklmnopqrstuvwxyz1234567890'), false)
+  await page.locator('#comment').fill('从原生长按菜单继续的备注')
+  await page.keyboard.press('Control+Enter')
+  assert.equal(await page.evaluate(() => window.commands.findLast(item => item.action === 'annotation').note.comment), '从原生长按菜单继续的备注')
   await page.locator('#effort').selectOption('max')
   await page.locator('#send').click()
   const sent = await page.evaluate(() => window.commands.findLast(item => item.action === 'send'))
@@ -101,6 +117,19 @@ try {
   await page.emulateMedia({ colorScheme: 'dark' }); await page.waitForTimeout(50)
   assert.equal(await page.locator('body').getAttribute('data-ds-dark-theme'), '')
   await page.screenshot({ path: '.artifacts/android-phone-chat-dark.png' })
+  // Older Desktop pages mount their existing menu asynchronously; opening it must not depend on frame timing.
+  await page.evaluate(() => {
+    const native = document.createElement('div'); native.id = 'remote-fixture'; native.textContent = '电脑文件的所选文字'; document.body.append(native)
+    const range = document.createRange(); range.selectNodeContents(native); getSelection().removeAllRanges(); getSelection().addRange(range)
+    document.dispatchEvent(new Event('selectionchange')); getSelection().removeAllRanges()
+    window.remoteQuote = ''
+    native.addEventListener('pointerup', () => {
+      const captured = getSelection().toString()
+      setTimeout(() => { const action = document.createElement('button'); action.role = 'menuitem'; action.textContent = '添加注释'; action.onclick = () => { window.remoteQuote = captured; action.remove() }; document.body.append(action) }, 80)
+    })
+    window.dshNativeAnnotate()
+  })
+  await page.waitForFunction(() => window.remoteQuote === '电脑文件的所选文字')
   assert.deepEqual(errors, [])
   console.log('Phone chat: model/effort, safe Markdown selection, draft shortcuts, desktop navigation, six responsive sizes, long content, keyboard-height viewport and dark theme passed.')
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)) }

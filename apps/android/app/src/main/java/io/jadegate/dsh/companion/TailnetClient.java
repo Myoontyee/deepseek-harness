@@ -50,6 +50,11 @@ final class TailnetClient implements AutoCloseable {
   Thread worker=new Thread(()->{try{command("network");}catch(Exception error){/* The next foreground refresh reports connection errors. */}finally{networkPending.set(false);}},"tailnet-network");worker.setDaemon(true);worker.start();
  }
  TailnetClient(Context context) { this.context=context.getApplicationContext(); }
+ boolean hasSavedNode(){return !context.getSharedPreferences("options",Context.MODE_PRIVATE).getBoolean("tailnetPaused",false)&&new File(context.getFilesDir(),"tailnet/tailscaled.state").isFile();}
+ Pairing route(Pairing pairing) throws Exception {
+  if(!ConnectionRoute.embedded(pairing.embedded,hasSavedNode(),pairing.origin)||pairing.embedded)return pairing;
+  return new Pairing(new JSONObject().put("url",pairing.origin).put("pin",pairing.pin).put("token",pairing.secret).put("tailnet",true),"token");
+ }
  private void start() throws Exception {
   if(closed)throw new IOException("Tailscale 组件已关闭");
   if(process!=null && process.isAlive())return;
@@ -77,7 +82,10 @@ final class TailnetClient implements AutoCloseable {
   start();
   boolean changed=writeNetworkSnapshot();
   if(changed && !"network".equals(command.optString("action")))exchange(new JSONObject().put("action","network"));
-  return exchange(command);
+  JSONObject result=exchange(command);
+  if("logout".equals(command.optString("action")))context.getSharedPreferences("options",Context.MODE_PRIVATE).edit().putBoolean("tailnetPaused",true).apply();
+  if("login".equals(command.optString("action")))context.getSharedPreferences("options",Context.MODE_PRIVATE).edit().putBoolean("tailnetPaused",false).apply();
+  return result;
  }
  private JSONObject exchange(JSONObject command) throws Exception {
   input.write(command.toString());input.newLine();input.flush();

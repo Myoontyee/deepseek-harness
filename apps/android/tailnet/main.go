@@ -149,11 +149,24 @@ func main() {
 		case "logout":
 			err = client.Logout(ctx)
 			result = map[string]any{"ok": err == nil}
+		case "ready":
+			readyCtx, readyCancel := context.WithTimeout(ctx, 25*time.Second)
+			_, err = srv.Up(readyCtx)
+			readyCancel()
+			if err != nil {
+				err = fmt.Errorf("应用内 Tailscale 暂未就绪，请在设置检查登录或网络后重试")
+			}
+			result = map[string]any{"ok": err == nil}
 		case "pair", "use", "request":
 			var status *ipnstate.Status
 			status, err = client.Status(ctx)
 			if err == nil && status.BackendState != "Running" {
-				err = fmt.Errorf("请先在应用内登录 Tailscale")
+				readyCtx, readyCancel := context.WithTimeout(ctx, 25*time.Second)
+				status, err = srv.Up(readyCtx)
+				readyCancel()
+				if err != nil {
+					err = fmt.Errorf("应用内 Tailscale 暂未就绪，请在设置检查登录或网络后重试")
+				}
 			}
 			if err == nil && request.Action == "pair" {
 				var selected *ipnstate.PeerStatus

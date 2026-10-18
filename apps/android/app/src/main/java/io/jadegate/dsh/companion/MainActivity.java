@@ -39,6 +39,9 @@ public final class MainActivity extends Activity {
  private String syncNotice="手机对话与批注在授权后自动同步；电脑离线时先保存在本机。";
  private Runnable syncLater;
  private final java.util.concurrent.atomic.AtomicBoolean readingRemotes=new java.util.concurrent.atomic.AtomicBoolean();
+ private final java.util.concurrent.atomic.AtomicBoolean restoringNode=new java.util.concurrent.atomic.AtomicBoolean();
+ private Runnable restoreLater;
+ private long restoreDelay=2000;
  private String requestedSession="";
  private SecureStore computersStore;
  private final java.util.LinkedHashMap<String,JSONObject> computerGrants=new java.util.LinkedHashMap<>();
@@ -87,6 +90,7 @@ public final class MainActivity extends Activity {
    if(phoneChat==null)phoneChat=new PhoneChatScreen(this,phoneStore,new JSONObject(accountStore.read()),new PhoneChatScreen.Host(){
     public void settings(){showHome("");}
     public void changed(){syncPhoneChats();}
+    public void ready(){if(automaticReconnect())readRemoteChats();}
     public void remoteChats(){readRemoteChats();}
     public void remoteOpen(String id,String session){
      try{JSONObject grant=computerGrants.get(id);if(grant==null&&id.equals("saved")){String value=store.read();if(value!=null)grant=new JSONObject(value);}if(grant==null)throw new Exception("此电脑尚未授权，请在设置连接");requestedSession=session;generation++;openSavedConnection(new Pairing(grant,"token"));}
@@ -145,6 +149,7 @@ public final class MainActivity extends Activity {
   TextView intro=text("手机聊天无需连接电脑。授权连接后，可查看电脑对话；手机记录与批注可同步到已授权电脑。",16);intro.setPadding(0,dp(18),0,dp(16));content.addView(intro);
   content.addView(text("已登录 DeepSeek",14));
   Switch sync=new Switch(this);sync.setText("同步手机对话与批注到已授权电脑");sync.setChecked(getSharedPreferences("options",MODE_PRIVATE).getBoolean("phoneSync",true));content.addView(sync);sync.setOnCheckedChangeListener((v,checked)->{getSharedPreferences("options",MODE_PRIVATE).edit().putBoolean("phoneSync",checked).apply();if(checked)syncPhoneChats();});
+  Switch automatic=new Switch(this);automatic.setText("打开应用自动连接已授权电脑");automatic.setChecked(automaticReconnect());content.addView(automatic);automatic.setOnCheckedChangeListener((v,checked)->{getSharedPreferences("options",MODE_PRIVATE).edit().putBoolean("autoReconnect",checked).apply();if(checked)restoreConnections();else if(restoreLater!=null)tailnetHandler.removeCallbacks(restoreLater);});
   TextView syncStatus=text(syncNotice,14);content.addView(syncStatus);Button syncNow=button("立即同步手机记录");content.addView(syncNow);syncNow.setOnClickListener(v->{syncPhoneChats();syncStatus.setText("正在同步，请稍后重新打开设置查看结果");});
   addTailnetPanel(content);
   Button settings=button("备用：扫码连接电脑");content.addView(settings);settings.setOnClickListener(v->showPairing(""));
@@ -152,7 +157,8 @@ public final class MainActivity extends Activity {
    String saved=store.read();
    if(saved!=null){Pairing pairing=new Pairing(new JSONObject(saved),"token");Button open=button("打开已配对电脑");content.addView(open);open.setOnClickListener(v->openSavedConnection(pairing));}
   } catch(Exception error) { notice="保存的连接暂不可用，请在设置重新配对。"; }
-  addNetworkControls(content);content.addView(text(notice,14));
+  Button diagnose=button("系统 VPN 诊断（可选）");content.addView(diagnose);
+  LinearLayout diagnostics=new LinearLayout(this);diagnostics.setOrientation(LinearLayout.VERTICAL);diagnostics.setVisibility(View.GONE);diagnostics.addView(text("DSH 内登录后无需打开手机 Tailscale 开关。以下仅检查系统 VPN，不代表应用内连接状态。",14));addNetworkControls(diagnostics);content.addView(diagnostics);diagnose.setOnClickListener(v->diagnostics.setVisibility(diagnostics.getVisibility()==View.GONE?View.VISIBLE:View.GONE));content.addView(text(notice,14));
   Button account=button("账号设置");content.addView(account);account.setOnClickListener(v->accountSettings());
   Button about=button("关于 DeepSeek Harness Desktop");content.addView(about);about.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("DeepSeek Harness Desktop").setMessage("版本 "+appVersion()).setPositiveButton("确定",null).show());
  }
@@ -172,7 +178,7 @@ public final class MainActivity extends Activity {
     runOnUiThread(()->{
      busy[0]=false;if(disposed || generation!=current)return;
      String state=result.optString("state");boolean running=state.equals("Running");
-     progress.setText(running?"Tailscale 已连接 · 设备列表自动更新":state.equals("NeedsMachineAuth")?"请在 Tailscale 管理页面批准此设备":"请登录应用内的 Tailscale，以读取设备列表");
+     progress.setText(running?"应用内已连接 · 无需打开手机 Tailscale 开关":state.equals("NeedsMachineAuth")?"请在 Tailscale 管理页面批准此设备":"请登录应用内的 Tailscale，以读取设备列表");
      logout.setVisibility(running?View.VISIBLE:View.GONE);login.setVisibility(running?View.GONE:View.VISIBLE);explanation.setVisibility(running?View.GONE:View.VISIBLE);
      String auth=result.optString("authUrl");
      if(tailnetLoginRequested && !auth.isEmpty() && !auth.equals(openedTailnetAuth)) {
@@ -273,7 +279,20 @@ public final class MainActivity extends Activity {
   Button refresh=button("刷新网络状态");actions.addView(refresh,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));refresh.setOnClickListener(v->refreshNetworkLabels());
   content.addView(actions);
  }
- @Override protected void onResume(){super.onResume();refreshNetworkLabels();syncPhoneChats();if(tailnetPoll!=null){tailnetHandler.removeCallbacks(tailnetPoll);tailnetHandler.post(tailnetPoll);}}
+ @Override protected void onResume(){super.onResume();refreshNetworkLabels();syncPhoneChats();restoreConnections();if(tailnetPoll!=null){tailnetHandler.removeCallbacks(tailnetPoll);tailnetHandler.post(tailnetPoll);}}
+ private void restoreConnections(){
+  if(disposed||!foreground||!signedIn()||!automaticReconnect()||!tailnet.hasSavedNode()||!restoringNode.compareAndSet(false,true))return;
+  if(restoreLater!=null)tailnetHandler.removeCallbacks(restoreLater);
+  worker.execute(()->{
+   boolean ready=false;try{tailnet.command("ready");ready=true;}catch(Exception unavailable){/* Retain grants and retry while foregrounded. */}
+   final boolean restored=ready;
+   runOnUiThread(()->{
+    restoringNode.set(false);if(disposed||!foreground||!automaticReconnect())return;
+    if(restored){restoreDelay=2000;readRemoteChats();syncPhoneChats();if(web!=null&&connected!=null&&connectionFailed){connectionFailed=false;openSavedConnection(connected);}}
+    restoreLater=()->restoreConnections();tailnetHandler.postDelayed(restoreLater,restored?30000:restoreDelay);if(!restored)restoreDelay=Math.min(60000,restoreDelay*2);
+   });
+  });
+ }
  private void syncPhoneChats(){
   runOnUiThread(()->{
    if(disposed||!foreground||!signedIn()||!getSharedPreferences("options",MODE_PRIVATE).getBoolean("phoneSync",true))return;
@@ -284,7 +303,7 @@ public final class MainActivity extends Activity {
     try{String legacy=store.read();if(targets.isEmpty()&&legacy!=null)targets.add(new JSONObject(legacy));}catch(Exception error){syncNotice="保存的电脑授权暂不可读，请重新授权。";}
     syncWorker.execute(()->{try{
      JSONObject account=new JSONObject(accountStore.read());String scope=PhoneChatScreen.scope(account),source=hash(scope);
-     for(JSONObject target:targets){Pairing pairing=new Pairing(target,"token");String cursorKey=hash(source+pairing.pin+pairing.secret);
+     for(JSONObject target:targets){Pairing pairing=tailnet.route(new Pairing(target,"token"));String cursorKey=hash(source+pairing.pin+pairing.secret);
       long cursor=getSharedPreferences("phone-sync",MODE_PRIVATE).getLong(cursorKey,0);
       for(int page=0;page<5;page++){
        org.json.JSONArray changes=phoneStore.changes(scope,cursor);if(changes.length()==0)break;
@@ -311,7 +330,7 @@ public final class MainActivity extends Activity {
   worker.execute(()->{try{for(java.util.Map.Entry<String,JSONObject> entry:targets.entrySet()){
    JSONObject grant=entry.getValue();String name=grant.optString("name","已授权电脑");org.json.JSONArray rows=new org.json.JSONArray();String error="";
    try{
-    Pairing pairing=new Pairing(grant,"token");JSONObject response=pairing.embedded?tailnet.command(new JSONObject().put("action","request").put("operation","sessions").put("origin",pairing.origin).put("pin",pairing.pin).put("token",pairing.secret)).getJSONObject("sessions"):pairing.sessions();
+    Pairing pairing=tailnet.route(new Pairing(grant,"token"));JSONObject response=pairing.embedded?tailnet.command(new JSONObject().put("action","request").put("operation","sessions").put("origin",pairing.origin).put("pin",pairing.pin).put("token",pairing.secret)).getJSONObject("sessions"):pairing.sessions();
     org.json.JSONArray items=response.getJSONObject("result").getJSONObject("value").getJSONArray("items");
     for(int i=0;i<items.length()&&rows.length()<500;i++){JSONObject item=items.getJSONObject(i);String id=item.optString("sessionId");JSONObject origin=item.optJSONObject("origin");if(id.isEmpty()||id.length()>512||(origin!=null&&origin.optString("kind").equals("subagent")))continue;JSONObject projections=item.optJSONObject("projections"),values=projections==null?null:projections.optJSONObject("values");rows.put(new JSONObject().put("id",id).put("title",values==null?id:values.optString("title",id)).put("running",item.optBoolean("running")));}
    }catch(Exception failure){error="暂未连接，手机聊天仍可使用。";}
@@ -343,8 +362,8 @@ public final class MainActivity extends Activity {
  @Override protected void onStart() {
   super.onStart();foreground=true;networkManager=(android.net.ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
   networkCallback=new android.net.ConnectivityManager.NetworkCallback(){@Override public void onAvailable(android.net.Network network){runOnUiThread(()->{
-   refreshNetworkLabels();tailnet.networkChanged();
-   if(!disposed && web!=null && connected!=null && connectionFailed && automaticReconnect() && signedIn() && System.currentTimeMillis()-lastReconnect>5000){lastReconnect=System.currentTimeMillis();connectionFailed=false;status.setText("网络已恢复，正在重连已授权电脑…");web.reload();}
+   refreshNetworkLabels();tailnet.networkChanged();restoreConnections();
+   if(!disposed && web!=null && connected!=null && connectionFailed && automaticReconnect() && signedIn() && System.currentTimeMillis()-lastReconnect>5000){lastReconnect=System.currentTimeMillis();connectionFailed=false;status.setText("网络已恢复，正在重连已授权电脑…");openSavedConnection(connected);}
   });}
    @Override public void onLost(android.net.Network network){runOnUiThread(()->{refreshNetworkLabels();tailnet.networkChanged();});}
    @Override public void onCapabilitiesChanged(android.net.Network network,android.net.NetworkCapabilities capabilities){runOnUiThread(()->{refreshNetworkLabels();tailnet.networkChanged();});}
@@ -352,14 +371,7 @@ public final class MainActivity extends Activity {
   };
   try { networkManager.registerNetworkCallback(new android.net.NetworkRequest.Builder().removeCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(),networkCallback); } catch(SecurityException unavailable){networkCallback=null;}
  }
- @Override protected void onStop(){foreground=false;if(tailnetPoll!=null)tailnetHandler.removeCallbacks(tailnetPoll);if(networkManager!=null&&networkCallback!=null){networkManager.unregisterNetworkCallback(networkCallback);networkCallback=null;}super.onStop();}
- private void annotateSelection() {
-  if(web==null || connected==null || !sameOrigin(Uri.parse(web.getUrl()==null?"":web.getUrl()),connected))return;
-  String script="(()=>{const s=getSelection();if(!s||s.isCollapsed||!s.anchorNode)return false;const e=s.anchorNode.nodeType===1?s.anchorNode:s.anchorNode.parentElement;if(!e||e.closest('input,textarea,[contenteditable=true]'))return false;e.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerType:'touch'}));let n=0;const pick=()=>{const b=[...document.querySelectorAll('button[role=menuitem]')].find(x=>/^(添加注释|Add annotation)$/i.test(x.textContent.trim()));if(b){b.click();return;}if(++n<12)requestAnimationFrame(pick);};requestAnimationFrame(pick);return true;})()";
-  web.evaluateJavascript(script,result->{if("false".equals(result))Toast.makeText(this,"先长按选中对话或文件中的文字，再点添加注释。",Toast.LENGTH_LONG).show();});
- }
- @Override public void onActionModeStarted(android.view.ActionMode mode){super.onActionModeStarted(mode);if(web!=null&&connected!=null)mode.getMenu().add("添加注释").setShowAsActionFlags(android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM).setOnMenuItemClickListener(item->{annotateSelection();new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(()->mode.finish(),300);return true;});}
-
+ @Override protected void onStop(){foreground=false;if(restoreLater!=null)tailnetHandler.removeCallbacks(restoreLater);if(tailnetPoll!=null)tailnetHandler.removeCallbacks(tailnetPoll);if(networkManager!=null&&networkCallback!=null){networkManager.unregisterNetworkCallback(networkCallback);networkCallback=null;}super.onStop();}
  private void installContent(View view) {
   networkStatusViews.clear();
   if(tailnetPoll!=null){tailnetHandler.removeCallbacks(tailnetPoll);tailnetPoll=null;}
@@ -412,7 +424,8 @@ public final class MainActivity extends Activity {
    });
   });
  }
- private void openSavedConnection(Pairing pairing) {
+ private void openSavedConnection(Pairing saved) {
+  final Pairing pairing;try{pairing=tailnet.route(saved);}catch(Exception error){showHome("保存的电脑身份暂不可读，请在设置重新授权");return;}
   if(!pairing.embedded) {
    if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.PROXY_OVERRIDE))androidx.webkit.ProxyController.getInstance().clearProxyOverride(this::runOnUiThread,()->showConnection(pairing));
    else showConnection(pairing);
@@ -430,11 +443,12 @@ public final class MainActivity extends Activity {
  }
  @android.annotation.SuppressLint("SetJavaScriptEnabled")
  private void showConnection(Pairing pairing) {
+  if(web!=null){web.stopLoading();web.destroy();web=null;}
   generation++; connected = pairing; pairingInput = null; connectionFailed=false;
   final String session=requestedSession;requestedSession="";
   LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
   status = text("正在连接电脑",14);
-  web = new WebView(this); root.addView(web,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1)); installContent(root);
+  web = new SelectionWebView(this); root.addView(web,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1)); installContent(root);
   WebSettings settings = web.getSettings(); settings.setJavaScriptEnabled(true); settings.setDomStorageEnabled(true);
   settings.setUseWideViewPort(true);settings.setLoadWithOverviewMode(true);
   settings.setAllowFileAccess(false); settings.setAllowContentAccess(false); settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
@@ -477,7 +491,7 @@ public final class MainActivity extends Activity {
     if (accepted) handler.proceed();
     else { handler.cancel(); Toast.makeText(MainActivity.this,"电脑身份已改变，请在设置重新授权",Toast.LENGTH_LONG).show(); }
    }
-   @Override public void onPageFinished(WebView view,String url) { if (sameOrigin(Uri.parse(url),pairing)) {connectionFailed=false;status.setText("已连接电脑");} }
+   @Override public void onPageFinished(WebView view,String url) { if (sameOrigin(Uri.parse(url),pairing)) {connectionFailed=false;status.setText("已连接电脑");((SelectionWebView)view).installSelection();} }
    @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error) { if(request.isForMainFrame()) {connectionFailed=true;Toast.makeText(MainActivity.this,"电脑暂未连接，网络恢复后自动重连；返回可继续手机聊天",Toast.LENGTH_LONG).show();} }
    @Override public void onReceivedHttpError(WebView view,WebResourceRequest request,WebResourceResponse response) { if(request.isForMainFrame()&&(response.getStatusCode()==401 || response.getStatusCode()==403)) Toast.makeText(MainActivity.this,"电脑授权已失效，请返回设置重新授权",Toast.LENGTH_LONG).show(); }
   });

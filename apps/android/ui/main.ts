@@ -120,6 +120,17 @@ function saveNote() { draft.comment = comment.value; persist(); send('annotation
 el('saveNote').onclick = saveNote
 el('selection').onpointerdown = event => event.preventDefault()
 el('selection').onclick = () => { if (selected) openNote({ quote: selected, comment: '' }); el('selection').hidden = true }
+document.addEventListener('dsh:annotate-selection', (event) => {
+  if (dialog.open) { event.preventDefault(); return }
+  const selection = getSelection()
+  if (!selection || selection.isCollapsed || selection.rangeCount !== 1) return
+  const range = selection.getRangeAt(0), start = range.startContainer, end = range.endContainer
+  const owner = (start instanceof Element ? start : start.parentElement)?.closest<HTMLElement>('.markdown')
+  if (!owner || !owner.contains(end) || !el('messages').contains(owner)) return
+  const quote = annotationSelectionMarkdown(owner, range)
+  if (!quote.trim()) return
+  event.preventDefault(); openNote({ quote, comment: '' }); el('selection').hidden = true
+})
 document.addEventListener('selectionchange', () => {
   if (dialog.open) return
   const selection = getSelection(); selected = ''

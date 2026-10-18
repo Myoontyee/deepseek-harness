@@ -12,6 +12,7 @@ const { renderToStaticMarkup } = primitive('react-dom/server')
 const iconNames = { sidebar: 'PanelLeftOutline', new: 'NewChatOutline', settings: 'SettingsOutline', close: 'CloseOutline', refresh: 'RefreshOutline', send: 'SendOutline', stop: 'StopFill', copy: 'CopyOutline', globe: 'GlobeOutline' }
 const icons = Object.fromEntries(Object.entries(iconNames).map(([name, glyph]) => [name, renderToStaticMarkup(createElement(artwork[`Icon${glyph}Regular`], { size: 20 }))]))
 await build({ root, base: './', configFile: false, plugins: [{ name: 'phone-desktop-icons',
+  generateBundle() { this.emitFile({ type: 'asset', fileName: 'native-selection.js', source: readFileSync(join(root, 'native-selection.js'), 'utf8') }) },
   resolveId(id) { if (id === 'virtual:phone-icons') return '\0phone-icons' },
   load(id) { if (id === '\0phone-icons') return `export default ${JSON.stringify(icons)}` },
 }, { name: 'phone-license-notices', writeBundle() {

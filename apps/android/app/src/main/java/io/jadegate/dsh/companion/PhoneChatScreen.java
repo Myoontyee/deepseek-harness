@@ -16,7 +16,7 @@ import org.json.*;
 /** The native bridge exists only on the packaged local chat origin, never on a paired computer. */
 final class PhoneChatScreen implements AutoCloseable {
  static DeepSeekApi.Connections testConnections;
- interface Host {void settings();void changed();void remoteChats();void remoteOpen(String device,String session);}
+ interface Host {void settings();void changed();void ready();void remoteChats();void remoteOpen(String device,String session);}
  final WebView view;
  private final Activity activity;
  private final PhoneChatStore store;
@@ -36,12 +36,13 @@ final class PhoneChatScreen implements AutoCloseable {
  PhoneChatScreen(Activity activity,PhoneChatStore store,JSONObject account,Host host) throws Exception {
   this.activity=activity;this.store=store;this.account=account;this.host=host;
   scope=scope(account);
-  view=new WebView(activity);WebSettings settings=view.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(false);
+  view=new SelectionWebView(activity);WebSettings settings=view.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(false);
   settings.setUseWideViewPort(true);settings.setLoadWithOverviewMode(true);
   settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
   settings.setJavaScriptCanOpenWindowsAutomatically(false);settings.setSupportMultipleWindows(false);
   WebViewAssetLoader assets=new WebViewAssetLoader.Builder().addPathHandler("/assets/",new WebViewAssetLoader.AssetsPathHandler(activity)).build();
   view.setWebViewClient(new WebViewClient(){
+   @Override public void onPageFinished(WebView web,String url){if(url.equals("https://appassets.androidplatform.net/assets/chat/index.html"))((SelectionWebView)web).installSelection();}
    @Override public WebResourceResponse shouldInterceptRequest(WebView web,WebResourceRequest request){
     Uri uri=request.getUrl();if("https".equals(uri.getScheme())&&"appassets.androidplatform.net".equals(uri.getHost())&&uri.getUserInfo()==null&&uri.getPort()==-1){WebResourceResponse response=assets.shouldInterceptRequest(uri);if(response!=null)return response;}
     return new WebResourceResponse("text/plain","UTF-8",403,"Blocked",Collections.emptyMap(),new ByteArrayInputStream(new byte[0]));
@@ -95,7 +96,7 @@ final class PhoneChatScreen implements AutoCloseable {
     models=new JSONArray(activity.getSharedPreferences("models",0).getString(scope,"[]"));
     // A killed process may leave a partial assistant turn; preserve its content and make interruption visible.
     JSONArray messages=chat.getJSONArray("messages");for(int i=0;i<messages.length();i++){JSONObject item=messages.getJSONObject(i);if(item.optString("status").equals("generating"))item.put("status","interrupted").put("error","上次生成已中断，收到的内容已保留");}
-    save();state();loadModels();break;
+    save();state();loadModels();activity.runOnUiThread(host::ready);break;
    }
    case "models":loadModels();break;
    case "remoteChats":activity.runOnUiThread(host::remoteChats);break;
