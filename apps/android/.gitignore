@@ -3,3 +3,6 @@
 **/build/
 *.jks
 *.keystore
+
+/app/src/main/jniLibs/
+/app/src/main/assets/licenses/

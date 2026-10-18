@@ -1,0 +1,32 @@
+{
+  "androidBehaviorSource": "4ee06df05afd9f73e47d63052b8ff4adc11f0f6a",
+  "version": "0.2.1-rc.2.20261018.2",
+  "android": {
+    "passed": true,
+    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.2-android-arm64.apk",
+    "bytes": 9072490,
+    "sha256": "724ffd59c60c2137218321e79069214e913721b72240f5f893c67fabfdca6b1c",
+    "abi": "arm64-v8a",
+    "nativeMatchesLocalBuild": true,
+    "licensesBundled": true,
+    "sameSigningCertificate": true,
+    "physicalPhoneTested": false
+  },
+  "remoteTransfer": {
+    "reason": "4090-server Tailnet node key expired; checkout/toolchain unverified",
+    "completed": false
+  },
+  "windows": {
+    "Path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.2-win-x64-unsigned.exe",
+    "Bytes": 296428569,
+    "SHA256": "E542AE3B9F9289231F3349A7E3526F3A6041D43B125095AACED5B50938DAD5A6"
+  },
+  "androidCloudRun": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39056040708",
+  "windowsSource": "0b97f14299910b0877e992e1827946d600d7f450",
+  "timezone": "Asia/Shanghai",
+  "branch": "codex/android-tailnet-20261018",
+  "physicalPhoneValidated": false,
+  "date": "2026-10-18",
+  "androidSigningCertificate": "e7f22b5b96df116121f091ad59eda08e7ce33225e39bebd89532660ce2949940",
+  "officialBase": "dsh-v0.2.1-rc.2"
+}
