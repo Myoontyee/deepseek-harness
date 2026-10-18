@@ -1,7 +1,7 @@
 {
-  "date": "2026-10-18",
+  "date": "2026-10-19",
   "timezone": "Asia/Shanghai",
-  "version": "0.2.1-rc.2.20261018.6",
+  "version": "0.2.1-rc.2.20261019.1",
   "officialBase": "dsh-v0.2.1-rc.2",
   "branch": "codex/android-tailnet-20261018",
   "android": {
@@ -17,14 +17,21 @@
     "version": "0.2.1-rc.2.20261018.5"
   },
   "windows": {
-    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.6-win-x64-unsigned.exe",
-    "bytes": 296438549,
-    "sha256": "07748E0E2FAD6335001E8BA098FA1254E5E9B56144F80202D11F09870E890F2D",
+    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261019.1-win-x64-unsigned.exe",
+    "bytes": 321288416,
+    "sha256": "F3483DE230003D802A930E872B0484523A064C18DFBA70DCAF45972A06422096",
     "buildGatesPassed": 9,
     "preparedRuntimeSmokePassed": true,
     "packagedRuntimeSmokePassed": true,
     "featuresInPackagedMain": true,
-    "version": "0.2.1-rc.2.20261018.6"
+    "version": "0.2.1-rc.2.20261019.1",
+    "finalAggregateChecksPassed": 2,
+    "packagedFileByteComparisonsPassed": 4,
+    "sourceBuildCommit": "50515f88a656ae9415fa1c99c994fd28411d31e1",
+    "sourceBuildDirty": true,
+    "compressionLevel": 1,
+    "standardDifferentialInstaller": true,
+    "publishedToUpdateChannel": false
   },
   "androidSigningCertificate": "e7f22b5b96df116121f091ad59eda08e7ce33225e39bebd89532660ce2949940",
   "checks": {
@@ -56,7 +63,18 @@
     "docsSyncInitialPassed": 37,
     "docsSyncInitialFailed": 6,
     "docsOutstandingFailures": 5,
-    "desktopPairingChangedHelpersClientStrictLintPassed": true
+    "desktopPairingChangedHelpersClientStrictLintPassed": true,
+    "remoteWorkspaceHostTestsPassed": 75,
+    "deviceCatalogAndViewTestsPassed": 10,
+    "pinnedPeerCatalogTestsPassed": 3,
+    "builtBrowserBootTestsPassed": 2,
+    "desktopMobileLightDarkLayoutsPassed": true,
+    "mainDevicePanelScrollPassed": true,
+    "finalBuildCheckPassed": true,
+    "fullGuiRunCompleted": false,
+    "fullGuiRunStoppedAfterFailures": true,
+    "focusedStyleTestsPassed": 28,
+    "focusedStyleTestsFailed": 3
   },
   "androidCloud": {
     "run": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39129299532",
@@ -75,12 +93,17 @@
     "originalChangesPreserved": 1,
     "checksumVerified": true,
     "dependenciesInstalled": false,
-    "node": "24.14.0"
+    "node": "24.14.0",
+    "latestWorkspaceUpdateTransferred": false
   },
   "remainingRepositoryChecks": [
     "Existing removed-discussion documentation: broken anchors, Model Experience and limitations entries, plus assistantReturnRoute return annotation",
     "CLI help generation failed in the complete documentation batch; no installer runtime failure",
     "Full documentation run initially exhausted the 2 GB graph-process heap; isolated graph verification passed at 3 GB",
-    "Legacy Desktop type-aware lint findings remain outside the new helper/client scope; new helpers and changed client files pass focused strict lint"
+    "Legacy Desktop type-aware lint findings remain outside the new helper/client scope; new helpers and changed client files pass focused strict lint",
+    "Full GUI run was stopped after recording failures to contain laptop resource use; do not describe it as green or completed. Focused device tests pass.",
+    "Focused style checks still fail in untouched AssistantIdentity/Discussions circular avatars, legacy radius exceptions and MessageEditor elevated scrolling. The new device stylesheet passes the shared focus-ring check.",
+    "UI i18n check reports eight existing hard-coded strings in main, removed discussions, InlineCommentEditor, clipboard math and SkillsPage; no new device strings were reported.",
+    "Local installer records base commit plus a dirty working tree; rebuild from a clean delivery commit before full publication. No tag or update feed was published."
   ]
 }

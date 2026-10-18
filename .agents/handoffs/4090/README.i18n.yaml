@@ -3,26 +3,26 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/handoffs/4090/README.md
 /deepseek-harness-desktop-4090-handoff:
-  en: dded8b21b431de2a
-  zh: b447948df9fde503
+  en: 37b5758c110f6899
+  zh: 31923437d6ea3994
 /deepseek-harness-desktop-4090-handoff/scope:
-  en: d8d8bec961839e54
-  zh: b0bc0e0486900640
+  en: 98ca2d13b375dca4
+  zh: 3843dfb7540e32c4
 /deepseek-harness-desktop-4090-handoff/current-installers:
-  en: cb55b1bfd7883dfa
-  zh: 5a8ae5eccdb432c5
+  en: b708fbee6415aaf1
+  zh: c4b6e711ed5c5b74
 /deepseek-harness-desktop-4090-handoff/start-on-4090:
   en: 7768b2a6d50468e2
   zh: 0ef36dee12549641
 /deepseek-harness-desktop-4090-handoff/local-android-build:
-  en: b459f28bb319fb7d
-  zh: 229385bd1e4c81a2
+  en: 1ce9f8ddd5cdd84d
+  zh: 6aa06db3e2fb85c1
 /deepseek-harness-desktop-4090-handoff/verification:
-  en: 58063d43402964f7
-  zh: dcb3fbe63137ccfc
+  en: 8002ac82a5a77cad
+  zh: cd96bbc2fee69baa
 /deepseek-harness-desktop-4090-handoff/current-local-changes:
-  en: 8e67397048d2f0bd
-  zh: 76152f0cc8a66e7e
+  en: 37e247c623d64f9c
+  zh: 4401b8ead7b2e5dc
 /deepseek-harness-desktop-4090-handoff/important-implementation-boundaries:
-  en: 06811209017053fd
-  zh: bea43195b54a520a
+  en: 9c0e57e12e99b3b5
+  zh: 112edb9859f22de4

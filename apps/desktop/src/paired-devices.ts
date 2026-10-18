@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path'
 import { hostname } from 'node:os'
 import { discoverTailDevices } from './tailscale-discovery.ts'
 import { probeTailnetConnection, requestTailnetConnection } from './tailnet-connect.ts'
+import { readPeerCatalog, type PeerCatalog } from './peer-catalog.ts'
 
 interface Grant { id: string; name: string; url: string; pin: string; token: string }
 interface State { version: 1; detect: boolean; grants: Grant[] }
@@ -81,6 +82,11 @@ export class PairedDevices {
   grant(id: string): Grant { const grant = this.state.grants.find(item => item.id === id); if (!grant) throw new Error('设备未配对'); return grant }
   /** Forget one computer locally. Its owner can additionally revoke the grant remotely. */
   forget(id: string): void { this.save({ ...this.state, grants: this.state.grants.filter(item => item.id !== id) }) }
+  /** Read a paired computer's workspace titles and grouped conversations.
+   * @param id - Saved device identity; caller-supplied network addresses are never accepted.
+   * @returns Display metadata without credentials.
+   */
+  workspaceCatalog(id: string): Promise<PeerCatalog> { return readPeerCatalog(this.grant(id)) }
   /** Read remote conversation summaries without starting work on the remote device. */
   async conversations(id: string) {
     const grant = this.grant(id)

@@ -90,9 +90,9 @@ const WORKSPACE_VIEWER: RemoteAccessRole<'workspace'> = { name: 'test:workspace-
 const SESSION_VIEWER: RemoteAccessRole<'session'> = { name: 'test:session-viewer', resource: 'session', actions: ['workspace/follow'] }
 
 /** The Context a Gateway dispatch of `workspace/follow` binds for `principal`. */
-function followerContext(ctx: Context, principal: Principal): Context {
+function followerContext(ctx: Context, principal: Principal, method = 'follow'): Context {
   const invocation: RemoteInvocation = {
-    request: { namespace: 'workspace', method: 'follow', args: {} },
+    request: { namespace: 'workspace', method, args: {} },
     service: 'workspaceController',
     peer: { id: 'workspace-access-peer' as PeerId, ctx, principal, interactions: 'answer', signal: new AbortController().signal, dispose: async () => {} },
     signal: new AbortController().signal,
@@ -116,6 +116,36 @@ async function nextFrame(
 }
 
 describe('WorkspaceController commands', () => {
+  it('filters the one-shot catalog by workspace and session permissions', async () => {
+    const { controller, ctx, root } = await harness()
+    const shown = await controller.create({ path: stageDir(root, 'shared') })
+    await controller.create({ path: stageDir(root, 'private') })
+    const allowed = ctx.sessions.create(SessionId('allowed'), { meta: { cwd: shown.workspace.path } })
+    const hidden = ctx.sessions.create(SessionId('hidden'), { meta: { cwd: shown.workspace.path } })
+    const workspace = ctx.workspaceRegistry.get(shown.workspace.workspaceId)
+    if (!workspace) throw new Error('Missing fixture workspace')
+    await workspace.attachSession(allowed.id)
+    await workspace.attachSession(hidden.id)
+    await controller.pinSession({ sessionId: allowed.id })
+    await controller.pinSession({ sessionId: hidden.id })
+    ctx.remoteAccess.registerPolicy('test-guest', { bindings: () => [
+      { role: { name: 'test:list-global', resource: 'global', actions: ['workspace/list'] }, resource: { kind: 'global' } },
+      { role: { name: 'test:list-workspace', resource: 'workspace', actions: ['workspace/list'] }, resource: { kind: 'workspace', id: shown.workspace.workspaceId } },
+      { role: { name: 'test:list-session', resource: 'session', actions: ['workspace/list'] }, resource: { kind: 'session', id: allowed.id } },
+    ] })
+    const guest: Principal = { kind: 'test-guest', guest: 'catalog' }
+    const value = followerContext(ctx, guest, 'list').workspaceController.list()
+    expect(value.items).toEqual([expect.objectContaining({ workspaceId: shown.workspace.workspaceId, sessionIds: [allowed.id] })])
+    expect(value.pinnedSessionIds).toEqual([allowed.id])
+  })
+  it('lists empty registered workspaces with their saved display titles', async () => {
+    const { controller, root } = await harness()
+    const created = await controller.create({ path: stageDir(root, 'research') })
+    await controller.rename({ workspaceId: created.workspace.workspaceId, title: 'Research notes' })
+    expect(controller.list().items).toContainEqual(expect.objectContaining({
+      workspaceId: created.workspace.workspaceId, title: 'Research notes', sessionIds: [],
+    }))
+  })
   it('serializes concurrent path adoption and preserves an existing title', async () => {
     const { controller, root } = await harness()
     const path = stageDir(root, 'alpha')

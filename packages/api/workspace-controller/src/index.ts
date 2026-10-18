@@ -93,6 +93,22 @@ export class WorkspaceController extends TypertRemoteService {
   }
 
   /**
+   * Read the current workspace catalog without retaining a follow subscription.
+   * @returns Workspaces and Session identities admitted for this invocation.
+   */
+  @Remote('list')
+  list(): WorkspaceBaseline {
+    const value = this.feed.baseline()
+    const admitted = (id: SessionId): boolean => this.ctx.remoteAccess.allows({ kind: 'session', id })
+    return {
+      items: value.items.filter(item => this.ctx.remoteAccess.allows({ kind: 'workspace', id: item.workspaceId }))
+        .map(item => ({ ...item, sessionIds: item.sessionIds.filter(admitted) })),
+      archivedSessionIds: value.archivedSessionIds.filter(admitted),
+      pinnedSessionIds: value.pinnedSessionIds.filter(admitted),
+    }
+  }
+
+  /**
    * Initialize or reuse the default Workspace during first-use startup. The
    * directory name is fixed, so the Host never renames or relocates an
    * existing default; its initial title is that same name, which browser

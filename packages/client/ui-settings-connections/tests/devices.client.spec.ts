@@ -7,7 +7,7 @@ it('keeps equal session IDs separate by device and contains one offline peer', a
     if (action === 'list') return { detect: true, peers: [], warning: '', paired: ['a', 'b', 'offline'].map(id => ({ id, name: id, address: '100.80.1.1' })) }
     if (action === 'phoneConversations') return []
     if (args?.id === 'offline') throw new Error('Offline')
-    return [{ id: 'same-session-id', title: args?.id, running: false }]
+    return { sessions: [{ id: 'same-session-id', title: args?.id, running: false }], workspaces: [], warning: '' }
   }, text => text)
   try {
     expect(await actions.deviceCommand('refresh')).toBe(true)
@@ -75,5 +75,26 @@ it('contains a failed cancel operation instead of rejecting the UI event handler
   try {
     expect(await actions.deviceCommand('cancelPairTailnet')).toBe(false)
     expect(actions.hooks.devices.getSnapshot().error).toBe('IPC closed')
+  } finally { actions.dispose() }
+})
+
+it('retains the last successful catalog during an outage and recovers on explicit refresh', async () => {
+  let offline = false
+  const invoke = vi.fn(async (action: string) => {
+    if (action === 'list') return { detect: true, peers: [], warning: '', paired: [{ id: 'a', name: 'Server', address: '100.80.1.1' }] }
+    if (action === 'phoneConversations') return []
+    if (offline) throw new Error('Offline')
+    return { workspaces: [{ id: 'w', title: 'Research', path: '/research' }],
+      sessions: [{ id: 's', title: 'Question', workspaceId: 'w', running: false }], warning: '' }
+  })
+  const actions = createDeviceActions(invoke, text => text)
+  try {
+    await actions.deviceCommand('refresh')
+    offline = true
+    expect(await actions.deviceCommand('refreshDevice', { id: 'a' })).toBe(false)
+    expect(actions.hooks.devices.getSnapshot()).toMatchObject({ sessions: { a: [{ id: 's' }] }, workspaces: { a: [{ id: 'w' }] }, failures: { a: 'Offline' } })
+    offline = false
+    expect(await actions.deviceCommand('refreshDevice', { id: 'a' })).toBe(true)
+    expect(actions.hooks.devices.getSnapshot().failures.a).toBeUndefined()
   } finally { actions.dispose() }
 })

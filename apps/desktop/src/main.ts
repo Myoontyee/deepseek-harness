@@ -1251,6 +1251,7 @@ async function main(): Promise<void> {
     }
     if (action === 'pair' && typeof data.code === 'string' && typeof data.name === 'string') { await devices.pair(data.code, data.name); return devices.list() }
     if (action === 'conversations') return devices.conversations(id)
+    if (action === 'workspaceCatalog') return devices.workspaceCatalog(id)
     if (action === 'forget') {
       for (const window of peerWindows.get(id) ?? []) if (!window.isDestroyed()) window.close()
       devices.forget(id); return devices.list()

@@ -115,6 +115,8 @@ export interface SessionRowScheduleOwnerProps {
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
+    /** Remote catalogs share the local workspace scroll area and visibility filters. */
+    'sidebar.workspaces.remote': { kind: 'list'; scope: 'root'; owner: { query: string; archivedFilter: 'default' | 'show' | 'only' } }
     /** Directory-flow hole under the conversation empty-state picker (declared by the WorkspacePicker entry). */
     'conversation.hero.workspace.directoryFlow': { kind: 'single'; scope: 'root'; owner: DirectoryFlowOwnerProps }
     /** Directory-flow hole under the sidebar browsing region (declared by the WorkspaceBrowser entry). */
@@ -510,6 +512,7 @@ export type RowToastProps =
 export type WorkspaceBrowserProps =
   PropsRuntime<'sidebar.workspaces'>
   & PropsRenderSlots<
+    | 'sidebar.workspaces.remote'
     | 'sidebar.workspaces.directoryFlow'
     | 'sidebar.workspaces.session.menu.item'
     | 'sidebar.workspaces.session.row.action'

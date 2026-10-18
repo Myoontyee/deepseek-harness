@@ -255,6 +255,7 @@ type SessionTreeProps = Pick<
   'useSessionStatus' | 'startSession' | 'open'
   | 'insertWorkspaceBefore' | 't' | 'usePanelInfo'
 > & PropsRenderSlots<
+  | 'sidebar.workspaces.remote'
   | 'sidebar.workspaces.session.menu.item'
   | 'sidebar.workspaces.session.row.action'
   | 'sidebar.session.row.leading'
@@ -671,7 +672,7 @@ function SessionTree({
       <AnimatedRows
         className={clsx(css.list, workspaceDropAtListStart && css.listTopDropActive)}
         label={t('section.sessions')}
-        rowKeys={rowKeys}
+        rowKeys={[...rowKeys, 'remote-workspaces']}
         ready={list.phase === 'ready' && workspaceReady && !nativeDragActive}
         resetKey={JSON.stringify([animationResetKey, watermarkMotionKey])}
       >
@@ -679,6 +680,7 @@ function SessionTree({
           <EmptySessions rowState={rowState} onLeaveArchivedOnly={onLeaveArchivedOnly} t={t} />
         )}
         {groupRows}
+        {renderSlot('sidebar.workspaces.remote', { query: '', archivedFilter: rowState.archivedFilter })}
       </AnimatedRows>
       <span className={css.fade} />
     </HoverCardGroup>
@@ -734,7 +736,7 @@ function FlatList({
       <AnimatedRows
         className={clsx(css.list, css.flatList)}
         label={t('section.sessions')}
-        rowKeys={rows.length === 0 ? ['empty'] : rows.map(row => `session:${row.id}`)}
+        rowKeys={[...(rows.length === 0 ? ['empty'] : rows.map(row => `session:${row.id}`)), 'remote-workspaces']}
         ready={list.phase === 'ready' && workspaceReady && drag === null}
         resetKey={animationResetKey}
       >
@@ -782,6 +784,7 @@ function FlatList({
             />
           )
         })}
+        {renderSlot('sidebar.workspaces.remote', { query: '', archivedFilter: rowState.archivedFilter })}
       </AnimatedRows>
       <span className={css.fade} />
     </HoverCardGroup>
@@ -797,6 +800,7 @@ interface RemoteSearchState {
 
 /** Flat search body: local metadata matches plus the current Host result page. */
 function SearchResults({
+  renderSlot,
   useSessions,
   useSessionStatus,
   open,
@@ -809,7 +813,7 @@ function SearchResults({
   resultLimit,
   usePanelInfo,
   t,
-}: Pick<WorkspaceBrowserProps, 'useSessions' | 'useSessionStatus' | 'open' | 't' | 'usePanelInfo'> & {
+}: Pick<WorkspaceBrowserProps, 'useSessions' | 'useSessionStatus' | 'open' | 't' | 'usePanelInfo' | 'renderSlot'> & {
   workspaces: readonly WorkspaceView[]
   archivedSessionIds: readonly SessionNode['id'][]
   /** Search matches follow the archived filter selected for the list. */
@@ -882,6 +886,7 @@ function SearchResults({
             {t('search.hasMore', { n: resultLimit })}
           </div>
         )}
+        {renderSlot('sidebar.workspaces.remote', { query, archivedFilter })}
       </div>
       <span className={css.fade} />
     </div>
@@ -1403,6 +1408,7 @@ export function WorkspaceBrowser({
         {wide && (normalizedQuery !== ''
           ? (
             <SearchResults
+              renderSlot={renderSlot}
               usePanelInfo={usePanelInfo}
               useSessions={useSessions}
               useSessionStatus={useSessionStatus}

@@ -1,7 +1,9 @@
 import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import { createDeviceActions } from './devices.ts'
-import { DevicesPage, DevicesIcon } from './DevicesPage.tsx'
+import { DevicesPanel, DevicesIcon } from './DevicesPage.tsx'
+import { RemoteWorkspaces } from './RemoteWorkspaces.tsx'
+import { ConnectionCenter } from './ConnectionCenter.tsx'
 /** Register saved SSH settings and reveal terminals after the Session surface mounts. */
 import type { Context } from '@deepseek-ai/cordis'
 import { useEffect } from 'react'
@@ -19,7 +21,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-sidebar-terminal/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-secret-mask/client'
-import { ConnectionsPage, type ConnectionActions } from './ConnectionsPage.tsx'
+import type { ConnectionActions } from './ConnectionsPage.tsx'
 import { en, zh, type ConnectionKey } from './locales.ts'
 import { connectionStyles } from './styles.ts'
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -63,20 +65,27 @@ export function apply(ctx: Context): void {
     dshDesktop?: { devices?: { invoke(action: string, args?: Record<string, unknown>): Promise<unknown> } }
   }).dshDesktop?.devices
   const panelId = 'paired-devices' as MainPanelId
+  const evaluate = ctx.uiConversation.userText.createEvaluator()
+  const devices = createDeviceActions((action, args) => {
+    if (!native) throw new Error('Native device operations unavailable')
+    return native.invoke(action, args)
+  }, text =>
+    evaluate({ text, facts: {} }).map(node => node.id === 'secret' ? node.data.masked : text.slice(node.start, node.end)).join(''))
+  ctx.effect(() => () => { devices.dispose() })
   if (native) {
-    const evaluate = ctx.uiConversation.userText.createEvaluator()
-    const devices = createDeviceActions((action, args) => native.invoke(action, args), text =>
-      evaluate({ text, facts: {} }).map(node => node.id === 'secret' ? node.data.masked : text.slice(node.start, node.end)).join(''))
-    ctx.effect(() => () => { devices.dispose() })
-    ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: panelId, locale: 'settings.connections', inject: () => devices }, DevicesPage))
+    ctx.slots.inject('sidebar.workspaces.remote', () => ctx.slots.register({
+      name: 'sidebar.workspaces.remote', id: 'paired-computers', locale: 'settings.connections', inject: () => devices,
+    }, RemoteWorkspaces))
+    ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: panelId, locale: 'settings.connections', inject: () => devices }, DevicesPanel))
     ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({ name: 'sidebar.panellist', id: panelId, order: 20, label: () => ctx.locale.bind('settings.connections')('devices.title') }, DevicesIcon))
   }
   const pending = createSnapshotStore<SshSessionReceipt | undefined>(undefined)
   const form = ctx.configForms.get<ConnectionPreferences>('connection-controller')
-  const actions: ConnectionActions = {
+  const actions: ConnectionActions & typeof devices = {
+    ...devices,
     devicesAvailable: native !== undefined,
     openDevices: () => { ctx.get('layout')?.selectPanel(panelId) },
-    hooks: { preferences: { getSnapshot: () => form.getSnapshot(), subscribe: listener => form.subscribe(listener) } },
+    hooks: { ...devices.hooks, preferences: { getSnapshot: () => form.getSnapshot(), subscribe: listener => form.subscribe(listener) } },
     list: async () => unwrap(await ctx.remote.connections.list()),
     save: (id, profile) =>
       form.mutate(
@@ -100,7 +109,7 @@ export function apply(ctx: Context): void {
         locale: 'settings.connections',
         inject: () => actions,
       },
-      ConnectionsPage,
+      ConnectionCenter,
     ),
   )
   ctx.slots.inject('shell.overlay', () =>

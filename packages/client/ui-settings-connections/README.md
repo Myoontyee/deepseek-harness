@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 Manage OpenSSH servers, test authentication and open remote terminals or SSH conversations.
 
+Desktop connection settings default to compact computer cards with per-device conversation refresh, reconnection and collapsed technical details; SSH has its own tab. A shared poller supplies the workspace sidebar and settings while either is mounted, with at most two peer reads at once. Remote folders and conversations carry globe marks, follow sidebar search and archive filters, and open through the approved device's isolated window. Failed refreshes retain the last successful list with a disconnected status. Older peers without the workspace catalog show conversation-directory groups and a warning in connection details.
+
 Desktop's Devices and conversations panel lists Tailscale peers by their configured names. Selecting an online computer probes its DSH service and requests approval there, with a visible waiting state and cancellation. Approval persists in local OS-encrypted storage; manual invitation codes remain a backup. While open, the panel refreshes paired computers and opens their conversations in certificate-pinned windows without local Desktop APIs. It also previews phone transcripts and annotations synchronized by authorized phones; continue those replies on the phone. Credential masking follows the conversation service.
 
 ## Table of Contents
