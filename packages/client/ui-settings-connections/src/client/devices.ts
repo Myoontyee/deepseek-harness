@@ -25,6 +25,7 @@ export interface DeviceActions {
   hooks: { devices: ObservableSnapshot<DevicesState> }
   deviceCommand: (action: string, args?: Record<string, unknown>) => Promise<boolean>
   watchDevices: () => () => void
+  maskPhoneText: (text: string) => string
 }
 /**
  * Create one plugin-lifetime owner; polling runs only while the device panel is mounted.
@@ -33,6 +34,7 @@ export interface DeviceActions {
  */
 export function createDeviceActions(
   invoke: (action: string, args?: Record<string, unknown>) => Promise<unknown>,
+  maskPhoneText: (text: string) => string,
 ): DeviceActions & { dispose(): void } {
   const state = createSnapshotStore<DevicesState>({ catalog: { detect: false, peers: [], paired: [], warning: '' }, sessions: {}, failures: {}, busy: false, error: '', phones: [], phone: undefined })
   let disposed = false
@@ -73,7 +75,7 @@ export function createDeviceActions(
     }
     finally { if (!disposed) state.update((value) => { value.busy = false }) }
   }
-  return { hooks: { devices: state }, deviceCommand,
+  return { hooks: { devices: state }, deviceCommand, maskPhoneText,
     watchDevices: () => {
       let active = true
       let timer: ReturnType<typeof setTimeout> | undefined

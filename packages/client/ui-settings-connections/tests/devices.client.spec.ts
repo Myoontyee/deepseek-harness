@@ -8,7 +8,7 @@ it('keeps equal session IDs separate by device and contains one offline peer', a
     if (action === 'phoneConversations') return []
     if (args?.id === 'offline') throw new Error('Offline')
     return [{ id: 'same-session-id', title: args?.id, running: false }]
-  })
+  }, text => text)
   try {
     expect(await actions.deviceCommand('refresh')).toBe(true)
     const value = actions.hooks.devices.getSnapshot()
@@ -26,7 +26,7 @@ it('previews synchronized phone copies without opening a remote operator window'
     if (action === 'readPhoneConversation') return transcript
     throw new Error('Unexpected operation')
   })
-  const actions = createDeviceActions(invoke)
+  const actions = createDeviceActions(invoke, text => text)
   try {
     expect(await actions.deviceCommand('refresh')).toBe(true)
     expect(actions.hooks.devices.getSnapshot().phones[0]?.title).toBe('Research')
@@ -38,7 +38,7 @@ it('previews synchronized phone copies without opening a remote operator window'
 
 it('does not publish a delayed inventory after disposal', async () => {
   let finish!: (value: unknown) => void
-  const actions = createDeviceActions(() => new Promise((resolve) => { finish = resolve }))
+  const actions = createDeviceActions(() => new Promise((resolve) => { finish = resolve }), text => text)
   const listener = vi.fn()
   const unsubscribe = actions.hooks.devices.subscribe(listener)
   const pending = actions.deviceCommand('refresh')

@@ -5,17 +5,16 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import { IconGlobeOutlineRegular, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { DeviceActions } from './devices.ts'
-import { createCredentialTextMask } from '@deepseek-ai/dsh-client-ui-secret-mask/src/client/masked-text.ts'
 
 /** @param props - Device state and native commands. @returns The paired conversation hub. */
-export function DevicesPage({ useDevices, deviceCommand, watchDevices, t }: PropsLocale<'settings.connections'> & InjectFace<DeviceActions>) {
+export function DevicesPage({ useDevices, deviceCommand, watchDevices, maskPhoneText: mask, t }:
+PropsLocale<'settings.connections'> & InjectFace<DeviceActions>) {
   const state = useDevices(value => value)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
   const [pairing, setPairing] = useState(false)
   const [search, setSearch] = useState('')
   const labels = { code: { copyLabel: t('phone.copy'), copiedLabel: t('phone.copied') }, footnotes: t('phone.footnotes') }
-  const [mask] = useState(createCredentialTextMask)
   useEffect(watchDevices, [watchDevices])
   return <section className="dsh-connections dsh-device-hub">
     <h2>{t('devices.title')}</h2><p>{t('devices.hint')}</p>

@@ -17,10 +17,10 @@ it('shows named peers in separate columns and pairs the chosen name', () => {
       { id: 'server', name: '4090-server', address: '100.80.1.2', os: 'windows', online: true, self: false },
       { id: 'phone', name: 'vivo-s18pro', address: '100.80.1.3', os: 'android', online: true, self: false },
     ], paired: [{ id: 'saved', name: 'Server', address: '100.80.1.2' }] },
-    sessions: { saved: [] }, failures: {}, busy: false, error: '',
+    sessions: { saved: [] }, failures: {}, busy: false, error: '', phones: [], phone: undefined,
   })
   const view = render(<DevicesPage useDevices={useDevices} deviceCommand={deviceCommand}
-    watchDevices={() => () => {}} t={makeTranslate(zh)} />)
+    watchDevices={() => () => {}} maskPhoneText={text => text} t={makeTranslate(zh)} />)
   const table = view.getByRole('table')
   expect(within(table).getAllByRole('columnheader').map(node => node.textContent)).toEqual([
     '设备名称', '网络地址', '系统', '连接状态', '操作',

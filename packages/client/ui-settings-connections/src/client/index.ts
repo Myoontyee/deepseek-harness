@@ -17,6 +17,8 @@ import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-terminal/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-secret-mask/client'
 import { ConnectionsPage, type ConnectionActions } from './ConnectionsPage.tsx'
 import { en, zh, type ConnectionKey } from './locales.ts'
 import { connectionStyles } from './styles.ts'
@@ -26,7 +28,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 /** Dependencies used by connection actions and terminal navigation. */
-export const inject = ['slots', 'locale', 'remote', 'remote.connections', 'configForms', 'uiWorkspace', 'sidebarRight']
+export const inject = ['slots', 'locale', 'remote', 'remote.connections', 'configForms', 'uiWorkspace', 'sidebarRight', 'uiConversation']
 function unwrap<T>(result: RemoteResult<T>): T {
   if (!result.ok) throw new Error(result.error.message)
   return result.value
@@ -62,7 +64,9 @@ export function apply(ctx: Context): void {
   }).dshDesktop?.devices
   const panelId = 'paired-devices' as MainPanelId
   if (native) {
-    const devices = createDeviceActions((action, args) => native.invoke(action, args))
+    const evaluate = ctx.uiConversation.userText.createEvaluator()
+    const devices = createDeviceActions((action, args) => native.invoke(action, args), text =>
+      evaluate({ text, facts: {} }).map(node => node.id === 'secret' ? node.data.masked : text.slice(node.start, node.end)).join(''))
     ctx.effect(() => () => { devices.dispose() })
     ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: panelId, locale: 'settings.connections', inject: () => devices }, DevicesPage))
     ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({ name: 'sidebar.panellist', id: panelId, order: 20, label: () => ctx.locale.bind('settings.connections')('devices.title') }, DevicesIcon))
