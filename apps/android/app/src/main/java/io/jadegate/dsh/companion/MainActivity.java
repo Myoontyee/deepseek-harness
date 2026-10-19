@@ -59,6 +59,16 @@ public final class MainActivity extends Activity {
  private volatile int generation;
  private ValueCallback<Uri[]> fileCallback;
  private static final int FILE_REQUEST = 41;
+ private static final String PREF_LAST_VIEW="lastView", PREF_REMOTE_CACHE="remote-cache";
+ private static final long REMOTE_WATCH_MS=20000, REMOTE_PROBE_MS=8000, REMOTE_LOAD_MS=15000;
+ private boolean remoteReachable=true, remoteUnauthorized, remoteConnecting, remoteProbePending, remoteUnavailableShown, remotePageLoaded, remoteLoadFailed, grantsUnreadable;
+ private int remoteProbeToken;
+ private long remoteRetryDelay=3000, backgroundedAt;
+ private Runnable remoteWatch, remoteRetry, remoteLoadWatch;
+ private LinearLayout remoteBanner;
+ private TextView remoteStatus;
+ private Button remoteBannerAction;
+ private String openedSession="";
 
  @Override public void onCreate(Bundle state) {
   super.onCreate(state);
@@ -68,7 +78,7 @@ public final class MainActivity extends Activity {
   accountStore = new SecureStore(this,"account");
   phoneStore=new PhoneChatStore(this);
   computersStore=new SecureStore(this,"computers");
-  try{String saved=computersStore.read();if(saved!=null){JSONObject root=new JSONObject(saved);if(root.getInt("version")!=1)throw new Exception("Unknown saved device version");org.json.JSONArray entries=root.getJSONArray("connections");if(entries.length()>32)throw new Exception("Too many saved devices");for(int i=0;i<entries.length();i++){JSONObject entry=entries.getJSONObject(i);new Pairing(entry,"token");computerGrants.put(entry.getString("nodeId"),entry);}}}catch(Exception error){Toast.makeText(this,"已保存设备列表暂不可读，可以重新授权连接",Toast.LENGTH_LONG).show();}
+  try{String saved=computersStore.read();if(saved!=null){JSONObject root=new JSONObject(saved);if(root.getInt("version")!=1)throw new Exception("Unknown saved device version");org.json.JSONArray entries=root.getJSONArray("connections");if(entries.length()>32)throw new Exception("Too many saved devices");for(int i=0;i<entries.length();i++){JSONObject entry=entries.getJSONObject(i);new Pairing(entry,"token");computerGrants.put(entry.getString("nodeId"),entry);}}}catch(Exception error){grantsUnreadable=true;Toast.makeText(this,"已保存设备列表暂不可读，可以重新授权连接",Toast.LENGTH_LONG).show();}
   showStart();
  }
  private String appVersion() {
@@ -81,11 +91,55 @@ public final class MainActivity extends Activity {
  }
  private void showStart() {
   if(!signedIn()) { showLogin(""); return; }
+  JSONObject view=automaticReconnect()?lastView():null;
+  if(LastView.isRemote(view)) {
+   String device=LastView.device(view),session=LastView.session(view);
+   Pairing pairing=savedPairing(device);JSONObject grant=savedGrant(device);
+   boolean paused=grant!=null&&grant.optBoolean("tailnet",false)&&!tailnet.hasSavedNode();
+   if(pairing!=null&&!paused) {
+    showConnecting(pairing,session);requestedSession=session;
+    final int current=generation;
+    tailnetHandler.post(()->{if(disposed||generation!=current)return;openSavedConnection(pairing);});
+    return;
+   }
+   if(pairing==null&&!grantsUnreadable)options().edit().remove(PREF_LAST_VIEW).apply();
+  }
   showPhoneChat();
+ }
+ private android.content.SharedPreferences options() { return getSharedPreferences("options",MODE_PRIVATE); }
+ private JSONObject lastView() { return LastView.parse(options().getString(PREF_LAST_VIEW,"")); }
+ private void remember(JSONObject view) { if(view!=null)options().edit().putString(PREF_LAST_VIEW,view.toString()).apply(); }
+ private void rememberPhone() { try{remember(LastView.phone());}catch(org.json.JSONException impossible){throw new IllegalStateException(impossible);} }
+ private void rememberRemote(String device,String session) { try{remember(LastView.remote(device,session));}catch(org.json.JSONException impossible){throw new IllegalStateException(impossible);} }
+ private JSONObject savedGrant(String device) {
+  try {
+   if(device.isEmpty()||"saved".equals(device)){String value=store.read();return value==null?null:new JSONObject(value);}
+   JSONObject grant=computerGrants.get(device);
+   if(grant==null&&device.isEmpty()&&computerGrants.size()==1)return computerGrants.values().iterator().next();
+   return grant;
+  } catch(Exception unreadable) { return null; }
+ }
+ private Pairing savedPairing(String device) {
+  JSONObject grant=savedGrant(device);if(grant==null)return null;
+  try{return new Pairing(grant,"token");}catch(Exception invalid){return null;}
+ }
+ private String deviceIdFor(Pairing pairing) {
+  for(java.util.Map.Entry<String,JSONObject> entry:computerGrants.entrySet()){try{if(new Pairing(entry.getValue(),"token").origin.equals(pairing.origin))return entry.getKey();}catch(Exception invalid){/* Skip a grant whose saved identity is unreadable. */}}
+  return "";
+ }
+ private void showConnecting(Pairing pairing,String session) {
+  generation++;connected=null;openedSession=session;
+  if(web!=null){web.stopLoading();web.destroy();web=null;}
+  LinearLayout content=page("正在连接电脑");
+  content.addView(text(pairing.origin,14));
+  TextView progress=text(session.isEmpty()?"正在恢复上次的电脑页面…":"正在恢复上次的对话…",15);progress.setPadding(0,dp(12),0,dp(12));content.addView(progress);
+  ProgressBar bar=new ProgressBar(this);bar.setIndeterminate(true);content.addView(bar);
+  Button chat=button("进入手机聊天");content.addView(chat);chat.setOnClickListener(v->showPhoneChat());
  }
  private void showPhoneChat() {
   if(!signedIn()){showLogin("");return;}
-  generation++;connected=null;if(web!=null){web.stopLoading();web.destroy();web=null;}
+  rememberPhone();stopRemoteWatch();cancelRemoteRetry();cancelRemoteLoad();remoteProbeToken++;remoteConnecting=false;remoteUnavailableShown=false;remotePageLoaded=false;remoteLoadFailed=false;requestedSession="";connected=null;openedSession="";
+  generation++;if(web!=null){web.stopLoading();web.destroy();web=null;}
   try{
    if(phoneChat==null)phoneChat=new PhoneChatScreen(this,phoneStore,new JSONObject(accountStore.read()),new PhoneChatScreen.Host(){
     public void settings(){showHome("");}
@@ -93,7 +147,7 @@ public final class MainActivity extends Activity {
     public void ready(){if(automaticReconnect())readRemoteChats();}
     public void remoteChats(){readRemoteChats();}
     public void remoteOpen(String id,String session){
-     try{JSONObject grant=computerGrants.get(id);if(grant==null&&id.equals("saved")){String value=store.read();if(value!=null)grant=new JSONObject(value);}if(grant==null)throw new Exception("此电脑尚未授权，请在设置连接");requestedSession=session;generation++;openSavedConnection(new Pairing(grant,"token"));}
+     try{JSONObject grant=computerGrants.get(id);if(grant==null&&id.equals("saved")){String value=store.read();if(value!=null)grant=new JSONObject(value);}if(grant==null)throw new Exception("此电脑尚未授权，请在设置连接");rememberRemote(id,session);requestedSession=session;generation++;openSavedConnection(new Pairing(grant,"token"));}
      catch(Exception error){Toast.makeText(MainActivity.this,error.getMessage(),Toast.LENGTH_LONG).show();}
     }
    });
@@ -142,7 +196,7 @@ public final class MainActivity extends Activity {
   });
  }
  private void showHome(String notice) {
-  requestedSession="";
+  requestedSession="";remoteUnavailableShown=false;cancelRemoteRetry();cancelRemoteLoad();
   if(web!=null){web.stopLoading();web.destroy();web=null;}connected=null;
   generation++; LinearLayout content=page("设置 → 设备与对话");
   Button back=button("返回手机聊天");content.addView(back);back.setOnClickListener(v->showPhoneChat());
@@ -155,7 +209,7 @@ public final class MainActivity extends Activity {
   Button settings=button("备用：扫码连接电脑");content.addView(settings);settings.setOnClickListener(v->showPairing(""));
   try {
    String saved=store.read();
-   if(saved!=null){Pairing pairing=new Pairing(new JSONObject(saved),"token");Button open=button("打开已配对电脑");content.addView(open);open.setOnClickListener(v->openSavedConnection(pairing));}
+   if(saved!=null){Pairing pairing=new Pairing(new JSONObject(saved),"token");Button open=button("打开已配对电脑");content.addView(open);open.setOnClickListener(v->{rememberRemote("saved","");openSavedConnection(pairing);});}
   } catch(Exception error) { notice="保存的连接暂不可用，请在设置重新配对。"; }
   Button diagnose=button("系统 VPN 诊断（可选）");content.addView(diagnose);
   LinearLayout diagnostics=new LinearLayout(this);diagnostics.setOrientation(LinearLayout.VERTICAL);diagnostics.setVisibility(View.GONE);diagnostics.addView(text("DSH 内登录后无需打开手机 Tailscale 开关。以下仅检查系统 VPN，不代表应用内连接状态。",14));addNetworkControls(diagnostics);content.addView(diagnostics);diagnose.setOnClickListener(v->diagnostics.setVisibility(diagnostics.getVisibility()==View.GONE?View.VISIBLE:View.GONE));content.addView(text(notice,14));
@@ -228,7 +282,7 @@ public final class MainActivity extends Activity {
  }
  private void connectTailnetPeer(JSONObject peer,TextView progress,Button button) {connectTailnetPeer(peer,progress,button,false);}
  private void connectTailnetPeer(JSONObject peer,TextView progress,Button button,boolean renew) {
-  if(!renew){JSONObject saved=savedComputer(peer);if(saved!=null){try{saveComputer(saved);openSavedConnection(new Pairing(saved,"token"));return;}catch(Exception error){progress.setText(error.getMessage());return;}}}
+  if(!renew){JSONObject saved=savedComputer(peer);if(saved!=null){try{saveComputer(saved);rememberRemote(peer.optString("id"),"");openSavedConnection(new Pairing(saved,"token"));return;}catch(Exception error){progress.setText(error.getMessage());return;}}}
   final int current=generation;button.setEnabled(false);progress.setText("正在联系 "+peer.optString("name")+"，请在电脑确认连接…");
   worker.execute(()->{try{
    if(disposed||generation!=current)return;
@@ -279,7 +333,17 @@ public final class MainActivity extends Activity {
   Button refresh=button("刷新网络状态");actions.addView(refresh,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));refresh.setOnClickListener(v->refreshNetworkLabels());
   content.addView(actions);
  }
- @Override protected void onResume(){super.onResume();refreshNetworkLabels();syncPhoneChats();restoreConnections();if(tailnetPoll!=null){tailnetHandler.removeCallbacks(tailnetPoll);tailnetHandler.post(tailnetPoll);}}
+ @Override protected void onResume(){super.onResume();refreshNetworkLabels();syncPhoneChats();restoreConnections();if(tailnetPoll!=null){tailnetHandler.removeCallbacks(tailnetPoll);tailnetHandler.post(tailnetPoll);}
+  if(web!=null&&connected!=null&&foreground){
+   long away=backgroundedAt==0?0:System.currentTimeMillis()-backgroundedAt;backgroundedAt=0;
+   if(away>60000){showRemoteBanner("正在重新同步电脑对话…",null,null);remoteReachable=true;remoteProbeToken++;remoteProbePending=false;remotePageLoaded=false;remoteLoadFailed=false;final int current=generation;web.reload();cancelRemoteLoad();remoteLoadWatch=()->{if(disposed||generation!=current||web==null||remotePageLoaded)return;showRemoteBanner("电脑没有响应 · 点按重新加载","重新加载",()->{hideRemoteBanner();web.reload();});};tailnetHandler.postDelayed(remoteLoadWatch,REMOTE_LOAD_MS);}
+   else if(away>3000)probeRemote();
+  }
+  if(web==null&&connected==null&&remoteUnavailableShown&&signedIn()&&automaticReconnect()){
+   JSONObject view=lastView();
+   if(LastView.isRemote(view)){Pairing pairing=savedPairing(LastView.device(view));if(pairing!=null){cancelRemoteRetry();remoteRetryDelay=3000;openSavedConnection(pairing);}}
+  }
+ }
  private void restoreConnections(){
   if(disposed||!foreground||!signedIn()||!automaticReconnect()||!tailnet.hasSavedNode()||!restoringNode.compareAndSet(false,true))return;
   if(restoreLater!=null)tailnetHandler.removeCallbacks(restoreLater);
@@ -288,7 +352,7 @@ public final class MainActivity extends Activity {
    final boolean restored=ready;
    runOnUiThread(()->{
     restoringNode.set(false);if(disposed||!foreground||!automaticReconnect())return;
-    if(restored){restoreDelay=2000;readRemoteChats();syncPhoneChats();if(web!=null&&connected!=null&&connectionFailed){connectionFailed=false;openSavedConnection(connected);}}
+    if(restored){restoreDelay=2000;readRemoteChats();syncPhoneChats();if(web!=null&&connected!=null&&connectionFailed&&!remoteUnauthorized)scheduleRemoteReconnect();}
     restoreLater=()->restoreConnections();tailnetHandler.postDelayed(restoreLater,restored?30000:restoreDelay);if(!restored)restoreDelay=Math.min(60000,restoreDelay*2);
    });
   });
@@ -333,9 +397,16 @@ public final class MainActivity extends Activity {
     Pairing pairing=tailnet.route(new Pairing(grant,"token"));JSONObject response=pairing.embedded?tailnet.command(new JSONObject().put("action","request").put("operation","sessions").put("origin",pairing.origin).put("pin",pairing.pin).put("token",pairing.secret)).getJSONObject("sessions"):pairing.sessions();
     org.json.JSONArray items=response.getJSONObject("result").getJSONObject("value").getJSONArray("items");
     for(int i=0;i<items.length()&&rows.length()<500;i++){JSONObject item=items.getJSONObject(i);String id=item.optString("sessionId");JSONObject origin=item.optJSONObject("origin");if(id.isEmpty()||id.length()>512||(origin!=null&&origin.optString("kind").equals("subagent")))continue;JSONObject projections=item.optJSONObject("projections"),values=projections==null?null:projections.optJSONObject("values");rows.put(new JSONObject().put("id",id).put("title",values==null?id:values.optString("title",id)).put("running",item.optBoolean("running")));}
-   }catch(Exception failure){error="暂未连接，手机聊天仍可使用。";}
+   }catch(Exception failure){org.json.JSONArray cached=cachedRemoteRows(entry.getKey());rows=cached;error=cached.length()==0?"暂未连接，手机聊天仍可使用。":"电脑离线，显示上次对话。";}
+   if(error.isEmpty())cacheRemoteRows(entry.getKey(),rows);
    PhoneChatScreen screen=phoneChat;if(screen!=null)screen.remote(entry.getKey(),name,rows,error);
   }}finally{readingRemotes.set(false);}});
+ }
+ private org.json.JSONArray cachedRemoteRows(String device){
+  try{JSONObject value=new JSONObject(options().getString(PREF_REMOTE_CACHE+":"+device,"{}"));org.json.JSONArray rows=value.optJSONArray("rows");if(rows==null)return new org.json.JSONArray();org.json.JSONArray stale=new org.json.JSONArray();for(int i=0;i<rows.length();i++)stale.put(new JSONObject(rows.getJSONObject(i).toString()).put("running",false));return stale;}catch(Exception unreadable){return new org.json.JSONArray();}
+ }
+ private void cacheRemoteRows(String device,org.json.JSONArray rows){
+  try{org.json.JSONArray kept=new org.json.JSONArray();for(int i=0;i<rows.length()&&i<120;i++)kept.put(rows.getJSONObject(i));options().edit().putString(PREF_REMOTE_CACHE+":"+device,new JSONObject().put("at",System.currentTimeMillis()).put("rows",kept).toString()).apply();}catch(org.json.JSONException impossible){throw new IllegalStateException(impossible);}
  }
  private void accountSettings() {
   new AlertDialog.Builder(this).setTitle("DeepSeek 账号").setMessage("已保存官方授权登录。电脑控制授权独立管理。退出账号前，请先保存未发送的备注。")
@@ -361,17 +432,18 @@ public final class MainActivity extends Activity {
  }
  @Override protected void onStart() {
   super.onStart();foreground=true;networkManager=(android.net.ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+  if(web!=null&&connected!=null)startRemoteWatch();
   networkCallback=new android.net.ConnectivityManager.NetworkCallback(){@Override public void onAvailable(android.net.Network network){runOnUiThread(()->{
    refreshNetworkLabels();tailnet.networkChanged();restoreConnections();
-   if(!disposed && web!=null && connected!=null && connectionFailed && automaticReconnect() && signedIn() && System.currentTimeMillis()-lastReconnect>5000){lastReconnect=System.currentTimeMillis();connectionFailed=false;status.setText("网络已恢复，正在重连已授权电脑…");openSavedConnection(connected);}
+   if(!disposed && web!=null && connected!=null && !remoteUnauthorized && System.currentTimeMillis()-lastReconnect>3000){lastReconnect=System.currentTimeMillis();tailnetHandler.postDelayed(MainActivity.this::probeRemote,1200);}
   });}
-   @Override public void onLost(android.net.Network network){runOnUiThread(()->{refreshNetworkLabels();tailnet.networkChanged();});}
+   @Override public void onLost(android.net.Network network){runOnUiThread(()->{refreshNetworkLabels();tailnet.networkChanged();if(!disposed&&web!=null&&connected!=null&&!remoteUnauthorized)tailnetHandler.postDelayed(MainActivity.this::probeRemote,1500);});}
    @Override public void onCapabilitiesChanged(android.net.Network network,android.net.NetworkCapabilities capabilities){runOnUiThread(()->{refreshNetworkLabels();tailnet.networkChanged();});}
    @Override public void onLinkPropertiesChanged(android.net.Network network,android.net.LinkProperties properties){runOnUiThread(()->{refreshNetworkLabels();tailnet.networkChanged();});}
   };
   try { networkManager.registerNetworkCallback(new android.net.NetworkRequest.Builder().removeCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(),networkCallback); } catch(SecurityException unavailable){networkCallback=null;}
  }
- @Override protected void onStop(){foreground=false;if(restoreLater!=null)tailnetHandler.removeCallbacks(restoreLater);if(tailnetPoll!=null)tailnetHandler.removeCallbacks(tailnetPoll);if(networkManager!=null&&networkCallback!=null){networkManager.unregisterNetworkCallback(networkCallback);networkCallback=null;}super.onStop();}
+ @Override protected void onStop(){foreground=false;backgroundedAt=System.currentTimeMillis();stopRemoteWatch();cancelRemoteRetry();cancelRemoteLoad();if(restoreLater!=null)tailnetHandler.removeCallbacks(restoreLater);if(tailnetPoll!=null)tailnetHandler.removeCallbacks(tailnetPoll);if(networkManager!=null&&networkCallback!=null){networkManager.unregisterNetworkCallback(networkCallback);networkCallback=null;}super.onStop();}
  private void installContent(View view) {
   networkStatusViews.clear();
   if(tailnetPoll!=null){tailnetHandler.removeCallbacks(tailnetPoll);tailnetPoll=null;}
@@ -388,6 +460,7 @@ public final class MainActivity extends Activity {
   LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,ViewGroup.LayoutParams.WRAP_CONTENT);params.topMargin=dp(8);params.bottomMargin=dp(4);view.setLayoutParams(params);return view;
  }
  private void showPairing(String notice) {
+  remoteUnavailableShown=false;cancelRemoteRetry();cancelRemoteLoad();
   generation++;
   if (web != null) { web.stopLoading(); web.destroy(); web = null; }
   connected = null;
@@ -425,7 +498,8 @@ public final class MainActivity extends Activity {
   });
  }
  private void openSavedConnection(Pairing saved) {
-  final Pairing pairing;try{pairing=tailnet.route(saved);}catch(Exception error){showHome("保存的电脑身份暂不可读，请在设置重新授权");return;}
+  final Pairing pairing;try{pairing=tailnet.route(saved);}catch(Exception error){showRemoteUnavailable(saved,"保存的电脑身份暂不可读，请在设置重新授权。",true);return;}
+  if(requestedSession.isEmpty()&&connected==null){JSONObject view=lastView();if(LastView.isRemote(view)){Pairing recent=savedPairing(LastView.device(view));if(recent!=null&&recent.origin.equals(pairing.origin))requestedSession=LastView.session(view);}}
   if(!pairing.embedded) {
    if(androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.PROXY_OVERRIDE))androidx.webkit.ProxyController.getInstance().clearProxyOverride(this::runOnUiThread,()->showConnection(pairing));
    else showConnection(pairing);
@@ -435,19 +509,24 @@ public final class MainActivity extends Activity {
   worker.execute(()->{try{
    JSONObject transport=tailnet.command(new JSONObject().put("action","use").put("origin",pairing.origin));int port=transport.getInt("proxyPort");
    runOnUiThread(()->{if(disposed||generation!=current)return;
-    if(!androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.PROXY_OVERRIDE)){showHome("请先更新 Android System WebView，再打开内置 Tailscale 连接。");return;}
+    if(!androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.PROXY_OVERRIDE)){showRemoteUnavailable(pairing,"请先更新 Android System WebView，再打开内置 Tailscale 连接。",false);return;}
     androidx.webkit.ProxyConfig config=new androidx.webkit.ProxyConfig.Builder().addProxyRule("http://127.0.0.1:"+port).build();
     androidx.webkit.ProxyController.getInstance().setProxyOverride(config,this::runOnUiThread,()->{if(!disposed&&generation==current)showConnection(pairing);});
    });
-  }catch(Exception error){runOnUiThread(()->{if(!disposed&&generation==current)showHome("连接未完成："+error.getMessage());});}});
+  }catch(Exception error){runOnUiThread(()->{if(!disposed&&generation==current)showRemoteUnavailable(pairing,error.getMessage(),true);});}});
  }
  @android.annotation.SuppressLint("SetJavaScriptEnabled")
  private void showConnection(Pairing pairing) {
   if(web!=null){web.stopLoading();web.destroy();web=null;}
-  generation++; connected = pairing; pairingInput = null; connectionFailed=false;
-  final String session=requestedSession;requestedSession="";
+  generation++; connected = pairing; pairingInput = null; connectionFailed=false; remoteUnauthorized=false; remoteConnecting=false; remoteUnavailableShown=false; remoteReachable=true; remoteProbePending=false; remoteProbeToken++; remotePageLoaded=false; remoteLoadFailed=false; cancelRemoteRetry(); cancelRemoteLoad(); stopRemoteWatch();
+  final int loadGeneration=generation;
+  final String session=requestedSession;requestedSession="";openedSession=session;rememberRemote(deviceIdFor(pairing),session);
   LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-  status = text("正在连接电脑",14);
+  remoteBanner = new LinearLayout(this); remoteBanner.setOrientation(LinearLayout.HORIZONTAL); remoteBanner.setGravity(android.view.Gravity.CENTER_VERTICAL); remoteBanner.setPadding(dp(12),dp(4),dp(8),dp(4));
+  android.graphics.drawable.GradientDrawable bannerSurface=new android.graphics.drawable.GradientDrawable();bannerSurface.setColor(Color.rgb(255,245,214));remoteBanner.setBackground(bannerSurface);
+  remoteStatus = text("正在连接电脑…",13); remoteStatus.setTextColor(Color.rgb(121,85,0)); remoteBanner.addView(remoteStatus,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
+  remoteBannerAction = button("重连"); remoteBannerAction.setTextSize(12); remoteBannerAction.setVisibility(View.GONE); remoteBanner.addView(remoteBannerAction);
+  root.addView(remoteBanner);
   web = new SelectionWebView(this); root.addView(web,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1)); installContent(root);
   WebSettings settings = web.getSettings(); settings.setJavaScriptEnabled(true); settings.setDomStorageEnabled(true);
   settings.setUseWideViewPort(true);settings.setLoadWithOverviewMode(true);
@@ -457,6 +536,7 @@ public final class MainActivity extends Activity {
   CookieManager.getInstance().setAcceptThirdPartyCookies(web,false);
   web.setWebChromeClient(new WebChromeClient() {
    @Override public void onPermissionRequest(PermissionRequest request) { request.deny(); }
+   @Override public boolean onConsoleMessage(ConsoleMessage message) { String value=message.message(); if(value!=null&&value.startsWith("DSH_PROBE:")){onRemoteProbeResult(value);return true;} return false; }
    @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
     if (fileCallback != null) fileCallback.onReceiveValue(null);
     fileCallback = callback;
@@ -491,15 +571,94 @@ public final class MainActivity extends Activity {
     if (accepted) handler.proceed();
     else { handler.cancel(); Toast.makeText(MainActivity.this,"电脑身份已改变，请在设置重新授权",Toast.LENGTH_LONG).show(); }
    }
-   @Override public void onPageFinished(WebView view,String url) { if (sameOrigin(Uri.parse(url),pairing)) {connectionFailed=false;status.setText("已连接电脑");((SelectionWebView)view).installSelection();} }
-   @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error) { if(request.isForMainFrame()) {connectionFailed=true;Toast.makeText(MainActivity.this,"电脑暂未连接，网络恢复后自动重连；返回可继续手机聊天",Toast.LENGTH_LONG).show();} }
-   @Override public void onReceivedHttpError(WebView view,WebResourceRequest request,WebResourceResponse response) { if(request.isForMainFrame()&&(response.getStatusCode()==401 || response.getStatusCode()==403)) Toast.makeText(MainActivity.this,"电脑授权已失效，请返回设置重新授权",Toast.LENGTH_LONG).show(); }
+   @Override public void onPageStarted(WebView view,String url,android.graphics.Bitmap favicon) { if(sameOrigin(Uri.parse(url),pairing))remoteLoadFailed=false; }
+   @Override public void onPageFinished(WebView view,String url) { if (sameOrigin(Uri.parse(url),pairing)) { if(remoteUnauthorized||remoteLoadFailed)return; cancelRemoteLoad();cancelRemoteRetry();remoteProbeToken++;remotePageLoaded=true;connectionFailed=false;remoteReachable=true;remoteConnecting=false;remoteRetryDelay=3000;remoteProbePending=false;hideRemoteBanner();startRemoteWatch();((SelectionWebView)view).installSelection();} }
+   @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error) { if(!request.isForMainFrame()||remoteUnauthorized)return; remoteLoadFailed=true;final int current=generation;tailnetHandler.post(()->{if(disposed||generation!=current||web==null||remoteUnauthorized)return;if(remotePageLoaded)onRemoteUnreachable("电脑连接已断开");else showRemoteUnavailable(pairing,"电脑暂时无法连接，请确认电脑与 DSH 正在运行、网络互通。",true);}); }
+   @Override public void onReceivedHttpError(WebView view,WebResourceRequest request,WebResourceResponse response) { if(!request.isForMainFrame())return; int code=response.getStatusCode(); if(code==401||code==403){remoteUnauthorized=true;remoteLoadFailed=true;cancelRemoteLoad();cancelRemoteRetry();showRemoteBanner("电脑授权已失效 · 请重新授权","返回",()->showPhoneChat());return;} if(code>=400){remoteLoadFailed=true;final int current=generation;tailnetHandler.post(()->{if(disposed||generation!=current||web==null||remoteUnauthorized)return;showRemoteUnavailable(pairing,"电脑返回错误（"+code+"），请确认 DSH 正在运行。",true);});} }
   });
   CookieManager.getInstance().setCookie(pairing.origin,"__Host-dsh-device="+pairing.secret+"; Path=/; Secure; HttpOnly; SameSite=Strict", ok -> {
    if (disposed || web==null || connected!=pairing) return;
-   if (!ok) { status.setText("无法保存连接凭据，请重新配对"); return; }
+   if (!ok) { showRemoteBanner("无法保存连接凭据，请重新配对","返回",()->showPhoneChat()); return; }
    CookieManager.getInstance().flush(); web.loadUrl(pairing.origin+"/"+(session.isEmpty()?"":"#dsh-session="+Uri.encode(session)));
+   remoteLoadWatch=()->{if(disposed||generation!=loadGeneration||web==null||remotePageLoaded)return;showRemoteUnavailable(pairing,"电脑没有在预期时间内响应，请确认电脑与 DSH 正在运行。",true);};
+   tailnetHandler.postDelayed(remoteLoadWatch,REMOTE_LOAD_MS);
   });
+ }
+ private void showRemoteBanner(String text,String action,Runnable click) {
+  if(remoteBanner==null||disposed)return;
+  remoteBanner.setVisibility(View.VISIBLE);remoteStatus.setText(text);
+  boolean visible=action!=null&&!action.isEmpty();
+  remoteBannerAction.setVisibility(visible?View.VISIBLE:View.GONE);
+  remoteBannerAction.setOnClickListener(visible?v->click.run():null);
+  if(visible)remoteBannerAction.setText(action);
+ }
+ private void hideRemoteBanner() { if(remoteBanner!=null)remoteBanner.setVisibility(View.GONE); }
+ private void startRemoteWatch() {
+  stopRemoteWatch();remoteWatch=()->{if(disposed||!foreground||web==null||connected==null)return;probeRemote();tailnetHandler.postDelayed(remoteWatch,REMOTE_WATCH_MS);};tailnetHandler.postDelayed(remoteWatch,REMOTE_WATCH_MS);
+ }
+ private void stopRemoteWatch() { if(remoteWatch!=null){tailnetHandler.removeCallbacks(remoteWatch);remoteWatch=null;} }
+ private void cancelRemoteLoad() { if(remoteLoadWatch!=null){tailnetHandler.removeCallbacks(remoteLoadWatch);remoteLoadWatch=null;} }
+ private void cancelRemoteRetry() { if(remoteRetry!=null){tailnetHandler.removeCallbacks(remoteRetry);remoteRetry=null;} }
+ private void probeRemote() {
+  if(disposed||!foreground||web==null||connected==null||remoteUnauthorized||remoteProbePending||!remotePageLoaded)return;
+  remoteProbePending=true;final int token=++remoteProbeToken;
+  web.evaluateJavascript("fetch('/_dsh_mobile/status',{cache:'no-store'}).then(r=>console.log('DSH_PROBE:'+(r.ok?'ok':'down')+':" + token + ":'+r.status)).catch(()=>console.log('DSH_PROBE:down:" + token + ":'+0))",null);
+  tailnetHandler.postDelayed(()->{if(disposed||!remoteProbePending||token!=remoteProbeToken)return;remoteProbeToken++;remoteProbePending=false;onRemoteProbe(false,0);},REMOTE_PROBE_MS);
+ }
+ private void onRemoteProbeResult(String message) {
+  String[] parts=message.split(":");if(parts.length!=4)return;
+  int token,status;try{token=Integer.parseInt(parts[2].trim());status=Integer.parseInt(parts[3].trim());}catch(NumberFormatException invalid){return;}
+  if(token!=remoteProbeToken)return;
+  remoteProbePending=false;onRemoteProbe("ok".equals(parts[1]),status);
+ }
+ private void onRemoteProbe(boolean reachable,int status) {
+  if(disposed||web==null||connected==null||remoteUnauthorized)return;
+  if(status==401||status==403){remoteUnauthorized=true;cancelRemoteRetry();showRemoteBanner("电脑授权已失效 · 请重新授权","返回",()->showPhoneChat());return;}
+  if(reachable){if(remoteReachable)return;remoteReachable=true;remoteRetryDelay=3000;cancelRemoteRetry();showRemoteBanner("电脑已恢复连接，正在同步…",null,null);remoteProbeToken++;web.reload();return;}
+  onRemoteUnreachable("电脑连接已断开");
+ }
+ private void onRemoteUnreachable(String reason) {
+  if(disposed||web==null||connected==null||remoteUnauthorized)return;
+  remoteReachable=false;remoteConnecting=false;connectionFailed=true;
+  showRemoteBanner(reason+" · 正在重连…","立即重试",this::reconnectRemote);
+  scheduleRemoteReconnect();
+ }
+ private void scheduleRemoteReconnect() {
+  if(disposed||remoteUnauthorized||remoteConnecting||connected==null||!automaticReconnect())return;
+  cancelRemoteRetry();final Pairing target=connected;
+  long delay=remoteRetryDelay;remoteRetryDelay=Math.min(30000,remoteRetryDelay*2);
+  remoteRetry=()->{if(disposed||remoteConnecting||remoteReachable||target!=connected)return;reconnectRemote();};
+  tailnetHandler.postDelayed(remoteRetry,delay);
+ }
+ private void reconnectRemote() {
+  if(disposed||remoteConnecting||remoteUnauthorized)return;
+  final Pairing target=connected;if(target==null)return;
+  remoteConnecting=true;cancelRemoteRetry();showRemoteBanner("正在重新连接电脑…",null,null);
+  requestedSession=currentRemoteSession();openSavedConnection(target);
+  tailnetHandler.postDelayed(()->remoteConnecting=false,20000);
+ }
+ private String currentRemoteSession() {
+  String url=web==null?null:web.getUrl();
+  if(url!=null){int index=url.indexOf("#dsh-session=");if(index>=0){try{return Uri.decode(url.substring(index+13));}catch(Exception invalid){/* Keep the session this page opened. */}}}
+  return openedSession;
+ }
+ private void showRemoteUnavailable(Pairing pairing,String detail,boolean retry) {
+  if(web!=null){web.stopLoading();web.destroy();web=null;}
+  connected=null;remoteConnecting=false;remotePageLoaded=false;requestedSession="";stopRemoteWatch();cancelRemoteRetry();cancelRemoteLoad();remoteProbeToken++;remoteUnavailableShown=true;generation++;final int current=generation;
+  LinearLayout content=page("电脑未连接");
+  if(pairing!=null)content.addView(text(pairing.origin,14));
+  TextView info=text(detail==null||detail.isEmpty()?"电脑当前不可达。请确认电脑与 DSH 保持运行、网络互通。":detail,15);info.setPadding(0,dp(12),0,dp(12));content.addView(info);
+  TextView hint=text(retry&&automaticReconnect()?"网络恢复后会自动重试，也可以立即重试。":"手机聊天仍可正常使用。",14);hint.setPadding(0,0,0,dp(8));content.addView(hint);
+  if(retry){Button again=button("立即重试");content.addView(again);again.setOnClickListener(v->{if(pairing!=null){cancelRemoteRetry();remoteRetryDelay=3000;openSavedConnection(pairing);}});}
+  Button chat=button("进入手机聊天");content.addView(chat);chat.setOnClickListener(v->showPhoneChat());
+  Button settings=button("设置");content.addView(settings);settings.setOnClickListener(v->showHome(""));
+  if(retry&&pairing!=null&&automaticReconnect())scheduleRemoteUnavailableRetry(pairing,current);
+ }
+ private void scheduleRemoteUnavailableRetry(Pairing target,int current) {
+  if(disposed||!automaticReconnect())return;
+  cancelRemoteRetry();long delay=remoteRetryDelay;remoteRetryDelay=Math.min(30000,remoteRetryDelay*2);
+  remoteRetry=()->{if(disposed||generation!=current||!foreground)return;openSavedConnection(target);};
+  tailnetHandler.postDelayed(remoteRetry,delay);
  }
  private boolean sameOrigin(Uri uri, Pairing pairing) {
   Uri origin=Uri.parse(pairing.origin);
@@ -508,6 +667,7 @@ public final class MainActivity extends Activity {
  private int normalizedPort(Uri uri) { return uri.getPort()==-1?443:uri.getPort(); }
  private void forget() {
   store.clear();computersStore.clear();computerGrants.clear();
+  android.content.SharedPreferences.Editor clean=options().edit().remove(PREF_LAST_VIEW);for(String key:options().getAll().keySet())if(key.startsWith(PREF_REMOTE_CACHE+":"))clean.remove(key);clean.apply();
   if (web!=null) { web.stopLoading(); web.clearCache(true); web.clearHistory(); }
   CookieManager.getInstance().removeAllCookies(null); WebStorage.getInstance().deleteAllData();
   showPairing("本机保存的授权已清除。需要立即撤销所有活动连接时，请在电脑的“手机控制”中移除设备。");
@@ -524,6 +684,6 @@ public final class MainActivity extends Activity {
   super.onActivityResult(requestCode,resultCode,data);
   if (requestCode==FILE_REQUEST && fileCallback!=null) { fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode,data)); fileCallback=null; }
  }
- @Override public void onBackPressed() { if (web!=null && web.canGoBack()) web.goBack(); else if(signedIn()&&phoneChat!=null&&phoneChat.view.getParent()==null)showPhoneChat();else if(web!=null)showPhoneChat();else super.onBackPressed(); }
- @Override protected void onDestroy() { disposed=true; generation++;if(phoneChat!=null)phoneChat.close();if(tailnet!=null)tailnet.close();tailnetHandler.removeCallbacksAndMessages(null); if(signIn!=null)signIn.close(); if(fileCallback!=null)fileCallback.onReceiveValue(null); if(web!=null)web.destroy(); worker.shutdownNow();syncWorker.shutdownNow(); super.onDestroy(); }
+ @Override public void onBackPressed() { if(web!=null&&web.canGoBack())web.goBack(); else if(web!=null)showPhoneChat(); else if(signedIn()&&(phoneChat==null||phoneChat.view.getParent()==null))showPhoneChat(); else super.onBackPressed(); }
+ @Override protected void onDestroy() { disposed=true; generation++;stopRemoteWatch();cancelRemoteRetry();cancelRemoteLoad();remoteProbeToken++;if(phoneChat!=null)phoneChat.close();if(tailnet!=null)tailnet.close();tailnetHandler.removeCallbacksAndMessages(null); if(signIn!=null)signIn.close(); if(fileCallback!=null)fileCallback.onReceiveValue(null); if(web!=null)web.destroy(); worker.shutdownNow();syncWorker.shutdownNow(); super.onDestroy(); }
 }

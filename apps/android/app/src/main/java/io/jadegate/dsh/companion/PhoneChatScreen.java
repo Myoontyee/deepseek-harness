@@ -92,7 +92,9 @@ final class PhoneChatScreen implements AutoCloseable {
   String action=request.getString("action");
   switch(action){
    case "init":{
-    JSONArray chats=store.list(scope);chat=chats.length()==0?store.create(scope):store.read(scope,chats.getJSONObject(0).getString("id"));
+    JSONArray chats=store.list(scope);String remembered=activity.getSharedPreferences("options",0).getString("lastPhoneChat","");chat=null;
+     if(!remembered.isEmpty())for(int i=0;i<chats.length();i++)if(chats.getJSONObject(i).getString("id").equals(remembered)){chat=store.read(scope,remembered);break;}
+     if(chat==null)chat=chats.length()==0?store.create(scope):store.read(scope,chats.getJSONObject(0).getString("id"));remember(chat.getString("id"));
     models=new JSONArray(activity.getSharedPreferences("models",0).getString(scope,"[]"));
     // A killed process may leave a partial assistant turn; preserve its content and make interruption visible.
     JSONArray messages=chat.getJSONArray("messages");for(int i=0;i<messages.length();i++){JSONObject item=messages.getJSONObject(i);if(item.optString("status").equals("generating"))item.put("status","interrupted").put("error","上次生成已中断，收到的内容已保留");}
@@ -106,8 +108,8 @@ final class PhoneChatScreen implements AutoCloseable {
    case "copy":{
     String text=request.getString("text");activity.runOnUiThread(()->((android.content.ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("DeepSeek",text)));break;
    }
-   case "new":chat=store.create(scope);state();break;
-   case "open":chat=store.read(scope,request.getString("id"));state();break;
+   case "new":chat=store.create(scope);remember(chat.getString("id"));state();break;
+   case "open":chat=store.read(scope,request.getString("id"));remember(chat.getString("id"));state();break;
    case "settings":activity.runOnUiThread(host::settings);break;
    case "draft":
     chat.put("draft",request.optString("text")).put("model",request.optString("model")).put("effort",request.optString("effort","high"));
@@ -121,7 +123,7 @@ final class PhoneChatScreen implements AutoCloseable {
    case "deleteAnnotation":{
     JSONArray notes=chat.getJSONArray("annotations");for(int i=notes.length()-1;i>=0;i--)if(notes.getJSONObject(i).getString("id").equals(request.getString("id")))notes.remove(i);save();state();host.changed();break;
    }
-   case "delete":if(generating)throw new IOException("请先停止生成");chat.put("deleted",true);save();JSONArray remaining=store.list(scope);chat=remaining.length()==0?store.create(scope):store.read(scope,remaining.getJSONObject(0).getString("id"));state();host.changed();break;
+   case "delete":if(generating)throw new IOException("请先停止生成");chat.put("deleted",true);save();JSONArray remaining=store.list(scope);chat=remaining.length()==0?store.create(scope):store.read(scope,remaining.getJSONObject(0).getString("id"));remember(chat.getString("id"));state();host.changed();break;
    case "stop":if(active!=null)active.close();break;
    case "send":send(request);break;
    default:throw new IOException("不支持的手机聊天操作");
@@ -156,5 +158,6 @@ final class PhoneChatScreen implements AutoCloseable {
    finally{api.close();synchronized(this){generating=false;active=null;try{store.save(scope,target);migrateIdentity();state();host.changed();}catch(Exception failure){error("无法保存回答，请保留当前页面并释放手机存储空间");}}}
   });
  }
+ private void remember(String id) { activity.getSharedPreferences("options",0).edit().putString("lastPhoneChat",id).apply(); }
  @Override public synchronized void close(){closed=true;if(active!=null)active.close();jobs.shutdown();inference.shutdown();view.destroy();}
 }

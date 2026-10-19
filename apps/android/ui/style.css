@@ -59,6 +59,13 @@ textarea { display: block; width: 100%; min-width: 0; resize: none; font-size: 1
 .chat-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 #chats button[aria-current="page"] { background: var(--dsw-static-neutral-bluish-150); }
 .remote-row svg { color: #74b6a3; }
+.remote-device { display: flex; align-items: center; gap: 8px; padding: 14px 12px 2px; }
+.remote-device .device-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
+.device-state { flex: none; padding: 1px 8px; border-radius: 999px; font-size: 11px; line-height: 18px; background: var(--dsw-static-neutral-bluish-150); color: var(--dsw-static-neutral-bluish-600); }
+.device-state[data-status="offline"] { background: #fff5d6; color: #795500; }
+#remoteChats .remote-note { padding: 2px 12px 4px; font-size: 12px; }
+#remoteChats .remote-running { flex: none; padding: 1px 8px; border-radius: 999px; background: #e6f2ee; color: #2f6b57; font-size: 11px; line-height: 18px; }
+.navigation.quiet { min-height: 44px; font-size: 13px; color: var(--dsw-static-neutral-bluish-600); border: 0; }
 .sidebar-footer { flex: none; padding-top: 8px; border-top: 1px solid var(--dsw-static-neutral-bluish-150); }
 #drawerBackdrop { position: fixed; inset: 0; z-index: 9; border: 0; border-radius: 0; background: #0005; }
 #notice { flex: none; padding: 8px 16px; background: #fff5d6; font-size: 13px; color: #795500; max-height: 15%; overflow: auto; }
@@ -91,3 +98,6 @@ body[data-compact-height] .welcome { margin: 20px auto; }
 body[data-ds-dark-theme] { color-scheme: dark; }
 body[data-ds-dark-theme] #chats button[aria-current="page"] { background: var(--dsw-static-neutral-bluish-800); }
 body[data-ds-dark-theme] #notice { background: #49402b; color: #f7dda0; }
+body[data-ds-dark-theme] .device-state { background: var(--dsw-static-neutral-bluish-800); color: var(--dsw-static-neutral-bluish-100); }
+body[data-ds-dark-theme] .device-state[data-status="offline"] { background: #49402b; color: #f7dda0; }
+body[data-ds-dark-theme] #remoteChats .remote-running { background: #243b33; color: #9fd8c5; }

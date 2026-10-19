@@ -5,16 +5,19 @@
   "officialBase": "dsh-v0.2.1-rc.2",
   "branch": "codex/android-tailnet-20261018",
   "android": {
-    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261018.5-android-arm64.apk",
-    "bytes": 10147868,
-    "sha256": "A245E35EB14F2B0A00C965D1F7523532318CF6CA8E0A6B5900E62B3E32869886",
+    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261019.2-android-arm64.apk",
+    "bytes": 10156060,
+    "sha256": "CF75AEA34D64DC3BCDF60B17BAEA1105FA3314F8D956ED98F9BE5520CB136877",
     "abi": "arm64-v8a",
     "nativeMatchesLocalBuild": true,
     "licensesBundled": true,
     "sameSigningCertificate": true,
     "physicalPhoneTested": false,
     "uiAssetsVerified": 65,
-    "version": "0.2.1-rc.2.20261018.5"
+    "version": "0.2.1-rc.2.20261019.2",
+    "versionCode": 2026101902,
+    "resumeLastView": true,
+    "remoteConnectionStatus": true
   },
   "windows": {
     "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261019.1-win-x64-unsigned.exe",
@@ -37,6 +40,10 @@
   "checks": {
     "modelProtocolTestsPassed": 6,
     "phoneBrowserSmokePassed": true,
+    "androidUnitTestsPassed": 14,
+    "androidResumeLastViewBrowserChecked": true,
+    "androidRemoteConnectionStatusBrowserChecked": true,
+    "androidOfflineConversationListBrowserChecked": true,
     "desktopBootstrapAndPhoneStoragePassed": true,
     "devicePreviewAndMaskingTestsPassed": 5,
     "prePushTypecheckPassed": true,

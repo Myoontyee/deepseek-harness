@@ -171,13 +171,19 @@ phone.onmessage = (event) => {
   if (update.type === 'remote') {
     const root = el('remoteChats'); let group = Array.from(root.children).find(item => item.getAttribute('data-device') === update.device)
     if (!group) { group = document.createElement('section'); group.setAttribute('data-device', update.device); root.append(group) }
-    group.replaceChildren(); const heading = document.createElement('small'); heading.textContent = update.name; group.append(heading)
-    if (update.error) { const error = document.createElement('small'); error.textContent = update.error; group.append(error) }
+    group.replaceChildren()
+    const head = document.createElement('div'); head.className = 'remote-device'
+    const name = document.createElement('strong'); name.className = 'device-name'; name.textContent = update.name
+    const state = document.createElement('span'); state.className = 'device-state'; state.dataset.status = update.error ? 'offline' : 'online'; state.textContent = update.error ? '离线' : '在线'
+    head.append(name, state); group.append(head)
+    if (update.error) { const note = document.createElement('small'); note.className = 'remote-note'; note.textContent = update.error; group.append(note) }
+    else if (!update.sessions.length) { const empty = document.createElement('small'); empty.className = 'remote-note'; empty.textContent = '电脑上还没有对话'; group.append(empty) }
     for (const item of update.sessions) {
       const row = button('', () => { persist(); drawer(false); send('remoteOpen', { device: update.device, id: item.id }) })
       const title = document.createElement('span'); title.textContent = item.title; title.className = 'chat-title'
+      if (item.running) { const live = document.createElement('span'); live.className = 'remote-running'; live.textContent = '运行中'; row.append(title, live) } else row.append(title)
       const globe = document.createElement('span'); globe.innerHTML = icons.globe; globe.setAttribute('aria-label', '远程对话')
-      row.title = `${update.name} · 远程对话`; row.className = 'remote-row'; row.append(title, globe); group.append(row)
+      row.title = `${update.name} · 远程对话`; row.className = 'remote-row'; row.append(globe); group.append(row)
     }
     return
   }
