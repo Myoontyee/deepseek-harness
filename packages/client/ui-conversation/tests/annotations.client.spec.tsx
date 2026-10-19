@@ -117,6 +117,45 @@ it('round-trips delimiter-like quotations and leaves malformed envelopes visible
   expect(serializeResponseAnnotations('普通正文', [])).toBe('普通正文')
 })
 
+it('numbers serialized annotations in array order and states the independence rules in guidance', () => {
+  const serialized = serializeResponseAnnotations('请求', [
+    { ...quotation, text: '第一段' },
+    { ...quotation, text: '第二段', comment: '第二条评论' },
+  ])
+  const payload = JSON.parse(serialized.slice('<dsh-response-annotations>\n'.length,
+    serialized.indexOf('\n</dsh-response-annotations>\n\n'))) as {
+    guidance: string
+    annotations: ReadonlyArray<{ index: number }>
+  }
+  expect(payload.annotations.map(item => item.index)).toEqual([1, 2])
+  expect(payload.guidance).toMatch(/ordered/i)
+  expect(payload.guidance).toMatch(/independent/i)
+  expect(payload.guidance).toMatch(/index/)
+  expect(payload.guidance).toMatch(/empty comment/i)
+  expect(payload.guidance).toMatch(/Never merge/i)
+})
+
+it('parses version-1 envelopes written before annotations carried an index', () => {
+  const legacy = '<dsh-response-annotations>\n'
+    + JSON.stringify({ version: 1, guidance: 'legacy guidance', annotations: [
+      { text: '旧引文', comment: '旧评论', sourceUrl: 'dsh://session/old', sourceLabel: '旧来源', sourceMessage: 'm0' },
+    ] })
+    + '\n</dsh-response-annotations>\n\n旧请求'
+  expect(parseResponseAnnotations(legacy)).toEqual({
+    annotations: [{ text: '旧引文', comment: '旧评论', sourceUrl: 'dsh://session/old', sourceLabel: '旧来源', sourceMessage: 'm0' }],
+    text: '旧请求',
+  })
+})
+
+it('round-trips every annotation field and keeps the serialized index out of the result', () => {
+  const annotations = [
+    { text: '第一段', comment: '评论一', sourceUrl: 'dsh://session/a', sourceLabel: '来源A', sourceMessage: 'm1' },
+    { text: '第二段', comment: '', sourceUrl: 'dsh://session/b', sourceLabel: '来源B', sourceMessage: 'm2' },
+  ]
+  expect(parseResponseAnnotations(serializeResponseAnnotations('正文', annotations)))
+    .toEqual({ annotations, text: '正文' })
+})
+
 
 it('keeps comments when closing the editor and clears all annotations without changing the request', () => {
   const input = shell()

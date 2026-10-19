@@ -51,10 +51,10 @@ FactoryComponentPropsOf<'conversation.chat.user.content'>) {
       )}
       {showBubble && <div className={css.bubble}>
         <div data-message-copy>
-          {annotated !== undefined && annotated !== null && <details className={css.annotations} data-message-annotations>
+          {annotated !== null && <details className={css.annotations} data-message-annotations>
             <summary>{t('message.annotations', { count: annotated.annotations.length })}</summary>
             {annotated.annotations.map((annotation, index) => <div key={index} className={css.annotation}>
-              <span className={css.annotationSource}>{annotation.sourceLabel}</span>
+              <span className={css.annotationSource}>{`${index + 1}. ${annotation.sourceLabel}`.trimEnd()}</span>
               <MarkdownText variant="compact" text={annotation.text} labels={markdownLabels(t)} />
               {annotation.comment && <div>{renderFactorySlot('conversation.user.text', { text: annotation.comment, facts, interactive, ellipsis })}</div>}
             </div>)}

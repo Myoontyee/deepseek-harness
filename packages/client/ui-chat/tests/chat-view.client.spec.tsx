@@ -683,7 +683,7 @@ describe('Chat node rendering', () => {
     expect(annotation?.textContent).toContain('这里不理解')
     expect(view.getByText('请解释')).toBeTruthy()
     expect(view.container.textContent).not.toContain('<dsh-response-annotations>')
-    expect(annotation?.textContent).toMatchInlineSnapshot('"1 条注释原对话被选中的原文这里不理解"')
+    expect(annotation?.textContent).toMatchInlineSnapshot('"1 条注释1. 原对话被选中的原文这里不理解"')
   })
 
 

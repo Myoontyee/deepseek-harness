@@ -135,7 +135,14 @@ final class PhoneChatScreen implements AutoCloseable {
   JSONObject choice=null;for(int i=0;i<models.length();i++)if(models.getJSONObject(i).getString("id").equals(model))choice=models.getJSONObject(i);
   if(choice==null||!choice.optBoolean("available"))throw new IOException("请刷新并选择账号可用的模型");
   StringBuilder input=new StringBuilder(text);JSONArray notes=chat.getJSONArray("annotations");
-  for(int i=0;i<notes.length();i++){JSONObject note=notes.getJSONObject(i);if(!note.optBoolean("sent")){input.append("\n\n> ").append(note.getString("quote").replace("\n","\n> ")).append("\n\n").append(note.optString("comment"));}}
+  int unsent=0;for(int i=0;i<notes.length();i++)if(!notes.getJSONObject(i).optBoolean("sent"))unsent++;
+  if(unsent>0){
+   input.append("\n\n（以下 ").append(unsent).append(" 条批注相互独立；每条评论只针对自己的引文，未写评论的引文仅作为整体请求的目标。）");
+   int number=0;
+   for(int i=0;i<notes.length();i++){JSONObject note=notes.getJSONObject(i);if(note.optBoolean("sent"))continue;number++;
+    input.append("\n\n**批注 ").append(number).append("**\n> ").append(note.getString("quote").replace("\n","\n> "));
+    String comment=note.optString("comment").trim();if(!comment.isEmpty())input.append("\n\n评论：").append(comment);}
+  }
   if(input.toString().trim().isEmpty())throw new IOException("请输入消息或添加批注");
   JSONArray history=new JSONArray(chat.getJSONArray("messages").toString());JSONObject user=new JSONObject().put("role","user").put("text",input.toString()).put("at",System.currentTimeMillis());history.put(user);
   JSONObject payload=DeepSeekApi.request(model,effort,Math.min(16384,choice.getInt("maxTokens")),history);

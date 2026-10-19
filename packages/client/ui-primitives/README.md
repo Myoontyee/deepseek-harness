@@ -7,9 +7,9 @@ kind: "package-library"
 
 English | [中文](README.zh.md)
 
-`serializeResponseAnnotations` and `parseResponseAnnotations` share the versioned text envelope used by composer drafts and Chat messages. The envelope preserves quotations, optional comments, source Session addresses, and message keys in model-visible logged text; parsing incomplete or invalid envelopes returns null without discarding ordinary user text.
+`serializeResponseAnnotations` and `parseResponseAnnotations` share the versioned text envelope used by composer drafts and Chat messages. The envelope preserves quotations, optional comments, source Session addresses, and message keys in model-visible logged text; each serialized annotation carries a 1-based `index` and remains an independent entry, so a comment applies only to its own quotation. Parsing incomplete or invalid envelopes returns null without discarding ordinary user text.
 
-New submissions include model-visible guidance connecting the selected passages to the current request, distinguishing quotations from instructions and asking delegated work to carry the relevant quotation and user feedback. Guidance is recorded with the ordinary user message; it improves explicit context but cannot guarantee model compliance. Existing version-1 envelopes without guidance remain readable.
+New submissions include model-visible guidance connecting the selected passages to the current request, numbering the annotations, distinguishing quotations from instructions, binding each comment to its own quotation (an empty comment marks a quotation as the target of the overall request), and asking delegated work to carry the relevant quotation and user feedback. Guidance is recorded with the ordinary user message; it improves explicit context but cannot guarantee model compliance. Existing version-1 envelopes without guidance or index remain readable.
 
 ## Summary
 

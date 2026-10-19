@@ -65,8 +65,8 @@ jobs:
           gradle-version: '8.11.1'
       - name: Build unsigned Android app
         env:
-          DSH_ANDROID_VERSION_NAME: 0.2.1-rc.2.20261019.2
-          DSH_ANDROID_VERSION_CODE: '2026101902'
+          DSH_ANDROID_VERSION_NAME: 0.2.1-rc.2.20261019.3
+          DSH_ANDROID_VERSION_CODE: '2026101903'
         run: |
           mkdir -p apps/android/app/src/main/jniLibs apps/android/app/src/main/assets/licenses
           cp -r apps/android/tailnet/out/arm64-v8a apps/android/tailnet/out/x86_64 apps/android/app/src/main/jniLibs/

@@ -4,8 +4,8 @@ param(
  [string]$KeyStore,
  [string]$PasswordFile,
  [string]$ProxyUrl='http://127.0.0.1:17897',
- [string]$Version='0.2.1-rc.2.20261019.2',
- [int]$VersionCode=2026101902,
+ [string]$Version='0.2.1-rc.2.20261019.3',
+ [int]$VersionCode=2026101903,
  [switch]$Unsigned
 )
 $ErrorActionPreference='Stop'
