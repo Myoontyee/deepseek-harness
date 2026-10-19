@@ -79,6 +79,10 @@ function main(command) {
   if (command === 'android') {
     if (process.env.DSH_ANDROID_KEYSTORE || process.env.DSH_ANDROID_STORE_PASSWORD) throw new Error('Cloud Android builds must not receive signing credentials')
     const identity = releaseIdentity(`custom-v${buildVersion}`, baseVersion())
+    for (const payload of [join(root, 'apps/android/app/src/main/assets/chat/index.html'),
+      join(root, 'apps/android/app/src/main/jniLibs/arm64-v8a/libdsh_tailnet.so')]) {
+      if (!existsSync(payload)) throw new Error(`Android release payload is incomplete: ${payload} is missing. Build the phone chat assets and native Tailscale helpers before packaging`)
+    }
     const env = { ...process.env, DSH_ANDROID_VERSION_NAME: buildVersion, DSH_ANDROID_VERSION_CODE: String(identity.androidCode) }
     run('gradle', ['--no-daemon', ':app:assembleRelease'], join(root, 'apps/android'), env)
     retain(join(root, 'apps/android/app/build/outputs/apk/release/app-release-unsigned.apk'), `deepseek-harness-${buildVersion}-android-universal-unsigned.apk`)
