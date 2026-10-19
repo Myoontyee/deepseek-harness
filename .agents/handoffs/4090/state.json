@@ -11,7 +11,8 @@
     "sourceCommit": "4edc52efc853101d24f414fa8d4a10bda7a1130b",
     "updateFeed": "https://github.com/Myoontyee/deepseek-harness/releases/download/custom-updates/update.json",
     "publishedToUpdateChannel": true,
-    "updateFeedVersion": "0.2.1-rc.2.20261019.3"
+    "updateFeedVersion": "0.2.1-rc.2.20261019.3",
+    "discussion": "https://github.com/Myoontyee/deepseek-harness/discussions/1"
   },
   "android": {
     "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261019.3-android-arm64.apk",
