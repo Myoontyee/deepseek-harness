@@ -16,6 +16,7 @@ import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { serializeResponseAnnotations } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   allowAllAccess, bindSnapshotSelector, conversationSnapshot, makeTranslate,
 } from '@deepseek-ai/dsh-client-test-runtime'
@@ -482,6 +483,36 @@ describe('QueueDock', () => {
       expect(updateQueue).toHaveBeenCalledWith(iid('i-lines'), {
         kind: 'edit',
         content: [{ type: 'text', text: `${text}\nline five` }],
+      })
+    })
+  })
+
+  it('keeps annotation envelopes out of queue previews and preserves them while editing the body', async () => {
+    const annotations = [{
+      text: '被引用的原文', comment: '这里改一下', sourceUrl: 'dsh://session/source',
+      sourceLabel: '原对话', sourceMessage: 'm1',
+    }]
+    const snap = snapshotWith([row('i-annotated', serializeResponseAnnotations('请求正文', annotations))])
+    const source = liveSession(snap)
+    const updateQueue = vi.fn(() => Promise.resolve())
+    const { getByLabelText, getByRole } = render(
+      <QueueDock {...kitFor(snap, { updateQueue })} useSession={source.useSession} useProjection={source.useProjection} />,
+    )
+
+    const item = getByRole('listitem')
+    expect(item.textContent).toContain('请求正文')
+    expect(item.textContent).not.toContain('dsh-response-annotations')
+
+    fireEvent.click(getByLabelText('编辑排队消息'))
+    const editor = getByLabelText('编辑排队消息') as HTMLTextAreaElement
+    expect(editor.value).toBe('请求正文')
+    fireEvent.change(editor, { target: { value: '改后的正文' } })
+    fireEvent.keyDown(editor, { key: 'Enter' })
+
+    await waitFor(() => {
+      expect(updateQueue).toHaveBeenCalledWith(iid('i-annotated'), {
+        kind: 'edit',
+        content: [{ type: 'text', text: serializeResponseAnnotations('改后的正文', annotations) }],
       })
     })
   })

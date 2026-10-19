@@ -8,6 +8,9 @@ import {
   FileTypeIcon, fileSizeText, IconEditOutlineRegular, InlineEditor, IconQueueOutlineRegular, IconSendOutlineRegular,
   IconTrashOutlineRegular, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
+import {
+  parseResponseAnnotations, serializeResponseAnnotations, type ResponseAnnotation,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InboxState } from '@deepseek-ai/dsh-agent/types'
 import type { QueueAction } from '@deepseek-ai/dsh-api-session-controller/types'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
@@ -24,6 +27,12 @@ const QUEUE_TEXT_FACTS: Readonly<Partial<UserTextFacts>> = {
 function textOf(content: InboxState['next-turn'][number]['content']): string | null {
   if (!content.every(block => block.type === 'text')) return null
   return content.map(block => block.text).join('')
+}
+
+/** Split an annotated request into the visible body and its preserved annotations. */
+function readableRequest(text: string): { body: string; annotations: readonly ResponseAnnotation[] } {
+  const parsed = parseResponseAnnotations(text)
+  return parsed === null ? { body: text, annotations: [] } : { body: parsed.text, annotations: parsed.annotations }
 }
 
 /** Queue operations injected by the session-scoped registration. */
@@ -123,7 +132,7 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
   const rowCount = queue.length + pendingQueue.length
   const running = useSession(s => s.running)
   const queueMutable = useSession(s => s.subagent === null || s.subagent.address.mode === 'continuable')
-  const [editing, setEditing] = useState<{ id: MessageId; text: string } | null>(null)
+  const [editing, setEditing] = useState<{ id: MessageId; text: string; annotations: readonly ResponseAnnotation[] } | null>(null)
   const [busy, setBusy] = useState<MessageId | null>(null)
   const [collapsed, setCollapsed] = useState(true)
   const listId = useId()
@@ -158,9 +167,10 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
 
   const saveEdit = async (): Promise<void> => {
     if (editing === null || editing.text.trim() === '') return
+    const text = editing.annotations.length === 0 ? editing.text : serializeResponseAnnotations(editing.text, editing.annotations)
     if (await applyAction(
       editing.id,
-      { kind: 'edit', content: [{ type: 'text', text: editing.text }] },
+      { kind: 'edit', content: [{ type: 'text', text }] },
       t('queue.editFailed'),
     )) setEditing(null)
   }
@@ -191,6 +201,7 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
           {listVisible && queue.map((row) => {
             const attachments = queueAttachments(row.content)
             const text = textOf(row.content)
+            const request = text === null ? null : readableRequest(text)
             return (
               <li key={row.id} className={css.row}>
                 {/* Single-item strip has no count header, so the row itself carries the queue glyph. */}
@@ -200,7 +211,7 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
                     <InlineEditor
                       value={editing.text}
                       label={t('queue.edit')}
-                      onChange={(text) => { setEditing({ id: row.id, text }) }}
+                      onChange={(text) => { setEditing(current => current === null ? null : { ...current, text }) }}
                       onSave={() => { void saveEdit() }}
                       onCancel={() => { setEditing(null) }}
                     />
@@ -228,7 +239,7 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
                         </span>
                       )}
                       <span className={css.preview}>{renderFactorySlot('conversation.user.text', {
-                        text: row.content.filter(block => block.type === 'text').map(block => block.text).join(''),
+                        text: request?.body ?? row.content.filter(block => block.type === 'text').map(block => block.text).join(''),
                         facts: QUEUE_TEXT_FACTS, interactive: false, ellipsis: true,
                       })}</span>
                     </>
@@ -273,7 +284,11 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
                             title={text === null ? t('queue.edit.unsupported') : undefined}
                             disabled={busy !== null || text === null}
                             onClick={() => {
-                              if (text !== null) setEditing({ id: row.id, text: text })
+                              if (text !== null) {
+                                const body = request?.body ?? text
+                                const annotations = request?.annotations ?? []
+                                setEditing({ id: row.id, text: body, annotations })
+                              }
                             }}
                           >
                             <IconEditOutlineRegular size={14} />
@@ -345,7 +360,7 @@ export function QueueDock({ useSession, useProjection, updateQueue, notify, load
                   </span>
                 )}
                 <span className={css.preview}>{renderFactorySlot('conversation.user.text', {
-                  text: submission.text, facts: QUEUE_TEXT_FACTS, interactive: false, ellipsis: true,
+                  text: readableRequest(submission.text).body, facts: QUEUE_TEXT_FACTS, interactive: false, ellipsis: true,
                 })}</span>
                 <span className={css.status} role="status">{t('queue.sending')}</span>
                 {queueMutable && <div className={css.actions}>
