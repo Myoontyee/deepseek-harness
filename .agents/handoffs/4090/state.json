@@ -1,40 +1,51 @@
 {
   "date": "2026-10-19",
   "timezone": "Asia/Shanghai",
-  "version": "0.2.1-rc.2.20261019.1",
+  "version": "0.2.1-rc.2.20261019.3",
   "officialBase": "dsh-v0.2.1-rc.2",
-  "branch": "codex/android-tailnet-20261018",
+  "branch": "custom/content-only-copy",
+  "release": {
+    "tag": "custom-v0.2.1-rc.2.20261019.3",
+    "url": "https://github.com/Myoontyee/deepseek-harness/releases/tag/custom-v0.2.1-rc.2.20261019.3",
+    "workflowRun": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39218560288",
+    "sourceCommit": "4edc52efc853101d24f414fa8d4a10bda7a1130b",
+    "updateFeed": "https://github.com/Myoontyee/deepseek-harness/releases/download/custom-updates/update.json",
+    "publishedToUpdateChannel": true,
+    "updateFeedVersion": "0.2.1-rc.2.20261019.3"
+  },
   "android": {
-    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261019.2-android-arm64.apk",
+    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261019.3-android-arm64.apk",
     "bytes": 10156060,
-    "sha256": "CF75AEA34D64DC3BCDF60B17BAEA1105FA3314F8D956ED98F9BE5520CB136877",
+    "sha256": "342F62733B045076B8582D5A1E938C0D57925A78DC97AB7DCEE2D4774B651876",
     "abi": "arm64-v8a",
     "nativeMatchesLocalBuild": true,
     "licensesBundled": true,
     "sameSigningCertificate": true,
     "physicalPhoneTested": false,
     "uiAssetsVerified": 65,
-    "version": "0.2.1-rc.2.20261019.2",
-    "versionCode": 2026101902,
+    "version": "0.2.1-rc.2.20261019.3",
+    "versionCode": 2026101903,
     "resumeLastView": true,
-    "remoteConnectionStatus": true
+    "remoteConnectionStatus": true,
+    "annotationNumbering": true,
+    "cloudUniversalApkIncomplete": true
   },
   "windows": {
-    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261019.1-win-x64-unsigned.exe",
-    "bytes": 321288416,
-    "sha256": "F3483DE230003D802A930E872B0484523A064C18DFBA70DCAF45972A06422096",
-    "buildGatesPassed": 9,
+    "path": "D:\\DeepseekHarness\\SetupBackage\\deepseek-harness-0.2.1-rc.2.20261019.3-win-x64-unsigned.exe",
+    "bytes": 302789231,
+    "sha256": "5a0d205d729d3a87bfa7ab0ea11a35a323d3af8b85b00dcee2dc7f2a25440a52",
+    "buildGatesPassed": 7,
     "preparedRuntimeSmokePassed": true,
     "packagedRuntimeSmokePassed": true,
     "featuresInPackagedMain": true,
-    "version": "0.2.1-rc.2.20261019.1",
+    "version": "0.2.1-rc.2.20261019.3",
     "finalAggregateChecksPassed": 2,
     "packagedFileByteComparisonsPassed": 4,
-    "sourceBuildCommit": "50515f88a656ae9415fa1c99c994fd28411d31e1",
-    "sourceBuildDirty": true,
+    "sourceBuildCommit": "4edc52efc853101d24f414fa8d4a10bda7a1130b",
+    "sourceBuildDirty": false,
     "compressionLevel": 1,
     "standardDifferentialInstaller": true,
-    "publishedToUpdateChannel": false
+    "publishedToUpdateChannel": true
   },
   "androidSigningCertificate": "e7f22b5b96df116121f091ad59eda08e7ce33225e39bebd89532660ce2949940",
   "checks": {
@@ -82,16 +93,25 @@
     "fullGuiRunStoppedAfterFailures": true,
     "focusedStyleTestsPassed": 28,
     "focusedStyleTestsFailed": 3,
-    "latestPrePushTypecheckPassed": true
+    "latestPrePushTypecheckPassed": true,
+    "customReleaseWorkflowPassed": true,
+    "updateFeedVerified": true,
+    "updateFeedNewerThanInstalled": true,
+    "androidLocalFullApkBuilt": true,
+    "ciAndroidUniversalApkIncomplete": true,
+    "ciAndroidPackagingFixCommitted": "95fd16c76d",
+    "windowRestoreDeferred": true
   },
   "androidCloud": {
-    "run": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39129299532",
+    "run": "https://github.com/Myoontyee/deepseek-harness/actions/runs/39218560288",
     "status": "success",
     "nativeNodeAndDatabasePassed": true,
     "chatHomePassed": true,
     "testsPassed": 4,
-    "testedVersion": "0.2.1-rc.2.20261018.5",
-    "currentVersionValidated": true
+    "testedVersion": "0.2.1-rc.2.20261019.3",
+    "currentVersionValidated": false,
+    "cloudApkComplete": false,
+    "localSignedApkComplete": true
   },
   "remoteTransfer": {
     "completed": true,
@@ -113,6 +133,7 @@
     "Full GUI run was stopped after recording failures to contain laptop resource use; do not describe it as green or completed. Focused device tests pass.",
     "Focused style checks still fail in untouched AssistantIdentity/Discussions circular avatars, legacy radius exceptions and MessageEditor elevated scrolling. The new device stylesheet passes the shared focus-ring check.",
     "UI i18n check reports eight existing hard-coded strings in main, removed discussions, InlineCommentEditor, clipboard math and SkillsPage; no new device strings were reported.",
-    "Local installer records base commit plus a dirty working tree; rebuild from a clean delivery commit before full publication. No tag or update feed was published."
+    "The 20261019.3 cloud Android asset is intentionally incomplete: the release workflow did not build phone chat assets or native helpers. Use the locally built, signed android-arm64 asset attached to the same release; the workflow fix is committed as 95fd16c76d for the next release.",
+    "Window restore (all windows vs primary only) remains a follow-up feature: it needs a cross-process desktop settings API, a settings-page toggle, and window lifecycle/display tests."
   ]
 }
