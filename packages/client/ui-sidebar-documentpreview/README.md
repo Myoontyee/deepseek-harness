@@ -125,7 +125,7 @@ The page refresh shortcut reuses the selected preview’s reload operation, incl
 <a id="navigation"></a>
 ## Navigation
 
-PDF previews include a collapsible Contents / Outline panel for embedded bookmarks. Nested internal destinations jump to the referenced page, including pages not yet rendered; external bookmark actions are not launched. Missing outlines are reported explicitly. Outline or destination failures leave the PDF readable, and late navigation cannot move a closed tab. The same panel is available for Office-generated PDFs when they contain bookmarks.
+PDF previews provide an icon button that toggles a left-side Contents / Outline pane for embedded bookmarks. Chapters expand independently; Escape closes the pane and restores button focus. The pane sits beside the pages in wide previews and floats over the left edge in narrow previews, retaining the page viewport. Nested internal destinations jump to the referenced page, including pages not yet rendered; external bookmark actions are not launched. Missing outlines are reported explicitly. Outline or destination failures leave the PDF readable, and late navigation cannot move a closed tab. The same panel is available for Office-generated PDFs when they contain bookmarks.
 
 Selecting readable file text offers Add to conversation and Add annotation. The composer receives the quotation, optional remark and file address; the file itself is not edited. Markdown math and links are preserved. Selection inside isolated HTML iframes and text-less images is not supported.
 

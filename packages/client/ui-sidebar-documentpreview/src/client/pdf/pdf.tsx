@@ -104,11 +104,12 @@ export function PdfBody(props: PdfBodyProps & { readonly loading: ReactNode }): 
     ))}
   </section>
   return <div className={css.reader}>
-    <PdfOutline document={load.document} signal={tab.signal} onNavigate={navigate} t={t} />
-    <div className={css.pagesViewport}><ZoomViewport preference={preference} intrinsicWidth={pageWidth} horizontalInset={24} labels={labels}
-      signal={tab.signal} scrollportRef={props.scrollportRef} onPreference={setPreference} onRenderZoom={setRenderZoom}>
-      {pages}
-    </ZoomViewport></div>
+    <PdfOutline document={load.document} signal={tab.signal} onNavigate={navigate} t={t}>
+      <ZoomViewport preference={preference} intrinsicWidth={pageWidth} horizontalInset={24} labels={labels}
+        signal={tab.signal} scrollportRef={props.scrollportRef} onPreference={setPreference} onRenderZoom={setRenderZoom}>
+        {pages}
+      </ZoomViewport>
+    </PdfOutline>
   </div>
 }
 

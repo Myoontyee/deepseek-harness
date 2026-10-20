@@ -12,27 +12,74 @@
   min-width: 0;
 }
 
-.outline {
+.outlineLayout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  container: pdf-preview / inline-size;
+}
+
+.readerToolbar {
+  display: flex;
   flex: none;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--dsw-alias-bg-base);
+  border-bottom: 1px solid var(--dsw-alias-border-l3);
+}
+
+.readerColumns {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.outline {
+  display: flex;
+  flex: 0 0 216px;
+  flex-direction: column;
+  max-width: 42%;
+  min-height: 0;
   min-width: 0;
   color: var(--dsw-alias-label-primary);
   background: var(--dsw-alias-bg-base);
-  border-bottom: 1px solid var(--dsw-alias-border-l3);
+  border-inline-end: 1px solid var(--dsw-alias-border-l3);
   font-size: 13px;
+}
+
+.outline[hidden] {
+  display: none;
+}
+
+.outlineHeading {
+  flex: none;
+  padding: 10px 12px;
+  font-weight: 500;
 }
 
 .outlineToggle {
   display: flex;
   gap: 8px;
   align-items: center;
-  width: 100%;
-  padding: 10px 12px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
   border: 0;
+  border-radius: 6px;
   background: transparent;
-  color: inherit;
+  color: var(--dsw-alias-label-primary);
   text-align: start;
   font: inherit;
   cursor: pointer;
+}
+
+.outlineToggle[aria-pressed="true"] {
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .outlineCollapsed {
@@ -40,9 +87,10 @@
 }
 
 .outlinePanel {
-  max-height: min(32vh, 260px);
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding: 0 12px 8px;
+  padding: 0 8px 8px;
   overflow-wrap: anywhere;
 }
 
@@ -57,14 +105,38 @@
 }
 
 .outlineList .outlineList {
-  padding-inline-start: 16px;
+  padding-inline-start: 12px;
+}
+
+.outlineRow {
+  display: flex;
+  align-items: flex-start;
+}
+
+.branchToggle,
+.branchSpacer {
+  box-sizing: border-box;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 32px;
+}
+
+.branchToggle {
+  padding: 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
 
 .outlineItem {
   display: block;
+  flex: 1;
+  min-width: 0;
   width: 100%;
   min-height: 32px;
-  padding: 6px 8px;
+  padding: 6px 4px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -80,6 +152,7 @@
 }
 
 .outlineToggle:focus-visible,
+.branchToggle:focus-visible,
 .outlineItem:focus-visible {
   outline: 2px solid var(--dsw-alias-label-primary);
   outline-offset: -2px;
@@ -87,8 +160,20 @@
 
 @media (hover: hover) {
   .outlineItem:hover:not(:disabled),
+  .branchToggle:hover,
   .outlineToggle:hover {
     background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+@container pdf-preview (max-width: 540px) {
+  .outline {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 2;
+    width: min(240px, calc(100% - 48px));
+    max-width: none;
+    box-shadow: var(--dsw-elevation-prominent);
   }
 }
 

@@ -18,6 +18,7 @@ export const zh = {
   outlineFailed: '无法读取目录，请重试',
   outlineNavigationFailed: '无法跳转到此章节，请选择其他章节或用默认应用打开',
   outlineUntitled: '未命名章节',
+  outlineToggleChapter: '展开或收起 {chapter}',
 } satisfies Record<string, string>
 
 /** PDF translation keys shared by both dictionaries. */
@@ -41,6 +42,7 @@ export const en = {
   outlineFailed: 'Could not read the outline. Try again.',
   outlineNavigationFailed: 'Could not navigate to this chapter. Choose another chapter or open in the default application.',
   outlineUntitled: 'Untitled chapter',
+  outlineToggleChapter: 'Expand or collapse {chapter}',
 } satisfies Record<PdfLocaleKey, string>
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {

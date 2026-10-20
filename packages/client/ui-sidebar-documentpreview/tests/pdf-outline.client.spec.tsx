@@ -37,10 +37,29 @@ it('shows a nested outline, navigates by keyboard-compatible buttons, and can co
   fireEvent.click(toggle)
   await act(async () => {})
   expect(screen.getAllByRole('list')).toHaveLength(2)
+  const chapterToggle = screen.getByRole('button', { name: 'Expand or collapse Chapter one' })
+  fireEvent.click(chapterToggle)
+  expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
+  fireEvent.click(chapterToggle)
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Details' })) })
   expect(onNavigate).toHaveBeenCalledWith(3)
   fireEvent.click(toggle)
   expect(screen.queryByRole('button', { name: 'Details' })).toBeNull()
+})
+
+it('keeps the PDF viewport beside the outline and restores focus when Escape closes it', async () => {
+  render(<PdfOutline document={documentOf()} signal={new AbortController().signal} onNavigate={vi.fn()} t={t}>
+    <div data-pdf-page-content>PDF pages remain mounted</div>
+  </PdfOutline>)
+  const toggle = screen.getByRole('button', { name: en.outline })
+  fireEvent.click(toggle)
+  await act(async () => {})
+  const outline = screen.getByRole('complementary', { name: en.outline })
+  expect(outline.parentElement?.querySelector('[data-pdf-pages-viewport] [data-pdf-page-content]')).toBeTruthy()
+  expect(fireEvent.keyDown(screen.getByRole('button', { name: 'Details' }), { key: 'Escape' })).toBe(false)
+  expect(screen.queryByRole('complementary', { name: en.outline })).toBeNull()
+  expect(document.activeElement).toBe(toggle)
+  expect(screen.getByText('PDF pages remain mounted')).toBeTruthy()
 })
 
 it('announces an absent outline and retries a failed outline without affecting pages', async () => {
