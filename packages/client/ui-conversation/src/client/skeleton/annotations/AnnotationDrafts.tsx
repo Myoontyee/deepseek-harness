@@ -35,6 +35,13 @@ export function AnnotationDrafts({ annotations, actions, disabled, t }: {
   }
   const count = t('annotation.count', { count: annotations.length })
   const cards = (editable: boolean) => <div className={css.items} data-annotation-preview={editable ? undefined : ''}
+    onKeyDown={editable ? (event) => {
+      if (event.key !== 'Enter' || (!event.ctrlKey && !event.metaKey) || event.shiftKey || event.altKey
+        || event.repeat || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
+      event.preventDefault()
+      event.stopPropagation()
+      setOpen(false)
+    } : undefined}
     tabIndex={editable ? undefined : 0} role={editable ? undefined : 'region'} aria-label={editable ? undefined : count}>
     {annotations.map((annotation, index) => <section className={css.item} key={annotation.id} data-annotation-id={annotation.id}>
       <div className={css.heading}>
@@ -77,7 +84,8 @@ export function AnnotationDrafts({ annotations, actions, disabled, t }: {
     </div>
     <Modal open={open} title={count} closeLabel={t('annotation.close')} onClose={() => { setOpen(false) }}
       description={t('annotation.savedHint')} contentClassName={css.editor ?? ''}
-      footer={<button type="button" className={css.done} onClick={() => { setOpen(false) }}>{t('annotation.done')}</button>}>
+      footer={<button type="button" className={css.done} aria-label={t('annotation.done')} aria-keyshortcuts="Control+Enter Meta+Enter"
+        onClick={() => { setOpen(false) }}>{t('annotation.done')} <kbd className={css.doneShortcut}>Ctrl+Enter</kbd></button>}>
       {cards(true)}
     </Modal>
   </div>

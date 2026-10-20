@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { getDocument, PDFWorker } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { renderPdfPage } from '../src/client/pdf/document.ts'
 import { pdfFixture } from './pdf-fixture.ts'
+import { outlinePage } from '../src/client/pdf/outline.ts'
 
 describe('PDF.js real-library smoke', () => {
   it('parses two pages and draws their distinct vector colors in a real worker', async () => {
@@ -34,8 +35,13 @@ describe('PDF.js real-library smoke', () => {
       await Promise.race([ready.promise, failed.promise])
       // The adapter carries browser-style messages across an actual Node worker thread.
       bridge = PDFWorker.create({ port: port as unknown as Worker })
-      loading = getDocument({ data: pdfFixture(), worker: bridge })
+      loading = getDocument({ data: pdfFixture(1, 0, true), worker: bridge })
       const pdf = await Promise.race([loading.promise, failed.promise])
+      const outline = await pdf.getOutline()
+      expect(outline?.map(item => item.title)).toEqual(['Chapter Two'])
+      const signal = new AbortController().signal
+      expect(await outlinePage(pdf, outline![0]!.dest, signal)).toBe(2)
+      expect(await outlinePage(pdf, outline![0]!.items[0].dest, signal)).toBe(1)
       expect(pdf.numPages).toBe(2)
       const factory = pdf.canvasFactory as {
         create(width: number, height: number): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D }

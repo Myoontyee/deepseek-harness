@@ -9,6 +9,7 @@ import { renderPdfPage, type PdfDocument } from './document.ts'
 import { openPdf } from './runtime.ts'
 import { PdfWorkerFailure } from './errors.ts'
 import { pdfTextRenderer } from './text.ts'
+import { PdfOutline } from './PdfOutline.tsx'
 import type { ZoomViewportProps } from '../zoom/ZoomViewport.tsx'
 import type { ZoomLabels, ZoomPreference } from '../zoom/types.ts'
 import type {} from './locales.ts'
@@ -50,6 +51,7 @@ export function PdfBody(props: PdfBodyProps & { readonly loading: ReactNode }): 
   const [attempt, setAttempt] = useState(0)
   const [pageWidth, setPageWidth] = useState<number>()
   const [renderZoom, setRenderZoom] = useState(1)
+  const [jump, setJump] = useState<{ page: number; revision: number }>()
   const { retainTab, actions, t, ZoomViewport, zoomSurfaceClass } = props
   const preference = view.zoom ?? FIT_WIDTH
   const labels: ZoomLabels = {
@@ -61,6 +63,10 @@ export function PdfBody(props: PdfBodyProps & { readonly loading: ReactNode }): 
   }, [actions, tab.id])
   const setPreference = useCallback((value: ZoomPreference): void => {
     actions.zoom(tab.id, value)
+  }, [actions, tab.id])
+  const navigate = useCallback((page: number): void => {
+    actions.page(tab.id, page)
+    setJump(previous => ({ page, revision: (previous?.revision ?? 0) + 1 }))
   }, [actions, tab.id])
 
   useEffect(() => { retainTab(tab.id, tab.signal) }, [retainTab, tab.id, tab.signal])
@@ -93,16 +99,20 @@ export function PdfBody(props: PdfBodyProps & { readonly loading: ReactNode }): 
     {Array.from({ length: load.document.numPages }, (_, index) => (
       <PdfPage key={index} document={load.document} page={index + 1}
         requested={index === 0 || view.page === index + 1} onVisible={pageVisible} signal={tab.signal}
+        jump={jump?.page === index + 1 ? jump.revision : undefined}
         onWidth={index === 0 ? setPageWidth : undefined} zoom={renderZoom} zoomSurfaceClass={zoomSurfaceClass} t={t} />
     ))}
   </section>
-  return <ZoomViewport preference={preference} intrinsicWidth={pageWidth} horizontalInset={24} labels={labels}
-    signal={tab.signal} scrollportRef={props.scrollportRef} onPreference={setPreference} onRenderZoom={setRenderZoom}>
-    {pages}
-  </ZoomViewport>
+  return <div className={css.reader}>
+    <PdfOutline document={load.document} signal={tab.signal} onNavigate={navigate} t={t} />
+    <div className={css.pagesViewport}><ZoomViewport preference={preference} intrinsicWidth={pageWidth} horizontalInset={24} labels={labels}
+      signal={tab.signal} scrollportRef={props.scrollportRef} onPreference={setPreference} onRenderZoom={setRenderZoom}>
+      {pages}
+    </ZoomViewport></div>
+  </div>
 }
 
-function PdfPage({ document, page, requested: initiallyRequested, onVisible, signal, onWidth, zoom, zoomSurfaceClass, t }: {
+function PdfPage({ document, page, requested: initiallyRequested, onVisible, signal, onWidth, zoom, zoomSurfaceClass, jump, t }: {
   readonly document: PdfDocument
   readonly page: number
   readonly requested: boolean
@@ -111,12 +121,14 @@ function PdfPage({ document, page, requested: initiallyRequested, onVisible, sig
   readonly onWidth: ((width: number) => void) | undefined
   readonly zoom: number
   readonly zoomSurfaceClass: string
+  readonly jump: number | undefined
 } & PropsLocale<'sidebarPdf'>): ReactNode {
   const host = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const text = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState<number>()
-  const [requested, setRequested] = useState(initiallyRequested)
+  const [observed, setRequested] = useState(initiallyRequested)
+  const requested = observed || initiallyRequested || jump !== undefined
   const [visible, setVisible] = useState(initiallyRequested)
   const renderedZoom = useRef<number>()
   const pendingRender = useRef(Promise.resolve())
@@ -124,6 +136,10 @@ function PdfPage({ document, page, requested: initiallyRequested, onVisible, sig
   const [state, setState] = useState<'loading' | 'ready'>('loading')
   const [failure, setFailure] = useState<{ readonly error: unknown }>()
   const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    if (jump === undefined || state !== 'ready' || signal.aborted) return
+    host.current?.scrollIntoView({ block: 'start', inline: 'nearest' })
+  }, [jump, state, signal])
   useEffect(() => {
     // A zoomed canvas can remain visible after its narrower page wrapper has
     // scrolled out horizontally. Observe the displayed page once it is ready.

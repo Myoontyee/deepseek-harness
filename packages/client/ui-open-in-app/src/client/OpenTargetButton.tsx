@@ -74,7 +74,7 @@ function ApplicationIcon({ source, size = 14 }: { source: string | null; size?: 
 
 /**
  * Render identical split buttons for files and directories. File reveal always
- * stays last; it is the default only when no application is registered.
+ * stays last; the operating system default stays available even without a catalog.
  * @param props - target applications, default selection, and operations.
  * @returns the control and its transient failure feedback.
  */
@@ -82,30 +82,17 @@ export function OpenTargetButton(props: OpenTargetButtonProps): ReactNode {
   const { applications, defaultId, kind, t } = props
   const [menuOpen, setMenuOpen] = useState(false)
   const { pending, toast, act } = useOpenTargetGesture(props.execute, t)
-  // Files open through an application whenever one is registered: the OS-marked
-  // default when the Host reported one, else the first entry in the Shell's
-  // preference order. Reveal is only promoted with no registered application, so
-  // a missing default marker never hides the applications behind it.
-  const preferred = kind === 'file'
-    ? applications.find(app => app.id === defaultId) ?? applications[0]
-    : applications.find(app => app.id === defaultId)
-  const disabled = pending || props.busy === true || props.loading === true
-  const hasMenu = props.loading === true || props.failed || applications.length + (kind === 'file' ? 1 : 0) > 1
-  const revealDefault = kind === 'file' && preferred === undefined && props.loading !== true
-  const primaryLabel = preferred === undefined ? t('path.reveal') : t('open.title', { app: preferred.name })
+  const preferred = applications.find(app => app.id === defaultId)
+  const disabled = pending || props.busy === true || (kind === 'directory' && props.loading === true)
+  const hasMenu = kind === 'file' || props.loading === true || props.failed || applications.length > 1
+  const primaryLabel = preferred === undefined ? t('path.systemDefault') : t('open.title', { app: preferred.name })
   const run = (operation: OpenTargetOperation): void => { setMenuOpen(false); act(operation) }
   const primary = (): void => {
-    if (revealDefault) { run({ kind: 'reveal' }); return }
-    // The Host's default marker is best effort. With none, request the application
-    // this control names instead of letting the OS resolve the association again.
-    if (preferred !== undefined && preferred.id !== defaultId) { run({ kind: 'application', id: preferred.id }); return }
     run({ kind: 'default' })
   }
   const icon = props.loading === true && preferred === undefined
     ? <span className={css.skeleton} data-open-target-skeleton aria-hidden="true" style={{ width: props.prominent ? 18 : 13, height: props.prominent ? 18 : 13 }} />
-    : revealDefault
-      ? <IconFolderOpenOutlineRegular size={props.prominent ? 18 : 13} />
-      : <ApplicationIcon key={preferred?.icon} source={preferred?.icon ?? null} size={props.prominent ? 18 : 13} />
+    : <ApplicationIcon key={preferred?.icon} source={preferred?.icon ?? null} size={props.prominent ? 18 : 13} />
   return (
     <>
       <Menu
@@ -117,18 +104,19 @@ export function OpenTargetButton(props: OpenTargetButtonProps): ReactNode {
         align="end"
         onClose={() => { setMenuOpen(false) }}
         items={[
+          ...(kind === 'file' ? [{ id: 'default', icon: <IconRightUpOutlineRegular />, label: t('path.systemDefault') }] : []),
           ...applications.map(app => ({
             id: `app:${app.id}`,
             icon: <ApplicationIcon key={app.icon} source={app.icon} />,
-            label: app.id === preferred?.id ? t('path.appDefault', { app: app.name }) : app.name,
+            label: app.id === defaultId ? t('path.appDefault', { app: app.name }) : app.name,
           })),
           ...(props.failed ? [{ id: 'unavailable', label: t('path.appsError'), disabled: true }] : []),
         ]}
         footer={kind === 'file' ? [{
           id: 'reveal', icon: <IconFolderOpenOutlineRegular />,
-          label: revealDefault ? t('path.appDefault', { app: t('path.reveal') }) : t('path.reveal'),
+          label: t('path.reveal'),
         }] : []}
-        onSelect={(id) => { run(id === 'reveal' ? { kind: 'reveal' } : { kind: 'application', id: id.slice(4) }) }}
+        onSelect={(id) => { run(id === 'default' ? { kind: 'default' } : id === 'reveal' ? { kind: 'reveal' } : { kind: 'application', id: id.slice(4) }) }}
         anchor={(
           <div className={css.split} data-open-target={kind} data-size={props.prominent ? 'large' : 'compact'}
             data-open-path={kind === 'file' && !props.prominent ? '' : undefined} data-state={disabled ? 'busy' : 'idle'}>
@@ -137,7 +125,7 @@ export function OpenTargetButton(props: OpenTargetButtonProps): ReactNode {
                 aria-keyshortcuts={props.shortcut?.aria}
                 data-open-path-open={kind === 'file' && !props.prominent ? '' : undefined}
                 data-open-path-unpreviewable={props.prominent ? '' : undefined} onClick={primary}>
-                {icon}{(props.prominent) && (revealDefault ? t('path.reveal') : t('path.open'))}
+                {icon}{props.prominent && t('path.open')}
               </button>
             </Tooltip>
             {hasMenu && <button

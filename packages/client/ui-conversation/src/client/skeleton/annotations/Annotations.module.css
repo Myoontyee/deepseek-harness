@@ -30,3 +30,4 @@
 .pendingDraft button { padding: 6px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--dsw-radius-md); background: var(--dsw-specific-input-major); color: var(--dsw-alias-label-primary); font: inherit; cursor: pointer; }
 .pendingDraft button:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pendingDraft button:last-child { flex-shrink: 0; }
+.doneShortcut { margin-inline-start: 8px; font: inherit; font-size: 12px; color: var(--dsw-alias-label-secondary); }

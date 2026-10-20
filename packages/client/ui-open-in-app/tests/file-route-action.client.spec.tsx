@@ -21,7 +21,7 @@ it('queries the authorized route, selects a handler, and keeps reveal last', asy
   fireEvent.mouseEnter(screen.getByRole('button', { name: 'Open in Music' }))
   expect(await screen.findByRole('tooltip')).toHaveProperty('textContent', 'Open in Music')
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: en['path.more'] })) })
-  expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['Music (default)', 'Show file location'])
+  expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['Open in system default application', 'Music (default)', 'Show file location'])
   await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Music (default)' })) })
   expect(p.onAction).toHaveBeenLastCalledWith('open', 'music')
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Open in Music' })) })
@@ -36,7 +36,8 @@ it.each(['http', 'transport', 'invalid'] as const)('keeps reveal available after
   const p = props()
   render(<FileRouteAction {...p} />)
   await act(async () => {})
-  await act(async () => { fireEvent.click(screen.getByRole('button', { name: en['path.reveal'] })) })
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: en['path.more'] })) })
+  await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: en['path.reveal'] })) })
   expect(p.onAction).toHaveBeenCalledWith('reveal', undefined)
 })
 

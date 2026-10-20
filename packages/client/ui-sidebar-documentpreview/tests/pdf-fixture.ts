@@ -3,13 +3,14 @@
 /**
  * @param userUnit - Page-coordinate unit size as a multiple of 1/72 inch.
  * @param rotation - Clockwise page rotation in degrees.
+ * @param outline - Whether to embed a named chapter and nested explicit bookmark.
  * @returns complete PDF bytes; no clocks, external fonts, images, or network references.
  */
-export function pdfFixture(userUnit = 1, rotation = 0): Uint8Array {
+export function pdfFixture(userUnit = 1, rotation = 0, outline = false): Uint8Array {
   const streams = ['0.9 0.1 0.1 rg 10 10 100 80 re f', '0.1 0.1 0.9 rg 10 10 100 80 re f']
     .map(stream => `${stream}\nBT /F1 8 Tf 0 0 0 rg 10 92 Td (Selectable PDF text) Tj ET`)
   const objects = [
-    '<< /Type /Catalog /Pages 2 0 R >>',
+    outline ? '<< /Type /Catalog /Pages 2 0 R /Outlines 8 0 R /Dests << /chapterTwo [5 0 R /Fit] >> >>' : '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>',
     `<< /Type /Page /Parent 2 0 R /UserUnit ${userUnit} /Rotate ${rotation} /MediaBox [0 0 120 100] /Resources << /Font << /F1 7 0 R >> >> /Contents 4 0 R >>`,
     `<< /Length ${streams[0]!.length} >>\nstream\n${streams[0]}\nendstream`,
@@ -17,6 +18,11 @@ export function pdfFixture(userUnit = 1, rotation = 0): Uint8Array {
     `<< /Length ${streams[1]!.length} >>\nstream\n${streams[1]}\nendstream`,
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
   ]
+  if (outline) objects.push(
+    '<< /Type /Outlines /First 9 0 R /Last 9 0 R /Count 2 >>',
+    '<< /Title (Chapter Two) /Parent 8 0 R /Dest /chapterTwo /First 10 0 R /Last 10 0 R /Count 1 >>',
+    '<< /Title (Details) /Parent 9 0 R /Dest [3 0 R /Fit] >>',
+  )
   return pdfObjects(objects)
 }
 

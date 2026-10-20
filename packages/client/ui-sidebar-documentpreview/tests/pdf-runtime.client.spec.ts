@@ -85,7 +85,8 @@ describe('PDF Worker lifecycle', () => {
     expect(options.data.byteLength).toBe(0)
     expect(Array.from(h.data)).toEqual(Array.from(transferred))
     expect(new TextDecoder().decode(h.data)).toBe('%PDF-test')
-    const document = { numPages: 2, getPage: vi.fn() }
+    const document = { numPages: 2, getPage: vi.fn(),
+      getOutline: vi.fn(async () => []), getDestination: vi.fn(async () => null), getPageIndex: vi.fn() }
     h.loading.resolve(document)
     await expect(h.session.document).resolves.toBe(document)
     await h.session.dispose()
@@ -118,7 +119,8 @@ describe('PDF Worker lifecycle', () => {
     h.controller.abort()
     await destroying.promise
     expect(workers[0]!.terminate).not.toHaveBeenCalled()
-    h.loading.resolve({ numPages: 99, getPage: vi.fn() })
+    h.loading.resolve({ numPages: 99, getPage: vi.fn(),
+      getOutline: vi.fn(async () => []), getDestination: vi.fn(async () => null), getPageIndex: vi.fn() })
     destruction.resolve(undefined)
     await expect(h.session.document).rejects.toMatchObject({ name: 'AbortError' })
     await h.session.dispose()
@@ -140,7 +142,8 @@ describe('PDF Worker lifecycle', () => {
     const h = setup()
     workers[0]!.ready()
     await h.entered.promise
-    h.loading.resolve({ numPages: 1, getPage: vi.fn() })
+    h.loading.resolve({ numPages: 1, getPage: vi.fn(),
+      getOutline: vi.fn(async () => []), getDestination: vi.fn(async () => null), getPageIndex: vi.fn() })
     await h.session.document
     const error = new ErrorEvent('error', { message: 'worker crashed' })
     workers[0]!.dispatchEvent(error)
@@ -170,7 +173,8 @@ describe('PDF Worker lifecycle', () => {
     expect(api.getDocument).not.toHaveBeenCalled()
     workers[0]!.ready()
     await h.entered.promise
-    h.loading.resolve({ numPages: 1, getPage: vi.fn() })
+    h.loading.resolve({ numPages: 1, getPage: vi.fn(),
+      getOutline: vi.fn(async () => []), getDestination: vi.fn(async () => null), getPageIndex: vi.fn() })
     await h.session.document
   })
 
@@ -191,7 +195,8 @@ describe('PDF Worker lifecycle', () => {
     const h = setup()
     workers[0]!.ready()
     await h.entered.promise
-    h.loading.resolve({ numPages: 1, getPage: vi.fn() })
+    h.loading.resolve({ numPages: 1, getPage: vi.fn(),
+      getOutline: vi.fn(async () => []), getDestination: vi.fn(async () => null), getPageIndex: vi.fn() })
     await h.session.document
     const destruction = Promise.withResolvers<undefined>()
     const destroying = Promise.withResolvers<undefined>()
@@ -211,7 +216,8 @@ describe('PDF Worker lifecycle', () => {
     const h = setup()
     workers[0]!.ready()
     await h.entered.promise
-    h.loading.resolve({ numPages: 1, getPage: vi.fn() })
+    h.loading.resolve({ numPages: 1, getPage: vi.fn(),
+      getOutline: vi.fn(async () => []), getDestination: vi.fn(async () => null), getPageIndex: vi.fn() })
     await h.session.document
     const failure = new Error('terminate RPC rejected')
     h.destroy.mockRejectedValueOnce(failure)

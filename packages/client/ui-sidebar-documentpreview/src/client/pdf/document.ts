@@ -2,7 +2,7 @@
 import type { PDFDocumentProxy, PDFPageProxy, PageViewport } from 'pdfjs-dist'
 
 /** The document operations used by one mounted PDF body. */
-export type PdfDocument = Pick<PDFDocumentProxy, 'numPages' | 'getPage'>
+export type PdfDocument = Pick<PDFDocumentProxy, 'numPages' | 'getPage' | 'getOutline' | 'getDestination' | 'getPageIndex'>
 
 /** One in-flight PDF load and its complete cleanup operation. */
 export interface PdfSession {
@@ -40,7 +40,7 @@ export type RenderPdfText = (page: PDFPageProxy, viewport: PageViewport) => {
  * @returns the page's CSS dimensions after rendering completes.
  */
 export async function renderPdfPage(
-  document: PdfDocument,
+  document: Pick<PdfDocument, 'numPages' | 'getPage'>,
   pageNumber: number,
   canvas: HTMLCanvasElement,
   signal: AbortSignal,

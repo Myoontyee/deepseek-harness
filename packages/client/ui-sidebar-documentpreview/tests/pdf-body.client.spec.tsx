@@ -101,9 +101,37 @@ function harness() {
   return { instance, controller, tabId, scrollportRef, View }
 }
 
-const documentOf = (numPages = 3): PdfDocument => ({ numPages, getPage: vi.fn() })
+const documentOf = (numPages = 3): PdfDocument => ({
+  numPages, getPage: vi.fn(), getOutline: vi.fn(async () => []),
+  getDestination: vi.fn(async () => null), getPageIndex: vi.fn(),
+})
 
 describe('PDF body', () => {
+  it('renders an unobserved bookmark target and scrolls there after its canvas is ready', async () => {
+    IntersectionObserverStub.instances = []
+    vi.stubGlobal('IntersectionObserver', IntersectionObserverStub)
+    const scroll = vi.fn()
+    const previousScroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView')
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scroll })
+    const h = harness(), pdf = documentOf(3)
+    pdf.getOutline = vi.fn(async () => [{ title: 'Last chapter', dest: [2], items: [], bold: false, italic: false,
+      color: new Uint8ClampedArray(3), url: null, unsafeUrl: undefined, newWindow: undefined, count: undefined }])
+    const view = render(<h.View />)
+    try {
+      await act(async () => { loads[0]!.deferred.resolve(pdf) })
+      expect(engine.render.mock.calls.map(([, page]) => page)).toEqual([1])
+      fireEvent.click(screen.getByRole('button', { name: en.outline }))
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Last chapter' })) })
+      expect(engine.render.mock.calls.map(([, page]) => page)).toEqual([1, 3])
+      expect(h.instance.getSnapshot().byTab[h.tabId]?.page).toBe(3)
+      expect(scroll).toHaveBeenCalledWith({ block: 'start', inline: 'nearest' })
+      expect(view.container.querySelector('[data-pdf-page="3"] [hidden]')).toBeNull()
+    } finally {
+      if (previousScroll === undefined) Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
+      else Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', previousScroll)
+    }
+  })
+
   it('reports non-byte contents without starting PDF.js', () => {
     const h = harness()
     render(<h.View kind="text" />)

@@ -13,7 +13,7 @@ async function queryRoute(url: string, signal: AbortSignal): Promise<readonly Se
     if (!response.ok) return null
     return parseNativeFileApplications(await response.json())
   } catch (_error) {
-    // Unavailable routes and malformed responses leave file reveal as the fallback.
+    // Catalog failure leaves default opening and file reveal available.
     return null
   }
 }
