@@ -10,7 +10,7 @@ import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import { createDeveloperMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { expect, it, onTestFinished, vi } from 'vitest'
 import { installSessionReadTestServices } from './test-remote.ts'
-import { editLatestMessage, installMessageRevisions } from '../src/edit-message.ts'
+import { editMessageTarget, installMessageRevisions } from '../src/edit-message.ts'
 import type { SessionRequestId } from '../src/types.ts'
 
 async function fixture() {
@@ -27,24 +27,24 @@ async function fixture() {
   const original = session.append('user/message', createUserMessage({
     content: [{ type: 'text', text: 'old request' }], source: { kind: 'user' },
   }), { surfaceOp: 'append' })
-  session.append('developer/message', { turn: 1, step: 1, message: createDeveloperMessage({
+  const developer = session.append('developer/message', { turn: 1, step: 1, message: createDeveloperMessage({
     content: [{ type: 'text', text: 'superseded context' }], source: { kind: 'user' },
   }) }, { surfaceOp: 'append' })
   session.append('step/end', { turn: 1, step: 1 })
   session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
   const followup = vi.fn()
-  const agent: Parameters<typeof editLatestMessage>[0] = { session, status: 'idle', inbox: { nextTurn: [], nextStep: [] }, followup,
+  const agent: Parameters<typeof editMessageTarget>[0] = { session, status: 'idle', inbox: { nextTurn: [], nextStep: [] }, followup,
     runMaintenance: <T>(task: (signal: AbortSignal) => Promise<T>) => task(new AbortController().signal) }
   const read = () => ctx.sessionQuery.observeSession(session.id)
   const request = { sessionId: session.id, seq: original.seq, text: 'revised request', requestId: 'edit-1' as SessionRequestId }
   const flush = vi.fn(() => Promise.resolve())
-  return { ctx, session, earlier, original, agent, followup, read, request, flush }
+  return { ctx, session, earlier, original, developer, agent, followup, read, request, flush }
 }
 
 it('queues revision intent while leaving the completed Session log untouched', async () => {
   const f = await fixture()
   const before = f.session.seq
-  await editLatestMessage(f.agent, f.request, f.read, f.flush)
+  await editMessageTarget(f.agent, f.request, f.read, f.flush)
   expect(f.session.seq).toBe(before)
   expect(f.session.id).toBe(f.request.sessionId)
   expect(JSON.stringify(f.session.deriveMessages())).toContain('old request')
@@ -57,14 +57,32 @@ it('queues revision intent while leaving the completed Session log untouched', a
   expect(f.flush).toHaveBeenCalledOnce()
 })
 
-it('rejects a stale message or active work without changing model history', async () => {
+it('rewrites an earlier human message with an edit range that covers the current surface tail', async () => {
   const f = await fixture()
   const before = f.session.seq
-  await expect(editLatestMessage(f.agent, { ...f.request, seq: f.earlier.seq }, f.read, f.flush))
-    .rejects.toMatchObject({ message: 'MESSAGE_EDIT_NOT_LATEST' })
-  await expect(editLatestMessage({ ...f.agent, status: 'running' }, f.request, f.read, f.flush))
+  const surfaceEnd = f.session.surface.nodes.at(-1)
+  if (surfaceEnd === undefined) throw new Error('Fixture surface is empty')
+  await editMessageTarget(f.agent, { ...f.request, seq: f.earlier.seq }, f.read, f.flush)
+  expect(f.session.seq).toBe(before)
+  expect(f.followup).toHaveBeenCalledWith(expect.objectContaining({
+    content: [{ type: 'text', text: 'revised request' }],
+    source: { kind: 'user', rpcId: 'edit-1', edit: {
+      startSeq: f.earlier.seq, endSeq: before - 1, surfaceEndSeq: surfaceEnd,
+    } },
+  }))
+  expect(JSON.stringify(f.session.deriveMessages())).toContain('earlier context')
+})
+
+it('rejects a target that is not a visible human message or active work without changing model history', async () => {
+  const f = await fixture()
+  const before = f.session.seq
+  await expect(editMessageTarget(f.agent, { ...f.request, seq: f.developer.seq }, f.read, f.flush))
+    .rejects.toMatchObject({ message: 'MESSAGE_EDIT_NOT_VISIBLE' })
+  await expect(editMessageTarget(f.agent, { ...f.request, seq: 999 }, f.read, f.flush))
+    .rejects.toMatchObject({ message: 'MESSAGE_EDIT_NOT_VISIBLE' })
+  await expect(editMessageTarget({ ...f.agent, status: 'running' }, f.request, f.read, f.flush))
     .rejects.toMatchObject({ message: 'MESSAGE_EDIT_BUSY' })
-  await expect(editLatestMessage(f.agent, { ...f.request, text: '  ' }, f.read, f.flush))
+  await expect(editMessageTarget(f.agent, { ...f.request, text: '  ' }, f.read, f.flush))
     .rejects.toMatchObject({ message: 'MESSAGE_EDIT_EMPTY' })
   expect(f.session.seq).toBe(before)
   expect(f.followup).not.toHaveBeenCalled()
@@ -75,7 +93,7 @@ it('refuses an edited message already shadowed by compaction', async () => {
   f.session.append('developer/message', { turn: 1, step: 1, message: createDeveloperMessage({
     content: [{ type: 'text', text: 'summary' }], source: { kind: 'user' },
   }) }, { surfaceOp: { op: 'replace', startSeq: f.original.seq, endSeq: f.original.seq }, sourceEventSeqs: [f.original.seq] })
-  await expect(editLatestMessage(f.agent, f.request, f.read, f.flush)).rejects.toMatchObject({ message: 'MESSAGE_EDIT_COMPACTED' })
+  await expect(editMessageTarget(f.agent, f.request, f.read, f.flush)).rejects.toMatchObject({ message: 'MESSAGE_EDIT_COMPACTED' })
   expect(f.followup).not.toHaveBeenCalled()
 })
 
@@ -94,7 +112,7 @@ it('regenerates through a real Agent loop without resending the old prompt or re
   using original = await ctx.sessionQuery.observeSession(agent.id)
   const prompt = original.events.findLast(event => event.type === 'user/message' && event.data.source.kind === 'user')
   if (prompt === undefined) throw new Error('Original prompt missing')
-  await editLatestMessage(agent, { sessionId: agent.id, seq: prompt.seq, text: 'new question',
+  await editMessageTarget(agent, { sessionId: agent.id, seq: prompt.seq, text: 'new question',
     requestId: 'real-edit-1' as SessionRequestId }, () => ctx.sessionQuery.observeSession(agent.id), async () => {})
   await agent.whenIdle()
   expect(adapter.requests).toHaveLength(2)
@@ -104,6 +122,53 @@ it('regenerates through a real Agent loop without resending the old prompt or re
   expect(input).not.toContain('old answer')
   const answers = agent.session.deriveMessages().flatMap(message => message.content)
   expect(answers).toContainEqual({ type: 'text', text: 'new answer' })
+})
+
+
+it('rewinds later Turns from the current surface when an earlier prompt is edited', async () => {
+  const ctx = new Context()
+  onTestFinished(() => ctx.fiber.dispose())
+  await mountAgentLoopTestDependencies(ctx)
+  installMessageRevisions(ctx)
+  installSessionReadTestServices(ctx)
+  const adapter = new MockAdapter([
+    textResponse('alpha reply'), textResponse('beta reply'), textResponse('gamma reply'),
+  ])
+  ctx.llm.registerAdapter(['edit-test'], adapter)
+  const loop = await mountAgentLoopTestHarness(ctx)
+  const agent = await loop.create(SessionId('earlier-message-edit'), { provider: 'edit-test', model: 'local' })
+  agent.followup(createUserMessage({ content: [{ type: 'text', text: 'alpha prompt' }], source: { kind: 'user' } }))
+  await agent.whenIdle()
+  agent.followup(createUserMessage({ content: [{ type: 'text', text: 'beta prompt' }], source: { kind: 'user' } }))
+  await agent.whenIdle()
+  using observed = await ctx.sessionQuery.observeSession(agent.id)
+  const prompts = observed.events.filter(event => event.type === 'user/message' && event.data.source.kind === 'user')
+  const first = prompts[0]
+  const second = prompts[1]
+  const secondAnswer = observed.events.findLast(event => event.type === 'assistant/message')
+  if (first?.type !== 'user/message' || second?.type !== 'user/message'
+    || secondAnswer?.type !== 'assistant/message') throw new Error('Fixture Turn history missing')
+  await editMessageTarget(agent, { sessionId: agent.id, seq: first.seq, text: 'gamma prompt',
+    requestId: 'earlier-edit-1' as SessionRequestId }, () => ctx.sessionQuery.observeSession(agent.id), async () => {})
+  await agent.whenIdle()
+  expect(adapter.requests).toHaveLength(3)
+  const input = JSON.stringify(adapter.requests[2]?.messages)
+  expect(input).toContain('gamma prompt')
+  for (const superseded of ['alpha prompt', 'alpha reply', 'beta prompt', 'beta reply']) {
+    expect(input).not.toContain(superseded)
+  }
+  const modelHistory = JSON.stringify(agent.session.deriveMessages())
+  expect(modelHistory).toContain('gamma reply')
+  expect(modelHistory).not.toContain('beta prompt')
+  expect(modelHistory).not.toContain('beta reply')
+  expect(agent.session.surface.nodes).not.toContain(second.seq)
+  expect(agent.session.surface.nodes).not.toContain(secondAnswer.seq)
+  using after = await ctx.sessionQuery.observeSession(agent.id)
+  const installed = after.events.findLast(event => event.type === 'developer/message'
+    && event.data.message.source.kind === 'message-edit')
+  if (installed?.type !== 'developer/message') throw new Error('Installed revision missing')
+  expect(installed.surfaceOp).toMatchObject({ op: 'replace', startSeq: first.seq })
+  expect(installed.sourceEventSeqs).toEqual(expect.arrayContaining([first.seq, second.seq, secondAnswer.seq]))
 })
 
 
@@ -137,7 +202,7 @@ it.each(['completed', 'queued'] as const)('reopens a %s edit from its compressed
   if (!prompt) throw new Error('Missing prompt')
   // Suspend only the driver's wake to model a process exiting after the durable enqueue.
   if (state === 'queued') vi.spyOn(agent, 'followup').mockImplementation((message) => { agent.inbox.append('next-turn', message) })
-  await editLatestMessage(agent, { sessionId: id, seq: prompt.seq, text: 'new question', requestId: 'restart-edit' as SessionRequestId },
+  await editMessageTarget(agent, { sessionId: id, seq: prompt.seq, text: 'new question', requestId: 'restart-edit' as SessionRequestId },
     () => ctx.sessionQuery.observeSession(id), () => ctx.sessions.flush(agent.session))
   await agent.whenIdle()
   await ctx.sessions.flush(agent.session)
@@ -191,7 +256,7 @@ it('does not withdraw history when admission rejects an edited prompt', async ()
     const decision = await next()
     return turn === 2 ? { kind: 'reject' } : decision
   })
-  await editLatestMessage(agent, { sessionId: agent.id, seq: prompt.seq, text: 'rejected question', requestId: 'rejected-edit' as SessionRequestId },
+  await editMessageTarget(agent, { sessionId: agent.id, seq: prompt.seq, text: 'rejected question', requestId: 'rejected-edit' as SessionRequestId },
     () => ctx.sessionQuery.observeSession(agent.id), async () => {})
   await agent.whenIdle()
   dispose()

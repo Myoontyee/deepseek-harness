@@ -314,12 +314,15 @@ export const UserMessageNodeView = memo(function UserMessageNodeView({
   const [editing, setEditing] = useState(false)
   const original = contentParts(data.content)
   const annotated = parseResponseAnnotations(original.text)
-  const canEdit = node.kind === 'user' && data.seq === editableMessageSeq && editMessage !== undefined
+  // Every rendered user message is a revision target; anything but the latest
+  // prompt removes its later surface tail when saved.
+  const canEdit = node.kind === 'user' && editMessage !== undefined
+  const rewinds = data.seq !== editableMessageSeq
   return (
     <UserStyleBubble
       editor={editing ? <MessageEditor text={annotated?.text ?? original.text} t={t} slash={editSlash}
         allowEmpty={original.attachments.length > 0 || (annotated?.annotations.length ?? 0) > 0}
-        disabled={!canEdit} annotationCount={annotated?.annotations.length ?? 0}
+        disabled={!canEdit} annotationCount={annotated?.annotations.length ?? 0} rewind={rewinds}
         onCancel={() =>{  setEditing(false) }} onSave={async (text) => {
           if (editMessage === undefined) return
           await editMessage(data.seq, serializeResponseAnnotations(text, annotated?.annotations ?? []))

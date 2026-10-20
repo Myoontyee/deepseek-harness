@@ -16,8 +16,9 @@ export const zh = {
   'message.editSaveShortcut': '保存并重新生成（Ctrl+Enter）',
   'message.editSaving': '正在提交…',
   'message.editHint': 'Ctrl+Enter 保存并重新生成，Enter 换行。已经执行的文件修改不会撤销',
+  'message.editRewind': '这条消息之后的内容将从当前对话中移除；历史记录仍保留在会话日志中。',
   'message.editBusy': '请等待当前任务和排队消息处理完成后再编辑',
-  'message.editStale': '此消息已不是最新消息，请刷新后重试',
+  'message.editNotVisible': '此消息已不在当前对话中，无法编辑',
   'message.editCompacted': '此消息已被上下文压缩，暂时无法编辑',
   'message.editFailed': '编辑失败，修改内容已保留，请重试',
 
@@ -233,8 +234,9 @@ export const en = {
   'message.editSaveShortcut': 'Save and regenerate (Ctrl+Enter)',
   'message.editSaving': 'Submitting…',
   'message.editHint': 'Ctrl+Enter saves and regenerates; Enter inserts a new line. Existing file changes are not undone.',
+  'message.editRewind': 'Saving removes everything after this message from the current conversation. The session log keeps the history.',
   'message.editBusy': 'Wait for active and queued work to finish before editing.',
-  'message.editStale': 'This is no longer the latest message. Refresh and try again.',
+  'message.editNotVisible': 'This message is no longer in the current conversation and cannot be edited.',
   'message.editCompacted': 'This message has been compacted and cannot be edited.',
   'message.editFailed': 'Could not edit the message. Your draft is retained; try again.',
 

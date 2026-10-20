@@ -3,13 +3,15 @@ import { useEffect, useRef, useState } from 'react'
 import type { ChatViewSlotProps, MessageEditSlash } from '../contract/slots.ts'
 import css from './MessageEditor.module.css'
 
-/** @param props - Original request, admission action, cancellation, and localized copy. @returns Inline edit controls. */
-export function MessageEditor({ text, allowEmpty, disabled, annotationCount, onSave, onCancel, t, slash }: {
+/** @param props - Original request, admission action, cancellation, rewind notice, and localized copy. @returns Inline edit controls. */
+export function MessageEditor({ text, allowEmpty, disabled, annotationCount, rewind = false, onSave, onCancel, t, slash }: {
   slash?: MessageEditSlash | undefined
   text: string
   allowEmpty: boolean
   disabled: boolean
   annotationCount: number
+  /** Saving removes every later Turn from the current conversation surface. */
+  rewind?: boolean
   onSave: (text: string) => Promise<void>
   onCancel: () => void
   t: ChatViewSlotProps['t']
@@ -61,7 +63,7 @@ export function MessageEditor({ text, allowEmpty, disabled, annotationCount, onS
       if (!live.current) return
       const reason = error instanceof Error ? error.message : ''
       setFailure(command !== undefined ? reason : t(reason === 'MESSAGE_EDIT_BUSY' ? 'message.editBusy'
-        : reason === 'MESSAGE_EDIT_NOT_LATEST' ? 'message.editStale'
+        : reason === 'MESSAGE_EDIT_NOT_VISIBLE' ? 'message.editNotVisible'
           : reason === 'MESSAGE_EDIT_COMPACTED' ? 'message.editCompacted' : 'message.editFailed'))
     } finally {
       busy.current = false
@@ -99,6 +101,7 @@ export function MessageEditor({ text, allowEmpty, disabled, annotationCount, onS
       if (!event.repeat) void save()
     }}>
       {annotationCount > 0 && <div>{t('message.annotations', { count: annotationCount })}</div>}
+      {rewind && <p role="status" className={css.rewind}>{t('message.editRewind')}</p>}
       <textarea ref={input} className={css.input} aria-label={t('message.edit')} value={draft}
         onCompositionStart={() => { composing.current = true }} onCompositionEnd={() => { composing.current = false }}
         disabled={saving || disabled} onSelect={(event) => { setCursor(event.currentTarget.selectionStart) }}

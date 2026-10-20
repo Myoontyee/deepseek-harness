@@ -10,13 +10,16 @@ import type { SessionEditMessageRequest } from './types.ts'
 
 /**
  * Queue a durable revision intent without writing step-owned events outside a live step.
+ * Any human message still on the current surface is a target: the replacement edit
+ * range starts at that message and ends at the last surface node, so the whole tail
+ * leaves the current surface while the append-only log keeps every superseded event.
  * @param agent - Explicitly resolved Session owner.
- * @param request - Expected last-message sequence, edited text, and retry identity.
+ * @param request - Target message sequence, edited text, and retry identity.
  * @param read - Owned snapshot of the current durable event prefix.
  * @param flush - Persist the queued edit intent before acknowledgement.
  * @returns Completion after the revised prompt has been queued and flushed.
  */
-export async function editLatestMessage(
+export async function editMessageTarget(
   agent: Pick<Agent, 'session' | 'status' | 'runMaintenance' | 'followup'>
     & { readonly inbox: Pick<Agent['inbox'], 'nextTurn' | 'nextStep'> },
   request: SessionEditMessageRequest,
@@ -33,10 +36,10 @@ export async function editLatestMessage(
     if (observed.events.length !== session.seq || agent.inbox.nextTurn.length > 0 || agent.inbox.nextStep.length > 0) {
       throw new RemoteError('gateway/bad-request', 'MESSAGE_EDIT_BUSY', {})
     }
-    const original = observed.events.findLast(event => event.type === 'user/message'
+    const original = observed.events.find(event => event.seq === request.seq && event.type === 'user/message'
       && event.surfaceOp === 'append' && event.data.source.kind === 'user')
-    if (original?.type !== 'user/message' || original.seq !== request.seq) {
-      throw new RemoteError('gateway/bad-request', 'MESSAGE_EDIT_NOT_LATEST', {})
+    if (original?.type !== 'user/message') {
+      throw new RemoteError('gateway/bad-request', 'MESSAGE_EDIT_NOT_VISIBLE', {})
     }
     const nodes = session.surface.nodes
     const end = nodes.at(-1)

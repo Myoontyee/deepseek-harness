@@ -9,6 +9,15 @@ import { MessageEditor } from '../src/client/chat/MessageEditor.tsx'
 afterEach(cleanup)
 const t = makeTranslate(zh, common)
 
+it('warns that saving an earlier message removes its later turns', () => {
+  const view = render(<MessageEditor text="旧消息" allowEmpty={false} disabled={false} annotationCount={0} rewind
+    onSave={vi.fn()} onCancel={vi.fn()} t={t} />)
+  expect(view.getByRole('status').textContent).toBe(zh['message.editRewind'])
+  view.rerender(<MessageEditor text="最新消息" allowEmpty={false} disabled={false} annotationCount={0} rewind={false}
+    onSave={vi.fn()} onCancel={vi.fn()} t={t} />)
+  expect(view.queryByRole('status')).toBeNull()
+})
+
 it('retains text after failure and retries the edited text through Save', async () => {
   const onSave = vi.fn<(text: string) => Promise<void>>()
     .mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined)

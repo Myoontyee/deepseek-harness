@@ -18,7 +18,7 @@ export interface MessageIconActionsProps {
   getCopyText?: (() => string) | undefined
   /** Apply the content-only Markdown projection for rendered assistant replies. */
   markdown?: boolean
-  /** Open the latest human message for editing; omission hides the action. */
+  /** Open this human message for editing; omission hides the action. */
   onEdit?: (() => void) | undefined
   /** Unix epoch ms for the clock label; omitted for transient messages. */
   time?: number | undefined

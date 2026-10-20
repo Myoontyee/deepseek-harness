@@ -328,7 +328,10 @@ export interface SessionRenameValue {
   readonly seq: number
 }
 
-/** Replace the latest human message and regenerate in the same Session. */
+/**
+ * Replace a human message still on the current surface and regenerate in the same Session.
+ * The target's whole surface tail leaves the current conversation; the log keeps it.
+ */
 export interface SessionEditMessageRequest {
   readonly sessionId: SessionId
   readonly seq: number
@@ -453,7 +456,7 @@ declare module '@deepseek-ai/dsh-llm' {
       rpcId: SessionRequestId
       principal?: Principal
       clientTimeZone?: string
-      /** Queued latest-message revision, applied as a surface replacement in its admitted step. */
+      /** Queued message revision whose edit range covers the target through the old surface tail. */
       edit?: { startSeq: number; endSeq: number; surfaceEndSeq: number }
     }
   }

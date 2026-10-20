@@ -276,7 +276,6 @@ export class SessionController extends TypertRemoteService {
       return Promise.resolve({
         meta: attached.header,
         inheritedEventCount: attached.inheritedEventCount,
-        // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
         events: attached.snapshotEvents(),
       })
     }
@@ -450,9 +449,10 @@ export class SessionController extends TypertRemoteService {
   }
 
   /**
-   * Edit and regenerate the latest human message in its existing Session.
-   * @param request - Expected message identity and replacement text.
-   * @returns Admission result; rejects stale, busy, or compacted targets.
+   * Edit and regenerate a human message in its existing Session.
+   * Editing an earlier message removes later turns from the current surface, not from the log.
+   * @param request - Target message identity and replacement text.
+   * @returns Admission result; rejects absent, compacted, or busy targets.
    */
   @Remote('editMessage')
   editMessage(request: SessionEditMessageRequest): Promise<SessionPromptValue> {

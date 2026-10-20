@@ -1,6 +1,6 @@
 /** Session commands whose activation policy is explicit at each Remote method. */
 
-import { editLatestMessage } from './edit-message.ts'
+import { editMessageTarget } from './edit-message.ts'
 import { modelAvailable } from './catalog.ts'
 import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
@@ -312,14 +312,15 @@ export class SessionCommandController {
   }
 
   /**
-   * Revise the last sent human message while preserving the physical log.
-   * @param request - Session, expected message sequence, edited text, and retry identity.
+   * Revise a sent human message still on the current surface while preserving the physical log.
+   * Editing an earlier message hides its whole surface tail and regenerates from the revision.
+   * @param request - Session, target message sequence, edited text, and retry identity.
    * @returns Admission of the replacement prompt.
    */
   async editMessage(request: SessionEditMessageRequest): Promise<SessionPromptValue> {
     const agent = await this.resolveAgent(request.sessionId)
     if (hasPromptRequest(agent, request.requestId)) return { accepted: true }
-    await editLatestMessage(agent, request,
+    await editMessageTarget(agent, request,
       () => this.ctx.sessionQuery.observeSession(request.sessionId), () => this.ctx.sessions.flush(agent.session))
     return { accepted: true }
   }
@@ -432,7 +433,6 @@ export class SessionCommandController {
    */
   async updateQueue(request: SessionUpdateQueueRequest): Promise<SessionUpdateQueueValue> {
     if (request.action.kind === 'edit') {
-      // oxlint-disable-next-line typescript/no-unnecessary-condition -- Remote callers can submit untyped JSON.
       if (request.action.content.some(block => block.type !== 'text')) {
         throw new RemoteError(
           'session/attachment-invalid',
@@ -555,7 +555,6 @@ export class SessionCommandController {
   private async readSessionState(sessionId: SessionId): Promise<SessionReadState> {
     const attached = this.ctx.sessions.get(sessionId)
     if (attached !== undefined) {
-      // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
       return { id: attached.id, header: attached.header, events: attached.snapshotEvents() }
     }
     const inspected = await inspectApiSession(this.ctx, sessionId)
@@ -602,7 +601,6 @@ function hasPromptRequest(agent: Agent, requestId: SessionRequestId): boolean {
     return source.kind === 'user' && 'rpcId' in source && source.rpcId === requestId
   }
   if (agent.inbox.nextTurn.some(matches) || agent.inbox.nextStep.some(matches)) return true
-  // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
   return agent.session.snapshotEvents().some((event) => {
     if (event.type !== 'user/message') return false
     const source = event.data.source

@@ -215,11 +215,11 @@ export interface ChatNodeOwnerProps {
   openFile: (path: string, options?: OpenFileOptions) => void
   inspectCall: ((callId: ToolCallId) => void) | undefined
   forkAt: (seq: number) => void
-  /** Revise the latest human prompt in this same Session. */
+  /** Revise a human message still on the current surface; an earlier target also removes its later tail. */
   editMessage?: ((seq: number, text: string) => Promise<void>) | undefined
   /** Command and skill selection inside the message editor. */
   editSlash?: MessageEditSlash | undefined
-  /** Exact last message sequence admitted for editing. */
+  /** Latest visible human prompt sequence; any other edited message is a rewind. */
   editableMessageSeq?: number | undefined
   /**
    * Session-authorized image loader, down-threaded from the Chat view so a
@@ -333,11 +333,11 @@ export interface ChatViewInjected {
     read: () => ChatScrollPosition | null
   }
   forkAt: (seq: number) => void
-  /** Revise the latest human prompt in this same Session. */
+  /** Revise a human message still on the current surface; an earlier target also removes its later tail. */
   editMessage?: ((seq: number, text: string) => Promise<void>) | undefined
   /** Command and skill selection inside the message editor. */
   editSlash?: MessageEditSlash | undefined
-  /** Exact last message sequence admitted for editing. */
+  /** Latest visible human prompt sequence; any other edited message is a rewind. */
   editableMessageSeq?: number | undefined
   fileMentions: (owner: TurnTailOwnerProps) => MarkdownFileMentions | undefined
 }

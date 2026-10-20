@@ -687,6 +687,29 @@ describe('Chat node rendering', () => {
   })
 
 
+  it('allows editing an older user message and discloses the surface rewind', async () => {
+    const annotations = [{ text: '被选中的原文', comment: '这里不理解', sourceUrl: 'dsh://session/source',
+      sourceLabel: '原对话', sourceMessage: 'message-1' }]
+    const older = serializeResponseAnnotations('旧问题', annotations)
+    const snapshot = {
+      ...chatSnapshotFixture({ nodes: [user(1, older), user(4, '最新问题')] }),
+      editableMessageSeq: 4,
+    }
+    const h = makeHarness({}, {}, snapshot)
+    const editMessage = vi.fn(async (_seq: number, _text: string) => {})
+    h.props.editMessage = editMessage
+    const view = render(<h.ChatView {...h.props} />)
+    expect(view.getAllByRole('button', { name: '编辑消息' })).toHaveLength(2)
+    fireEvent.click(view.getAllByRole('button', { name: '编辑消息' })[1] as HTMLElement)
+    expect(view.container.querySelector('[data-message-editor]')?.textContent).not.toContain(zh['message.editRewind'])
+    fireEvent.click(view.getByText('取消'))
+    fireEvent.click(view.getAllByRole('button', { name: '编辑消息' })[0] as HTMLElement)
+    expect(view.container.querySelector('[data-message-editor]')?.textContent).toContain(zh['message.editRewind'])
+    fireEvent.click(view.getByText('保存并重新生成'))
+    await waitFor(() => { expect(editMessage).toHaveBeenCalledExactlyOnceWith(1, older) })
+  })
+
+
   it('opens Markdown references to unmodified files with line navigation', () => {
     const h = makeHarness({
       nodes: [user(1, 'explain'), assistant(2, '[source](src/index.ts#L24-L30)', 1)],
