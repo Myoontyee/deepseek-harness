@@ -32,6 +32,9 @@ final class RemoteCatalog {
    String name=values==null?"":values.optString("title","");
    rows.put(new JSONObject().put("id",id).put("title",name.isEmpty()?id:name).put("running",item.optBoolean("running")).put("workspaceId",workspace).put("workspaceTitle",title).put("workspacePath",path));
   }
+  java.util.HashSet<String> represented=new java.util.HashSet<>();
+  for(int i=0;i<rows.length();i++)represented.add(rows.getJSONObject(i).getString("workspaceId"));
+  for(String id:new java.util.TreeSet<>(titles.keySet()))if(!represented.contains(id)&&rows.length()<500)rows.put(new JSONObject().put("id","").put("title","").put("emptyWorkspace",true).put("workspaceId",id).put("workspaceTitle",titles.get(id)));
   return rows;
  }
  private static boolean subagent(Object origin){

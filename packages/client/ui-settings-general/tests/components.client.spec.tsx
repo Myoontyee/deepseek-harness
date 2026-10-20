@@ -324,10 +324,11 @@ describe('startup window restore row', () => {
   it('loads the saved choice and writes a changed choice', async () => {
     const restoreOnStartup = restoreBridge('primary', async () => {})
     render(<StartupWindowRow {...kit} t={t} restoreOnStartup={restoreOnStartup} />)
-    const select = await screen.findByRole('combobox', { name: en['startupWindows.title'] }) as HTMLSelectElement
-    expect(select.value).toBe('primary')
-    fireEvent.change(select, { target: { value: 'all' } })
-    await waitFor(() => { expect(select.value).toBe('all') })
+    const select = await screen.findByRole('button', { name: en['startupWindows.title'] }) as HTMLButtonElement
+    expect(select.textContent).toContain(en['startupWindows.primary'])
+    fireEvent.click(select)
+    fireEvent.click(await screen.findByText(en['startupWindows.all']))
+    await waitFor(() => { expect(select.textContent).toContain(en['startupWindows.all']) })
     expect(restoreOnStartup.set).toHaveBeenCalledExactlyOnceWith('all')
     expect(screen.queryByRole('alert')).toBeNull()
     expect(select.hasAttribute('disabled')).toBe(false)
@@ -340,10 +341,11 @@ describe('startup window restore row', () => {
     first.unmount()
     const restoreOnStartup = restoreBridge('primary', async () => { throw new Error('write denied') })
     render(<StartupWindowRow {...kit} t={t} restoreOnStartup={restoreOnStartup} />)
-    const select = await screen.findByRole('combobox', { name: en['startupWindows.title'] }) as HTMLSelectElement
-    fireEvent.change(select, { target: { value: 'all' } })
+    const select = await screen.findByRole('button', { name: en['startupWindows.title'] }) as HTMLButtonElement
+    fireEvent.click(select)
+    fireEvent.click(await screen.findByText(en['startupWindows.all']))
     expect((await screen.findByRole('alert')).textContent).toBe(en['startupWindows.error'])
-    expect(select.value).toBe('primary')
+    expect(select.textContent).toContain(en['startupWindows.primary'])
     expect(select.hasAttribute('disabled')).toBe(false)
   })
 })

@@ -40,4 +40,10 @@ public final class RemoteCatalogTest {
   assertEquals("directory:e:/work/alpha",rows.getJSONObject(0).getString("workspaceId"));
   assertEquals("alpha",rows.getJSONObject(0).getString("workspaceTitle"));
  }
+ @Test public void preservesRegisteredEmptyWorkspaces() throws Exception {
+  JSONObject sessions=envelope(new JSONObject().put("items",new JSONArray()));
+  JSONObject workspaces=envelope(new JSONObject().put("items",new JSONArray().put(new JSONObject().put("workspaceId","empty").put("title","Empty project").put("path","E:/empty"))));
+  JSONArray rows=RemoteCatalog.rows(sessions,workspaces);
+  assertEquals(1,rows.length());assertEquals(true,rows.getJSONObject(0).getBoolean("emptyWorkspace"));assertEquals("empty",rows.getJSONObject(0).getString("workspaceId"));
+ }
 }

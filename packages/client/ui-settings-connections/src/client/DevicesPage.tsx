@@ -62,7 +62,8 @@ PropsLocale<'settings.connections'> & InjectFace<DeviceActions>) {
             <div className={css.actions}><Button variant="outline" disabled={locked || loading}
               onClick={() => { void deviceCommand('refreshDevice', { id: device.id }) }}>
               {failed ? t('devices.reconnect') : t('devices.refreshConversations')}
-            </Button></div>
+            </Button><Button variant="outline" disabled={locked || loading || Boolean(failed)}
+              onClick={() => { void deviceCommand('migrateProfile', { id: device.id }) }}>{t('devices.migrateProfile')}</Button></div>
           </div>
           <details className={css.details}><summary>{t('devices.details')}</summary>
             <p>{t('devices.address')} · {device.address}</p>

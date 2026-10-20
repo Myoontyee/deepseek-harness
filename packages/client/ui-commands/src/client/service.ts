@@ -332,9 +332,13 @@ export class CommandUiRuntime extends Service implements CommandUiContract {
     const refuseAttachments = (): never => {
       throw new Error(this.t('notice.attachmentsUnsupported', { command: typedName }))
     }
+    const refuseAnnotations = (): void => {
+      if ((envelope.annotations ?? 0) > 0) throw new Error(this.t('notice.annotationsUnsupported', { command: typedName }))
+    }
     const contribution = this.live.contributions.get(typedName)
     if (contribution !== undefined && contribution.available(session)) {
       if (!bare) return undefined
+      refuseAnnotations()
       if (envelope.attachments > 0 && contribution.ui.kind !== 'action') refuseAttachments()
       this.invoke(typedName, contribution.ui, session, { via: 'enter', token })
       return 'handled'
@@ -349,16 +353,19 @@ export class CommandUiRuntime extends Service implements CommandUiContract {
     if (bare) {
       const decoration = this.live.decorations.get(name)
       if (decoration !== undefined && decoration.available(session)) {
+        refuseAnnotations()
         if (envelope.attachments > 0 && decoration.ui.kind !== 'action') refuseAttachments()
         this.invoke(name, decoration.ui, session, { via: 'enter', token })
         return 'handled'
       }
     }
     if (desc.input !== undefined) {
+      refuseAnnotations()
       if (envelope.attachments > 0 && desc.input.attachments !== true) refuseAttachments()
       return { claim: this.leadingClaim(desc, session, token.slice(1)) }
     }
     if (!bare) return undefined
+    refuseAnnotations()
     if (envelope.attachments > 0) refuseAttachments()
     this.consumeVia(session.sessionId, { via: 'enter', token })
     this.runDetached(desc, session, canonical)

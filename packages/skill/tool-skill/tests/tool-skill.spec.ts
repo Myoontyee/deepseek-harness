@@ -1040,6 +1040,19 @@ describe('user-explicit invocation injection', () => {
     expect(block.text).not.toContain('what does this do')
   })
 
+  it('invokes the requested skill when numbered annotations precede the user request', async () => {
+    const { ctx, agent } = await invokeHarness()
+    const envelope = '<dsh-response-annotations>\n' + JSON.stringify({ version: 1, annotations: [
+      { index: 1, text: 'first quote', comment: 'review this', sourceUrl: 'dsh://session/test', sourceLabel: 'source', sourceMessage: 'm1' },
+      { index: 2, text: 'second quote', comment: 'keep this', sourceUrl: 'dsh://session/test', sourceLabel: 'source', sourceMessage: 'm2' },
+    ] }) + '\n</dsh-response-annotations>\n\n/hidden-demo review these passages'
+    const message = gesture(envelope)
+    const decision = await proposeStep(ctx, agent, [message])
+    if (decision.kind !== 'enter') throw new Error('expected enter')
+    expect(decision.messages[0]).toEqual(message)
+    expect(decision.messages.at(-1)?.source).toMatchObject({ kind: 'skill-invocation', name: 'hidden-demo' })
+  })
+
   it('injects an ordinary skill the same way (one uniform user-explicit path)', async () => {
     const { ctx, agent } = await invokeHarness()
     const decision = await proposeStep(ctx, agent, [gesture('/shared-skill go')])

@@ -1,3 +1,4 @@
+import { migrateToComputer } from './profile-migration-control.ts'
 import electronCustomUpdater from 'electron-updater'
 import { newerOfficialVersion } from './official-update-check.ts'
 import type { DesktopUpdatePresentation } from './ipc.ts'
@@ -1248,6 +1249,7 @@ async function main(): Promise<void> {
   let pairedDevices: PairedDevices | undefined
   const peerWindows = new Map<string, Set<BrowserWindow>>()
   const devicePairings = new Map<number, AbortController>()
+  const deviceMigrations = new Set<string>()
   const openPeerConversation = async (devices: PairedDevices, id: string, sessionId: string): Promise<void> => {
     const window = await openPeerWindow(devices.grant(id), sessionId)
     const windows = peerWindows.get(id) ?? new Set<BrowserWindow>()
@@ -1277,6 +1279,14 @@ async function main(): Promise<void> {
     if (action === 'pair' && typeof data.code === 'string' && typeof data.name === 'string') { await devices.pair(data.code, data.name); return devices.list() }
     if (action === 'conversations') return devices.conversations(id)
     if (action === 'workspaceCatalog') return devices.workspaceCatalog(id)
+    if (action === 'migrateProfile') {
+      if (!hostUrl || !hostCookie) throw new Error('本机服务尚未就绪')
+      if (deviceMigrations.has(id)) throw new Error('此设备正在迁移，请等待当前操作结束')
+      deviceMigrations.add(id)
+      try { await migrateToComputer({ url: hostUrl, cookie: hostCookie }, devices.grant(id)) }
+      finally { deviceMigrations.delete(id) }
+      return
+    }
     if (action === 'forget') {
       for (const window of peerWindows.get(id) ?? []) if (!window.isDestroyed()) window.close()
       devices.forget(id); return devices.list()

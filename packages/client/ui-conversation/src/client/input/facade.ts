@@ -420,7 +420,7 @@ export class SessionInputShell implements SessionInput {
    */
   submit(mode: InputSubmitMode = 'queue', source?: 'click' | 'enter'): void {
     if (this.disposed) return
-    if (this.annotations.length > 0 && (this.snapshot.phase === 'claimed' || this.snapshot.draft.trimStart().startsWith('/'))) {
+    if (this.annotations.length > 0 && this.snapshot.phase === 'claimed') {
       this.notify('error', this.deps.commandAttachments.unsupportedNotice(this.snapshot.draft))
       return
     }
@@ -912,7 +912,9 @@ export class SessionInputShell implements SessionInput {
       this.dispatchRun(({ type: 'adjudicated', attempt, outcome: undefined }))
       return
     }
-    inputTriggers.adjudicate(draft.trim(), attempt.signal, { attachments: this.attachmentIds.length }).then(
+    inputTriggers.adjudicate(draft.trim(), attempt.signal, {
+      attachments: this.attachmentIds.length, ...(this.annotations.length ? { annotations: this.annotations.length } : {}),
+    }).then(
       (outcome: PickOutcome) => {
         if (this.dead(attempt)) return
         this.dispatchRun(({ type: 'adjudicated', attempt, outcome }))

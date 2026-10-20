@@ -19,7 +19,7 @@ export function acceptsPeerCertificate(raw: Buffer, pin: string): boolean {
     && Date.parse(cert.validFrom) <= Date.now() && Date.parse(cert.validTo) >= Date.now()
 }
 /** Pinned, bounded JSON exchange; request bytes are withheld until the peer certificate is verified. */
-export function peerJson(url: string, pin: string, path: string, body: unknown, token?: string): Promise<unknown> {
+export function peerJson(url: string, pin: string, path: string, body: unknown, token?: string, timeoutMs = 25000): Promise<unknown> {
   const origin = pairingOrigin(url)
   if (!/^[a-f0-9]{64}$/u.test(pin) || (token !== undefined && !/^[\w-]{43}$/u.test(token))) return Promise.reject(new Error('Invalid pairing credential'))
   return new Promise((resolve, reject) => {
@@ -35,7 +35,7 @@ export function peerJson(url: string, pin: string, path: string, body: unknown, 
         try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))) } catch { reject(new Error('远端返回了无效数据')) }
       })
     })
-    const timer = setTimeout(() => { req.destroy(new Error('连接超时，请确认设备在线且 Tailscale 已连接')) }, 25000)
+    const timer = setTimeout(() => { req.destroy(new Error('连接超时，请确认设备在线且 Tailscale 已连接')) }, timeoutMs)
     req.once('close', () => { clearTimeout(timer) })
     req.once('error', reject)
     req.once('socket', (socket) => {

@@ -1,3 +1,4 @@
+import { connections } from './connections'
 import './style.css'
 import 'katex/dist/katex.min.css'
 import katex from 'katex'
@@ -142,7 +143,8 @@ document.addEventListener('selectionchange', () => {
   }
   el('selection').hidden = !selected
 })
-el('settings').onclick = () => { persist(); drawer(false); send('settings') }
+const deviceSettings = connections(send)
+el('settings').onclick = () => { persist(); drawer(false); deviceSettings.open() }
 el('new').onclick = el('sidebarNew').onclick = () => { persist(); drawer(false); send('new') }
 el('history').onclick = () => { const open = el('drawer').hidden; drawer(open); if (open) send('remoteChats') }
 el('refreshRemote').onclick = () => send('remoteChats')
@@ -167,6 +169,8 @@ document.addEventListener('keydown', (event) => {
 window.addEventListener('pagehide', persist)
 phone.onmessage = (event) => {
   const update = JSON.parse(event.data)
+  if (update.type === 'devices') { deviceSettings.update(update); return }
+  if (update.type === 'showRemoteDevice') { drawer(true); send('remoteChats'); return }
   if (update.type === 'error') { notice(update.message); return }
   if (update.type === 'remote') {
     const root = el('remoteChats'); let group = Array.from(root.children).find(item => item.getAttribute('data-device') === update.device)
@@ -175,8 +179,9 @@ phone.onmessage = (event) => {
     group.replaceChildren()
     const head = document.createElement('div'); head.className = 'remote-device'
     const name = document.createElement('strong'); name.className = 'device-name'; name.textContent = update.name
-    const state = document.createElement('span'); state.className = 'device-state'; state.dataset.status = update.error ? 'offline' : 'online'; state.textContent = update.error ? '离线' : '在线'
-    head.append(name, state); group.append(head)
+    const state = document.createElement('span'); state.className = 'device-state'; state.dataset.status = update.refreshing ? 'refreshing' : update.error ? 'offline' : 'online'; state.textContent = update.refreshing ? '刷新中' : update.error ? '离线' : '在线'
+    const refresh = button('', () => send('remoteChats')); refresh.className = 'icon-button'; refresh.setAttribute('aria-label', `刷新 ${update.name}`); refresh.innerHTML = icons.refresh
+    head.append(name, state, refresh); group.append(head)
     if (update.error) { const note = document.createElement('small'); note.className = 'remote-note'; note.textContent = update.error; group.append(note) }
     else if (!update.sessions.length) { const empty = document.createElement('small'); empty.className = 'remote-note'; empty.textContent = '电脑上还没有对话'; group.append(empty) }
     const spaces = new Map<string, { title: string; rows: typeof update.sessions }>()
@@ -191,7 +196,9 @@ phone.onmessage = (event) => {
       const folder = document.createElement('span'); folder.innerHTML = icons.folder; folder.setAttribute('aria-hidden', 'true')
       const name = document.createElement('span'); name.textContent = space.title; name.title = space.title
       label.append(folder, name); workspace.append(label)
+      if (space.rows.every((item: { emptyWorkspace?: boolean }) => item.emptyWorkspace)) { const empty = document.createElement('small'); empty.className = 'remote-note'; empty.textContent = '暂无对话'; workspace.append(empty) }
       for (const item of space.rows) {
+        if (item.emptyWorkspace) continue
         const row = button('', () => { persist(); drawer(false); send('remoteOpen', { device: update.device, id: item.id }) })
         const title = document.createElement('span'); title.textContent = item.title; title.className = 'chat-title'
         if (item.running) { const live = document.createElement('span'); live.className = 'remote-running'; live.textContent = '运行中'; row.append(title, live) } else row.append(title)

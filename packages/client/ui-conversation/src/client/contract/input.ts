@@ -118,7 +118,7 @@ export interface InputTriggerController {
   adjudicate(
     line: string,
     signal: AbortSignal,
-    envelope: { readonly attachments: number },
+    envelope: { readonly attachments: number; readonly annotations?: number },
   ): Promise<PickOutcome>
   /**
    * Resolve the claim a persisted command chip names without acting on it.

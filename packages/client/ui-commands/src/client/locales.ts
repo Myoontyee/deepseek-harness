@@ -35,6 +35,7 @@ export const zh = {
   'overlay.aria': '/{command} 选项',
   'listbox.aria': '/{command} 匹配项',
   'notice.attachmentsUnsupported': '/{command} 不接受附件，请先移除附件',
+  'notice.annotationsUnsupported': '/{command} 是操作命令，不能接收批注；请将批注作为普通消息发送',
 } satisfies Record<string, string>
 
 /** The command namespace key union. */
@@ -70,4 +71,5 @@ export const en = {
   'overlay.aria': '/{command} options',
   'listbox.aria': '/{command} matches',
   'notice.attachmentsUnsupported': '/{command} does not accept attachments; remove them first',
+  'notice.annotationsUnsupported': '/{command} is an action command and cannot receive annotations; send them as a message',
 } satisfies Record<CommandKey, string>

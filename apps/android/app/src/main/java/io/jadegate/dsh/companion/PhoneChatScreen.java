@@ -16,7 +16,7 @@ import org.json.*;
 /** The native bridge exists only on the packaged local chat origin, never on a paired computer. */
 final class PhoneChatScreen implements AutoCloseable {
  static DeepSeekApi.Connections testConnections;
- interface Host {void settings();void changed();void ready();void remoteChats();void remoteOpen(String device,String session);}
+ interface Host {void settings();void changed();void ready();void remoteChats();void remoteOpen(String device,String session);void devices(JSONObject request);}
  final WebView view;
  private final Activity activity;
  private final PhoneChatStore store;
@@ -76,6 +76,10 @@ final class PhoneChatScreen implements AutoCloseable {
  private void emit(JSONObject event){activity.runOnUiThread(()->{if(!closed&&reply!=null)reply.postMessage(event.toString());});}
  private void error(String text){try{emit(new JSONObject().put("type","error").put("message",text));}catch(JSONException impossible){throw new IllegalStateException(impossible);}}
  void remote(String device,String name,JSONArray sessions,String error){try{emit(new JSONObject().put("type","remote").put("device",device).put("name",name).put("sessions",sessions).put("error",error));}catch(JSONException impossible){throw new IllegalStateException(impossible);}}
+ void devices(JSONObject value){try{emit(new JSONObject(value.toString()).put("type","devices"));}catch(JSONException invalid){error("设备状态暂不可读");}}
+ void showRemoteDevice(){try{emit(new JSONObject().put("type","showRemoteDevice"));}catch(JSONException impossible){throw new IllegalStateException(impossible);}}
+ void cachedRemote(String device,String name,JSONArray sessions){try{emit(new JSONObject().put("type","remote").put("device",device).put("name",name).put("sessions",sessions).put("refreshing",true));}catch(JSONException impossible){throw new IllegalStateException(impossible);}}
+ void back(Runnable fallback){view.evaluateJavascript("(()=>{const d=document.querySelector('dialog[open]');if(d){d.close();return true}const drawer=document.getElementById('drawer');if(drawer&&!drawer.hidden){document.getElementById('closeHistory').click();return true}return false})()",result->{if(!"true".equals(result))fallback.run();});}
  private synchronized void save() throws Exception {store.save(scope,chat);}
  private synchronized void state() throws Exception {emit(new JSONObject().put("type","state").put("chat",new JSONObject(chat.toString())).put("chats",store.list(scope)).put("models",models).put("generating",generating&&chat.getString("id").equals(generatingId)));}
  private void loadModels(){inference.execute(()->{try(DeepSeekApi api=api()){JSONArray result=api.models(account.getString("token"));synchronized(this){models=result;activity.getSharedPreferences("models",0).edit().putString(scope,result.toString()).apply();state();}
@@ -100,6 +104,8 @@ final class PhoneChatScreen implements AutoCloseable {
     JSONArray messages=chat.getJSONArray("messages");for(int i=0;i<messages.length();i++){JSONObject item=messages.getJSONObject(i);if(item.optString("status").equals("generating"))item.put("status","interrupted").put("error","上次生成已中断，收到的内容已保留");}
     save();state();loadModels();activity.runOnUiThread(host::ready);break;
    }
+   case "devices":activity.runOnUiThread(()->host.devices(request));break;
+   case "showRemoteDevice":showRemoteDevice();break;
    case "models":loadModels();break;
    case "remoteChats":activity.runOnUiThread(host::remoteChats);break;
    case "remoteOpen":{

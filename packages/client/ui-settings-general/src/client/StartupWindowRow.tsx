@@ -1,5 +1,6 @@
 /** Desktop-only startup preference: restore every conversation window or only the primary one. */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { IconChevronDownOutlineRegular, Menu } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DesktopStartupRestoreMode } from '../types.ts'
 import css from './StartupWindowRow.module.css'
@@ -26,6 +27,8 @@ export function StartupWindowRow({ restoreOnStartup, t }:
   PropsRuntime<'settings.general.item'> & PropsLocale<'settings'> & InjectFace<StartupWindowRowInjected>) {
   const [mode, setMode] = useState<DesktopStartupRestoreMode>()
   const [busy, setBusy] = useState(false)
+  const [open, setOpen] = useState(false)
+  const selector = useRef<HTMLButtonElement>(null)
   const [failed, setFailed] = useState(false)
   useEffect(() => {
     let disposed = false
@@ -38,21 +41,28 @@ export function StartupWindowRow({ restoreOnStartup, t }:
   }, [restoreOnStartup])
   if (mode === undefined) return failed ? <div className={css.row}><div role="alert">{t('startupWindows.error')}</div></div> : null
   return <div className={css.row}>
-    <div>
+    <div className={css.rowText}>
       <div className={css.title}>{t('startupWindows.title')}</div>
       <div className={css.description}>{t('startupWindows.description')}</div>
       {failed && <div role="alert">{t('startupWindows.error')}</div>}
     </div>
-    <select className={css.select} aria-label={t('startupWindows.title')} value={mode} disabled={busy}
-      onChange={(event) => {
-        const next = restoreMode(event.target.value)
+    <Menu open={open} onClose={() => { setOpen(false) }} selectedId={mode} align="end" portal
+      items={[{ id: 'all', label: t('startupWindows.all') }, { id: 'primary', label: t('startupWindows.primary') }]}
+      onSelect={(value) => {
+        selector.current?.focus({ preventScroll: true })
+        setOpen(false)
+        const next = restoreMode(value)
         setFailed(false)
         setBusy(true)
         void restoreOnStartup.set(next).then(() => { setMode(next) })
           .catch(() => { setFailed(true) }).finally(() => { setBusy(false) })
-      }}>
-      <option value="all">{t('startupWindows.all')}</option>
-      <option value="primary">{t('startupWindows.primary')}</option>
-    </select>
+      }}
+      anchor={<button ref={selector} type="button" className={css.select}
+        aria-label={t('startupWindows.title')} aria-haspopup="menu" aria-expanded={open} disabled={busy}
+        onClick={() => { setOpen(value => !value) }}>
+        {t(mode === 'all' ? 'startupWindows.all' : 'startupWindows.primary')}
+        <IconChevronDownOutlineRegular />
+      </button>}
+    />
   </div>
 }

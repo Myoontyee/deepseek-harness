@@ -60,15 +60,30 @@ it('restores a failed annotation-only send alongside newer draft and annotations
   input.dispose()
 })
 
-it('retains annotations and request when a slash command cannot consume them', () => {
+it('sends a typed skill invocation together with numbered annotation text', async () => {
   const sink = vi.fn((_text: string) => Promise.resolve<SubmitOutcome>({ kind: 'success' }))
   const input = shell(sink)
   input.actions.addAnnotation(quotation)
-  input.setDraft('/help')
+  input.actions.addAnnotation({ ...quotation, text: '第二段', comment: '只修改这一段' })
+  input.setDraft('/logic-completion-4-science-paper 梳理一下逻辑')
   input.submit()
-  expect(sink).not.toHaveBeenCalled()
-  expect(input.snapshot.annotations).toHaveLength(1)
-  expect(input.snapshot.draft).toBe('/help')
+  await vi.waitFor(() => { expect(sink).toHaveBeenCalledOnce() })
+  expect(parseResponseAnnotations(sink.mock.calls[0]![0])).toEqual({
+    text: '/logic-completion-4-science-paper 梳理一下逻辑',
+    annotations: [quotation, { ...quotation, text: '第二段', comment: '只修改这一段' }],
+  })
+  expect(input.snapshot.annotations).toHaveLength(0)
+  input.dispose()
+})
+
+it('restores skill text and annotations after a failed submission', async () => {
+  const sink = vi.fn(() => Promise.resolve<SubmitOutcome>({ kind: 'error', text: 'offline' }))
+  const input = shell(sink)
+  input.setDraft('/review 检查')
+  input.actions.addAnnotation(quotation)
+  input.submit()
+  await vi.waitFor(() => { expect(sink).toHaveBeenCalledOnce(); expect(input.snapshot.annotations).toHaveLength(1) })
+  expect(input.snapshot.draft).toBe('/review 检查')
   input.dispose()
 })
 

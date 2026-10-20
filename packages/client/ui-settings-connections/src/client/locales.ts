@@ -1,5 +1,6 @@
 /** Connections settings copy. */
 export const en = {
+  'devices.migrateProfile': 'Migrate plugins and settings',
   'devices.tab': 'Other devices',
   'ssh.tab': 'SSH',
   'devices.saved': 'Connected computers',
@@ -91,6 +92,7 @@ export const en = {
 export type ConnectionKey = keyof typeof en
 /** Simplified Chinese copy. */
 export const zh: Record<ConnectionKey, string> = {
+  'devices.migrateProfile': '迁移插件与配置',
   'devices.tab': '其他设备',
   'ssh.tab': 'SSH',
   'devices.saved': '已连接的电脑',

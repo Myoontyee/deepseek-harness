@@ -108,6 +108,8 @@ export interface HeaderRequest {
 export interface SubmitEnvelope {
   /** Number of attachments accompanying the draft. */
   readonly attachments: number
+  /** Text quotations retained by the composer, independent of file attachment acceptance. */
+  readonly annotations?: number
 }
 
 /** Candidate request passed to a source. The signal is superseded on query change / menu close. */

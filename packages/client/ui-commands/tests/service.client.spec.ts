@@ -810,6 +810,17 @@ describe('matchEnter (enter column)', () => {
   })
 })
 
+describe('annotation command admission', () => {
+  it('lets skill-like plain text fall through but refuses commands without consuming annotations', async () => {
+    const { source, warm, executeCalls } = await bench()
+    await warm(proj('s1'))
+    const envelope = { attachments: 0, annotations: 2 }
+    await expect(source.matchEnter!(proj('s1'), '/logic-completion-4-science-paper review', new AbortController().signal, envelope)).resolves.toBeUndefined()
+    await expect(source.matchEnter!(proj('s1'), '/goal ship', new AbortController().signal, envelope)).rejects.toThrow('annotationsUnsupported')
+    expect(executeCalls).toEqual([])
+  })
+})
+
 describe('matchEnter envelope policy (images)', () => {
   const signal = () => new AbortController().signal
   const IMG_CMDS: CommandDescriptor[] = [

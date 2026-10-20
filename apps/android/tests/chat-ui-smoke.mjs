@@ -84,6 +84,21 @@ try {
   assert.equal(await page.locator('#drawer').isVisible(), false)
   assert.equal(await page.evaluate(() => window.commands.some(item => ['pair', 'login', 'status'].includes(item.action))), false)
   await page.screenshot({ path: '.artifacts/android-phone-chat-ui.png' })
+  await page.locator('#history').click()
+  await page.locator('#settings').click()
+  const connections = page.getByRole('dialog', { name: '连接', exact: true })
+  await connections.waitFor({ state: 'visible' })
+  assert.equal(await page.evaluate(() => window.commands.findLast(item => item.action === 'devices').operation), 'status')
+  await page.evaluate(() => window.phone.onmessage({ data: JSON.stringify({ type: 'devices', state: 'Running', autoReconnect: true, phoneSync: true, devices: [{ id: 'one', name: '4090-server', os: 'windows', online: true, ready: true, authorized: true }, { id: 'two', name: '另一台电脑', os: 'windows', online: true, ready: true, authorized: false }] }) }))
+  assert.equal(await connections.getByRole('switch', { name: '打开应用自动连接' }).isChecked(), true)
+  await connections.getByRole('button', { name: '连接', exact: true }).click()
+  assert.deepEqual(await page.evaluate(() => window.commands.findLast(item => item.action === 'devices')), { action: 'devices', operation: 'pair', device: 'two' })
+  await page.evaluate(() => window.phone.onmessage({ data: JSON.stringify({ type: 'devices', state: 'Running', autoReconnect: true, phoneSync: true, error: '电脑没有批准连接，请重试', devices: [{ id: 'one', name: '4090-server', os: 'windows', online: false, ready: false, authorized: true }] }) }))
+  assert.ok((await connections.textContent()).includes('电脑没有批准连接'))
+  assert.equal(await connections.getByRole('button', { name: '查看对话' }).isEnabled(), true)
+  await page.screenshot({ path: '.artifacts/android-connections-desktop-style.png' })
+  await page.keyboard.press('Escape')
+  assert.equal(await connections.isVisible(), false)
   // Geometry fixtures cover phone portrait, landscape, keyboard-height and tablet widths.
   await page.evaluate(() => {
     window.fixture.chat.id = 'long-layout-fixture'

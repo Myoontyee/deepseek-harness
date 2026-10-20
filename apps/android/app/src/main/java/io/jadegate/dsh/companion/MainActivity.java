@@ -34,6 +34,8 @@ public final class MainActivity extends Activity {
  private SecureStore accountStore;
  private PhoneChatStore phoneStore;
  private PhoneChatScreen phoneChat;
+ private final java.util.concurrent.atomic.AtomicBoolean deviceActionPending=new java.util.concurrent.atomic.AtomicBoolean();
+ private JSONObject lastDeviceState=new JSONObject();
  private final ExecutorService syncWorker=Executors.newSingleThreadExecutor();
  private final java.util.concurrent.atomic.AtomicBoolean syncing=new java.util.concurrent.atomic.AtomicBoolean();
  private String syncNotice="手机对话与批注在授权后自动同步；电脑离线时先保存在本机。";
@@ -130,6 +132,7 @@ public final class MainActivity extends Activity {
   try{
    if(phoneChat==null)phoneChat=new PhoneChatScreen(this,phoneStore,new JSONObject(accountStore.read()),new PhoneChatScreen.Host(){
     public void settings(){showHome("");}
+    public void devices(JSONObject request){deviceAction(request);}
     public void changed(){syncPhoneChats();}
     public void ready(){if(automaticReconnect())readRemoteChats();}
     public void remoteChats(){readRemoteChats();}
@@ -202,6 +205,53 @@ public final class MainActivity extends Activity {
   LinearLayout diagnostics=new LinearLayout(this);diagnostics.setOrientation(LinearLayout.VERTICAL);diagnostics.setVisibility(View.GONE);diagnostics.addView(text("DSH 内登录后无需打开手机 Tailscale 开关。以下仅检查系统 VPN，不代表应用内连接状态。",14));addNetworkControls(diagnostics);content.addView(diagnostics);diagnose.setOnClickListener(v->diagnostics.setVisibility(diagnostics.getVisibility()==View.GONE?View.VISIBLE:View.GONE));content.addView(text(notice,14));
   Button account=button("账号设置");content.addView(account);account.setOnClickListener(v->accountSettings());
   Button about=button("关于 DeepSeek Harness Desktop");content.addView(about);about.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("DeepSeek Harness Desktop").setMessage("版本 "+appVersion()).setPositiveButton("确定",null).show());
+ }
+ private void deviceAction(JSONObject request) {
+  String operation=request.optString("operation");
+  if("advanced".equals(operation)){showHome("");return;}
+  if("account".equals(operation)){accountSettings();return;}
+  if(!java.util.Arrays.asList("status","login","pair","autoReconnect","phoneSync").contains(operation))return;
+  if(!deviceActionPending.compareAndSet(false,true))return;
+  final int current=generation;
+  if("autoReconnect".equals(operation))options().edit().putBoolean("autoReconnect",request.optBoolean("enabled")).apply();
+  if("phoneSync".equals(operation))options().edit().putBoolean("phoneSync",request.optBoolean("enabled")).apply();
+  worker.execute(()->{
+   JSONObject state=null,granted=null;String failure="";
+   try{
+    if("login".equals(operation)){tailnetLoginRequested=true;openedTailnetAuth="";tailnet.command("login");}
+    if("pair".equals(operation)){
+     String id=request.getString("device");if(id.isEmpty()||id.length()>200)throw new Exception("设备信息无效");
+     JSONObject result=tailnet.command(new JSONObject().put("action","pair").put("id",id));
+     granted=result.getJSONObject("connection").put("tailnet",true).put("nodeId",id);new Pairing(granted,"token");
+    }
+    state=tailnet.command("status");
+   }catch(Exception error){failure=error.getMessage()==null?"无法刷新设备，请重试":error.getMessage();}
+   final JSONObject response=state,grant=granted;final String error=failure;
+   runOnUiThread(()->{
+    deviceActionPending.set(false);if(disposed||generation!=current||phoneChat==null)return;
+    try{
+     if(grant!=null){saveComputer(grant);readRemoteChats();syncPhoneChats();}
+     JSONObject safe=new JSONObject();org.json.JSONArray devices=new org.json.JSONArray();java.util.HashSet<String> seen=new java.util.HashSet<>();
+     if(response!=null){
+      String auth=response.optString("authUrl");
+      if(tailnetLoginRequested&&!auth.isEmpty()&&!auth.equals(openedTailnetAuth)){
+       Uri uri=Uri.parse(auth);if("https".equals(uri.getScheme())&&"login.tailscale.com".equals(uri.getHost())&&uri.getUserInfo()==null){openedTailnetAuth=auth;startActivity(new Intent(Intent.ACTION_VIEW,uri));}
+      }
+      if("Running".equals(response.optString("state")))tailnetLoginRequested=false;
+      safe.put("state",response.optString("state"));org.json.JSONArray peers=response.optJSONArray("devices");
+      if(peers!=null)for(int i=0;i<peers.length();i++){
+       JSONObject peer=peers.optJSONObject(i);if(peer==null||peer.optBoolean("self"))continue;String id=peer.optString("id");if(id.isEmpty())continue;seen.add(id);
+       devices.put(new JSONObject().put("id",id).put("name",peer.optString("name",id)).put("os",peer.optString("os")).put("online",peer.optBoolean("online")).put("ready",peer.optBoolean("ready")).put("authorized",computerGrants.containsKey(id)));
+      }
+     }else safe.put("state","Unavailable");
+     for(java.util.Map.Entry<String,JSONObject> item:computerGrants.entrySet())if(!seen.contains(item.getKey()))devices.put(new JSONObject().put("id",item.getKey()).put("name",item.getValue().optString("name","已授权电脑")).put("authorized",true).put("online",false).put("ready",false));
+     safe.put("devices",devices).put("autoReconnect",automaticReconnect()).put("phoneSync",options().getBoolean("phoneSync",true)).put("error",error);
+     if(grant!=null)safe.put("notice","设备已保存，可返回对话从侧栏打开");lastDeviceState=safe;phoneChat.devices(safe);
+     if("autoReconnect".equals(operation)&&automaticReconnect())restoreConnections();
+     if("phoneSync".equals(operation)&&options().getBoolean("phoneSync",true))syncPhoneChats();
+    }catch(Exception invalid){try{phoneChat.devices(new JSONObject(lastDeviceState.toString()).put("devices",lastDeviceState.optJSONArray("devices")==null?new org.json.JSONArray():lastDeviceState.getJSONArray("devices")).put("error","设备操作未完成，请重试"));}catch(Exception ignored){Toast.makeText(MainActivity.this,"设备操作未完成，请重试",Toast.LENGTH_LONG).show();}}
+   });
+  });
  }
  private void addTailnetPanel(LinearLayout content) {
   final int current=generation;
@@ -378,6 +428,7 @@ public final class MainActivity extends Activity {
   if(disposed||phoneChat==null||!readingRemotes.compareAndSet(false,true))return;
   final java.util.LinkedHashMap<String,JSONObject> targets=new java.util.LinkedHashMap<>(computerGrants);
   try{String saved=store.read();if(targets.isEmpty()&&saved!=null)targets.put("saved",new JSONObject(saved));}catch(Exception error){Toast.makeText(this,"保存的电脑授权暂不可读",Toast.LENGTH_SHORT).show();}
+  for(java.util.Map.Entry<String,JSONObject> entry:targets.entrySet())phoneChat.cachedRemote(entry.getKey(),entry.getValue().optString("name","已授权电脑"),cachedRemoteRows(entry.getKey()));
   worker.execute(()->{try{for(java.util.Map.Entry<String,JSONObject> entry:targets.entrySet()){
    JSONObject grant=entry.getValue();String name=grant.optString("name","已授权电脑");org.json.JSONArray rows=new org.json.JSONArray();String error="";
    try{
@@ -673,6 +724,6 @@ public final class MainActivity extends Activity {
   super.onActivityResult(requestCode,resultCode,data);
   if (requestCode==FILE_REQUEST && fileCallback!=null) { fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode,data)); fileCallback=null; }
  }
- @Override public void onBackPressed() { if(web!=null&&web.canGoBack())web.goBack(); else if(web!=null)showPhoneChat(); else if(signedIn()&&(phoneChat==null||phoneChat.view.getParent()==null))showPhoneChat(); else super.onBackPressed(); }
+ @Override public void onBackPressed() { if(web!=null&&web.canGoBack())web.goBack(); else if(web!=null)showPhoneChat(); else if(signedIn()&&(phoneChat==null||phoneChat.view.getParent()==null))showPhoneChat(); else if(phoneChat!=null&&phoneChat.view.isShown())phoneChat.back(()->MainActivity.super.onBackPressed()); else super.onBackPressed(); }
  @Override protected void onDestroy() { disposed=true; generation++;stopRemoteWatch();cancelRemoteRetry();cancelRemoteLoad();remoteProbeToken++;if(phoneChat!=null)phoneChat.close();if(tailnet!=null)tailnet.close();tailnetHandler.removeCallbacksAndMessages(null); if(signIn!=null)signIn.close(); if(fileCallback!=null)fileCallback.onReceiveValue(null); if(web!=null)web.destroy(); worker.shutdownNow();syncWorker.shutdownNow(); super.onDestroy(); }
 }
