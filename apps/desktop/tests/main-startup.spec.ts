@@ -89,6 +89,7 @@ const harness = await vi.hoisted(async () => {
     })
     readonly shown = deferred()
     readonly show = vi.fn(() => { this.shown.resolve() })
+    readonly showInactive = vi.fn(() => { this.shown.resolve() })
     readonly hide = vi.fn()
     readonly focus = vi.fn()
     readonly moveTop = vi.fn()
@@ -300,6 +301,7 @@ vi.mock('electron', () => ({
   powerMonitor: harness.powerMonitor,
   Tray: harness.FakeTray,
   nativeImage: { createFromPath: (path: string) => ({ path }), createFromBitmap: vi.fn() },
+  screen: { getAllDisplays: () => [{ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }] },
 }))
 vi.mock('../src/background-notice.ts', () => ({ DesktopBackgroundNotice: class {
   constructor(options: { markerPath: string }) { harness.backgroundNotice.markerPath = options.markerPath }
@@ -475,6 +477,42 @@ describe('desktop main startup', () => {
     const take = harness.handlers.get(DESKTOP_IPC.takeSessionLink)!
     expect(() => take({ sender: {}, senderFrame: { url: 'dsh-app://app/' } })).toThrow(/rejected/u)
     expect(invoke(DESKTOP_IPC.takeSessionLink, 'app')).toBe('owned')
+  })
+
+  it('restores saved conversation windows except the externally linked one', async () => {
+    vi.stubGlobal('process', { ...process, argv: ['DeepSeek Harness.exe', 'dsh://session/saved-b'] })
+    const directory = join(harness.app.getPath('userData'), 'desktop')
+    mkdirSync(directory, { recursive: true })
+    writeFileSync(join(directory, 'settings.json'), JSON.stringify({ windows: { restoreOnStartup: 'all' } }))
+    writeFileSync(join(directory, 'window-state.json'), JSON.stringify({ version: 1, windows: [
+      { sessionId: 'saved-a', bounds: { x: 40, y: 50, width: 900, height: 700 } },
+      { sessionId: 'saved-b', bounds: { x: 2000, y: 100, width: 900, height: 700 } },
+    ] }))
+    await readyForUpdate()
+    await harness.windows[0]!.shown.promise
+    await vi.advanceTimersByTimeAsync(0)
+    // The linked conversation stays in the primary window, so only the other saved window reopens.
+    expect(harness.windows).toHaveLength(2)
+    const restored = harness.windows[1]!
+    expect(restored.urls).toEqual(['dsh-app://app/'])
+    expect(restored.options).toMatchObject({ x: 40, y: 50, width: 900, height: 700 })
+    expect(restored.showInactive).toHaveBeenCalledOnce()
+    expect(invoke(DESKTOP_IPC.takeSessionLink, 'app')).toBe('saved-b')
+    const take = harness.handlers.get(DESKTOP_IPC.takeSessionLink)!
+    expect(take({ sender: restored.webContents, senderFrame: restored.webContents.mainFrame })).toBe('saved-a')
+  })
+
+  it('reads and writes the startup window restore preference over the product bridge', async () => {
+    await readyForUpdate()
+    expect(invoke(DESKTOP_IPC.windowsRestoreOnStartupGet, 'app')).toBe('primary')
+    await invoke(DESKTOP_IPC.windowsRestoreOnStartupSet, 'app', 'all')
+    expect(invoke(DESKTOP_IPC.windowsRestoreOnStartupGet, 'app')).toBe('all')
+    const settings = JSON.parse(readFileSync(join(harness.app.getPath('userData'), 'desktop', 'settings.json'), 'utf8')) as
+      { windows: { restoreOnStartup: string } }
+    expect(settings.windows.restoreOnStartup).toBe('all')
+    await expect(invoke(DESKTOP_IPC.windowsRestoreOnStartupSet, 'shell', 'all')).rejects.toThrow(/rejected/u)
+    await expect(invoke(DESKTOP_IPC.windowsRestoreOnStartupSet, 'app', 'some')).rejects
+      .toThrow("windows.restoreOnStartup must be 'all' or 'primary'")
   })
 
   it.each([true, false])('selects the package manager before Host startup (packaged=%s)', async (packaged) => {

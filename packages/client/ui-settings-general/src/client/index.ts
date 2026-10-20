@@ -32,12 +32,13 @@ import { createSettingsShellStore } from './shell-store.ts'
 import { SettingsRoot } from './SettingsRoot.tsx'
 import { UpdateChannelSettings, type UpdateChannelSettingsInjected } from './UpdateChannelSettings.tsx'
 import { DesktopUpdateBadge } from './DesktopUpdateIndicator.tsx'
-import type { DesktopUpdateBridge } from '../types.ts'
+import type { DesktopUpdateBridge, DesktopWindowsBridge } from '../types.ts'
 import { DesktopUpdateSource } from './desktop-update-source.ts'
 import { CloseLabel, HeaderContent, TriggerContent } from './chrome.tsx'
 import { GeneralSection } from './GeneralSection.tsx'
 import { CurrentVersionRow } from './CurrentVersionRow.tsx'
 import { DeveloperToolsRow, type DeveloperToolsRowInjected } from './DeveloperToolsRow.tsx'
+import { StartupWindowRow, type StartupWindowRowInjected } from './StartupWindowRow.tsx'
 import { SettingsDocumentAction } from './SettingsDocumentAction.tsx'
 import type { SettingsDocumentActionInjected } from './SettingsDocumentAction.tsx'
 import { SettingsDocumentStore } from './settings-document-store.ts'
@@ -85,6 +86,16 @@ export function apply(ctx: ClientContext): void {
       setEnabled: enabled => ctx.configForms.developerTools.setEnabled(enabled),
     }),
   }, DeveloperToolsRow))
+  // Startup window restore belongs to the Desktop shell; browsers register no row.
+  const desktopWindows = (globalThis as typeof globalThis & {
+    dshDesktop?: { protocolVersion: number; windows?: DesktopWindowsBridge }
+  }).dshDesktop?.windows
+  if (desktopWindows !== undefined) {
+    ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+      name: 'settings.general.item', id: 'startup-windows', order: 14, locale: NS,
+      inject: (): StartupWindowRowInjected => ({ restoreOnStartup: desktopWindows.restoreOnStartup }),
+    }, StartupWindowRow))
+  }
   // Version information follows the core preferences.
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
     name: 'settings.general.item', id: 'current-version', order: 100, locale: NS,

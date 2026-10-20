@@ -47,6 +47,8 @@ The current release version appears at the bottom of General Settings in Web and
 
 The Coding Tools switch controls the shared `ui-settings.enabled` preference described by [ui-settings](../ui-settings/README.md#use-this-package). It is available in both Web and desktop, follows accepted changes immediately, and disables duplicate input while a write settles. A failed write displays localized retry guidance.
 
+Desktop adds a **Startup windows** select that chooses whether the next launch restores every conversation window or only the primary window with its last conversation. The row registers only when the preload exposes `dshDesktop.windows.restoreOnStartup`; browsers therefore show nothing. Selecting an option calls the Desktop bridge, which writes the choice to the shell settings file, and a failed read or write displays localized retry guidance.
+
 The General section holds the built-in Coding Tools and Current version rows alongside rows registered into `settings.general.item` by feature packages. Each registrant owns its row copy and behavior. The Appearance row, for example, lives in ui-theme.
 
 ### Opening the configuration file

@@ -35,6 +35,8 @@ export const DESKTOP_IPC = {
   openSessionWindow: 'dsh-desktop:open-session-window',
   takeSessionLink: 'dsh-desktop:take-session-link',
   sessionLinkChanged: 'dsh-desktop:session-link-changed',
+  windowsRestoreOnStartupGet: 'dsh-desktop:windows-restore-on-startup-get',
+  windowsRestoreOnStartupSet: 'dsh-desktop:windows-restore-on-startup-set',
   deviceInfo: 'dsh-desktop:device-info',
   localeBootstrap: 'dsh-desktop:locale-bootstrap',
   localeChanged: 'dsh-desktop:locale-changed',
@@ -111,6 +113,18 @@ export interface DshDesktopProductApi {
      * @returns Disposer that stops delivery to this subscription.
      */
     subscribe(listener: (sessionId: string) => void): () => void
+  }
+  /**
+   * Desktop-only window preferences; absent from the marker-only preload object.
+   * Changes apply when the application starts again.
+   */
+  readonly windows: {
+    readonly restoreOnStartup: {
+      /** @returns whether the next launch restores every saved conversation window or only the primary one. */
+      get(): Promise<'all' | 'primary'>
+      /** @param value - restore mode for the next launch. */
+      set(value: 'all' | 'primary'): Promise<void>
+    }
   }
   /**
    * Local machine description for the feedback questionnaire.

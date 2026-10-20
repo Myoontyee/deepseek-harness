@@ -11,20 +11,33 @@ import { readPeerCatalog, type PeerCatalog } from './peer-catalog.ts'
 
 interface Grant { id: string; name: string; url: string; pin: string; token: string }
 interface State { version: 1; detect: boolean; grants: Grant[] }
+interface PeerReply { ok: boolean; value?: unknown; error?: { message?: unknown } }
 function assertConnecting(signal: AbortSignal): void { if (signal.aborted) throw new Error('已取消连接申请') }
+function replyValue(value: unknown): Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('远端返回了无效数据')
+  const envelope = (value as { result?: unknown }).result
+  if (envelope === null || typeof envelope !== 'object' || Array.isArray(envelope)) throw new Error('远端返回了无效数据')
+  const reply = envelope as PeerReply
+  if (!reply.ok) {
+    const message = reply.error?.message
+    throw new Error(typeof message === 'string' && message ? message : '远端操作失败')
+  }
+  if (reply.value === null || typeof reply.value !== 'object' || Array.isArray(reply.value)) throw new Error('远端返回了无效数据')
+  return reply.value as Record<string, unknown>
+}
 /** Manage encrypted local grants and explicit remote reads. */
 export class PairedDevices {
   private state: State = { version: 1, detect: false, grants: [] }
   private readonly path = join(app.getPath('userData'), 'paired-computers.dat')
   constructor() {
     try {
-      const value = JSON.parse(safeStorage.decryptString(readFileSync(this.path))) as State
+      const value = JSON.parse(safeStorage.decryptString(readFileSync(this.path))) as Partial<State>
       if (value.version !== 1 || typeof value.detect !== 'boolean' || !Array.isArray(value.grants) || value.grants.length > 32) throw new Error('Invalid device storage')
       for (const grant of value.grants) {
         pairingOrigin(grant.url)
         if (!/^[a-f0-9]{64}$/u.test(grant.pin) || !/^[\w-]{43}$/u.test(grant.token) || typeof grant.name !== 'string' || typeof grant.id !== 'string') throw new Error('Invalid device grant')
       }
-      this.state = value
+      this.state = { version: 1, detect: value.detect, grants: value.grants }
     } catch (error) { if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error }
   }
   private save(next: State): void {
@@ -87,6 +100,40 @@ export class PairedDevices {
    * @returns Display metadata without credentials.
    */
   workspaceCatalog(id: string): Promise<PeerCatalog> { return readPeerCatalog(this.grant(id)) }
+  private async remote(id: string, method: string, args: unknown): Promise<Record<string, unknown>> {
+    const grant = this.grant(id)
+    const result = await peerJson(grant.url, grant.pin, `/api/${method}`,
+      { type: 'client-request', rpcId: randomUUID(), method, payload: { args } }, grant.token)
+    return replyValue(result)
+  }
+  /** Create one blank conversation inside a remote Workspace and return its identity.
+   * @param id - Saved device identity.
+   * @param workspaceId - Remote Workspace that owns the new conversation directory.
+   * @returns Created conversation identity, or a reusable blank conversation's identity.
+   */
+  async createConversation(id: string, workspaceId: string): Promise<string> {
+    const value = await this.remote(id, 'session/create', { request: { workspaceId } })
+    if (typeof value.sessionId !== 'string' || !value.sessionId) throw new Error('远端没有返回新对话')
+    return value.sessionId
+  }
+  /** Register one existing remote directory as a Workspace.
+   * @param id - Saved device identity.
+   * @param path - Absolute directory on the remote computer.
+   * @returns Display metadata for the created or already registered Workspace.
+   */
+  async createWorkspace(id: string, path: string): Promise<{ id: string; title: string; path: string }> {
+    if (path.length > 4096 || !/^(?:[a-zA-Z]:[\\/]|[\\/])/u.test(path) || path.includes('\0')) {
+      throw new Error('请输入远端电脑上的绝对路径')
+    }
+    const value = await this.remote(id, 'workspace/create', { request: { path } })
+    const workspace = value.workspace
+    if (workspace === null || typeof workspace !== 'object' || Array.isArray(workspace)) throw new Error('远端没有返回工作区')
+    const item = workspace as Record<string, unknown>
+    if (typeof item.workspaceId !== 'string' || typeof item.title !== 'string' || typeof item.path !== 'string') {
+      throw new Error('远端返回了无效工作区')
+    }
+    return { id: item.workspaceId, title: item.title, path: item.path }
+  }
   /** Read remote conversation summaries without starting work on the remote device. */
   async conversations(id: string) {
     const grant = this.grant(id)

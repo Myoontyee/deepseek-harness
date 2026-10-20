@@ -64,7 +64,7 @@ Command registration is optional after installing Desktop. Use **Manage dsh Comm
 
 ## Independent conversation windows
 
-The Session row menu offers **Open in new window**. Each window has its own navigation and connects to the same Desktop Host and Session data; opening a window neither forks the Session nor starts another Host. Session links are delivered to the requesting window. Closing an additional window destroys its document without stopping running tasks. Sign-out, Host shutdown, and application quit close additional windows. The primary window retains its background behavior.
+The Session row menu offers **Open in new window**. Each window has its own navigation and connects to the same Desktop Host and Session data; opening a window neither forks the Session nor starts another Host. Session links are delivered to the requesting window. Closing an additional window destroys its document without stopping running tasks. Sign-out, Host shutdown, and application quit close additional windows. The primary window retains its background behavior. Settings → General selects what the next launch opens: **Restore all windows** reopens up to eight saved secondary windows with bounds clamped onto a connected display, and **Primary window only** keeps the default of opening just the main window, which restores its last conversation. Closing a secondary window removes it from the saved set; windows closed by sign-out, Host shutdown, or quit stay saved for the next launch. A conversation link that arrives at launch opens only in the primary window.
 <a id="closing-the-window-and-quitting"></a>
 
 ## Closing the window and quitting
@@ -298,11 +298,16 @@ On first launch, including after an upgrade, Desktop creates this document if it
 {
   "updates": {
     "allowTestAuthPopupWindow": false
+  },
+  "windows": {
+    "restoreOnStartup": "primary"
   }
 }
 ```
 
-Existing documents are never overwritten; an omitted `updates` object or field resolves to `false`. Set the field to `true` to permit test authentication dialogs, then fully quit and restart the application. Set it back to `false` and restart to suppress them again. Creation, read, or validation failures use the default `false` without blocking startup. Desktop attempts to warn through the Electron console with the file path; unavailable logging does not block startup. Correct the file and restart to apply an explicit setting. Unknown fields are preserved. Installation updates retain this user-data file; Windows uninstallation removes it under the [uninstall rules](#windows-uninstall-rules).
+Existing documents are never overwritten; an omitted `updates` object or field resolves to `false`, and an omitted `windows.restoreOnStartup` resolves to `primary`. Set the update field to `true` to permit test authentication dialogs, then fully quit and restart the application. Set it back to `false` and restart to suppress them again. Creation, read, or validation failures use the defaults without blocking startup. Desktop attempts to warn through the Electron console with the file path; unavailable logging does not block startup. Correct the file and restart to apply an explicit setting. Unknown fields are preserved. Installation updates retain this user-data file; Windows uninstallation removes it under the [uninstall rules](#windows-uninstall-rules).
+
+`windows.restoreOnStartup` accepts `all` or `primary`. Settings → General writes the choice through the same atomic replacement, without reinstalling, and the next launch applies it. `all` reopens the secondary conversation windows recorded in `app.getPath('userData')/desktop/window-state.json`: version 1 holds at most eight deduplicated entries with their session identities and last bounds, written on open, close, move, resize, and quit. Restored windows open without taking focus; malformed entries and entries whose conversation no longer resolves are skipped, and bounds are clamped onto a connected display. The main process never records welcome, update, peer, or pairing windows there.
 
 <a id="mandatory-update-policy"></a>
 

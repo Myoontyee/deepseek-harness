@@ -38,6 +38,9 @@
   outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)); outline-offset: -2px;
 }
 .conversation:disabled, .smallAction:disabled { opacity: .5; cursor: default; }
+.menuAnchor { position: fixed; width: 0; height: 0; }
+.addForm { display: grid; gap: 10px; }
+.addForm p { margin: 0; }
 @media (hover: hover) {
   .folder:hover, .conversation:not(:disabled):hover, .smallAction:not(:disabled):hover { background: var(--dsw-alias-interactive-bg-hover); }
 }

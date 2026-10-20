@@ -26,6 +26,7 @@ import {
   nativeTheme,
   net,
   protocol,
+  screen,
   session,
   shell,
   type WebContents,
@@ -63,7 +64,8 @@ import { DesktopMandatoryUpdatePolicy, resolveDesktopPolicyConfig, type DesktopP
 import { desktopClientMetadata, desktopClientVersion } from './client-metadata.ts'
 import { DesktopMandatoryUpdateWindow } from './mandatory-update-window.ts'
 import { DesktopPolicyTestAuth } from './policy-test-auth.ts'
-import { readDesktopSettings } from './settings.ts'
+import { readDesktopSettings, writeWindowRestoreOnStartup } from './settings.ts'
+import { clampWindowBounds, parseSessionId, WindowSessionStore, MAX_SAVED_WINDOWS, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, type SavedWindow, type WindowBounds } from './window-session.ts'
 import { DesktopUpdateDialog, type UpdateDialogOptions } from './update-dialog.ts'
 import { readDesktopRuntime } from './runtime-tree.ts'
 import { DesktopBrowserGuests } from './browser-guests.ts'
@@ -77,12 +79,15 @@ import { parseDesktopLink } from './deep-links.ts'
 let focusPrimaryWindow = (): void => {}
 let notifySessionLink = (): void => {}
 let pendingSessionLink: string | undefined
+/** Session identities an external link already delivered, so startup restore never opens them twice. */
+const linkedSessionIds = new Set<string>()
 
 function receiveDesktopLink(value: string): boolean {
   const link = parseDesktopLink(value)
   if (link === undefined) return false
   if (link.kind === 'session') {
     pendingSessionLink = link.sessionId
+    linkedSessionIds.add(link.sessionId)
     notifySessionLink()
   }
   return true
@@ -230,12 +235,11 @@ function platformLoginUrl(authorizeUrl: string): string {
   return url.href
 }
 
-function createWindow(preload: string, show = false, primary = false): BrowserWindow {
+function createWindow(preload: string, show = false, primary = false, bounds?: WindowBounds): BrowserWindow {
   const window = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 520,
-    minHeight: 600,
+    ...(bounds ?? { width: 1280, height: 820 }),
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     show,
     ...(process.platform === 'win32' && primary ? {
       titleBarStyle: 'hidden' as const,
@@ -341,6 +345,9 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
 
 async function main(): Promise<void> {
   const desktopSettings = readDesktopSettings(app.getPath('userData'))
+  let restoreOnStartup = desktopSettings.windows.restoreOnStartup
+  const windowSession = new WindowSessionStore(app.getPath('userData'))
+  const savedWindows = windowSession.read()
   void pruneCrashReports(app.getPath('logs'))
   const journalDirectory = process.env.DSH_DESKTOP_UPDATE_JOURNAL_DIR
   const updateJournal = journalDirectory === undefined ? undefined : new DesktopUpdateJournal(journalDirectory, app.getVersion())
@@ -368,7 +375,15 @@ async function main(): Promise<void> {
   let startup: Promise<void> | undefined
   let workspaceRecovery: Promise<void> | undefined
   let mainWindow: BrowserWindow | undefined
-  const sessionWindows = new Map<BrowserWindow, { pendingSessionId?: string }>()
+  const sessionWindows = new Map<BrowserWindow, { readonly sessionId: string; pendingSessionId?: string }>()
+  /** Set while windows close in bulk (quit, sign-out, Host stop); those closes keep the saved set. */
+  let closingSessionWindows = false
+  const savedSessionWindows = (): SavedWindow[] => [...sessionWindows.entries()].flatMap(([window, entry]) =>
+    window.isDestroyed() ? [] : [{ sessionId: entry.sessionId, bounds: window.getBounds() }])
+  const persistSessionWindows = (): void => {
+    if (quitting) return
+    windowSession.replace(savedSessionWindows())
+  }
   const productWindow = (contents?: WebContents): BrowserWindow | undefined => {
     const windows = [mainWindow, ...sessionWindows.keys()]
       .filter((window): window is BrowserWindow => window !== undefined && !window.isDestroyed())
@@ -397,8 +412,13 @@ async function main(): Promise<void> {
     paintCompletionBadge(completionBadge.count)
   }
   const closeSessionWindows = (): void => {
-    for (const window of sessionWindows.keys()) if (!window.isDestroyed()) window.destroy()
-    sessionWindows.clear()
+    closingSessionWindows = true
+    try {
+      for (const window of sessionWindows.keys()) if (!window.isDestroyed()) window.destroy()
+      sessionWindows.clear()
+    } finally {
+      closingSessionWindows = false
+    }
   }
   let welcomeWindow: BrowserWindow | undefined
   let enteredWorkspace = false
@@ -780,7 +800,6 @@ async function main(): Promise<void> {
     // A confirmation on a hidden window would go unseen, so it waits for the next show; the mandatory
     // flow keeps its own taskbar and Dock attention instead.
     if (!isMandatory()) await windowShown()
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- A quit can begin while the show is awaited.
     if (quitting) return state
     return updates.install(version)
   }
@@ -1229,6 +1248,12 @@ async function main(): Promise<void> {
   let pairedDevices: PairedDevices | undefined
   const peerWindows = new Map<string, Set<BrowserWindow>>()
   const devicePairings = new Map<number, AbortController>()
+  const openPeerConversation = async (devices: PairedDevices, id: string, sessionId: string): Promise<void> => {
+    const window = await openPeerWindow(devices.grant(id), sessionId)
+    const windows = peerWindows.get(id) ?? new Set<BrowserWindow>()
+    windows.add(window); peerWindows.set(id, windows)
+    window.once('closed', () => { windows.delete(window); if (!windows.size) peerWindows.delete(id) })
+  }
   ipcMain.handle(DESKTOP_IPC.devices, async (event, action: unknown, args: unknown) => {
     assertProductSender(event)
     const devices = pairedDevices ??= new PairedDevices()
@@ -1256,11 +1281,18 @@ async function main(): Promise<void> {
       for (const window of peerWindows.get(id) ?? []) if (!window.isDestroyed()) window.close()
       devices.forget(id); return devices.list()
     }
+    if (action === 'createConversation' && typeof data.workspaceId === 'string'
+      && data.workspaceId.length > 0 && data.workspaceId.length <= 512) {
+      const sessionId = await devices.createConversation(id, data.workspaceId)
+      await openPeerConversation(devices, id, sessionId)
+      return
+    }
+    if (action === 'createWorkspace' && typeof data.path === 'string') {
+      await devices.createWorkspace(id, data.path)
+      return devices.list()
+    }
     if (action === 'open' && typeof data.sessionId === 'string' && data.sessionId.length <= 512) {
-      const window = await openPeerWindow(devices.grant(id), data.sessionId)
-      const windows = peerWindows.get(id) ?? new Set<BrowserWindow>()
-      windows.add(window); peerWindows.set(id, windows)
-      window.once('closed', () => { windows.delete(window); if (!windows.size) peerWindows.delete(id) })
+      await openPeerConversation(devices, id, data.sessionId)
       return
     }
     throw new Error('Invalid device operation')
@@ -1275,35 +1307,84 @@ async function main(): Promise<void> {
     if (report === null) throw new Error('Invalid completion report')
     completionBadge.report(owner.id, report, owner === mainWindow)
   })
-  ipcMain.handle(DESKTOP_IPC.openSessionWindow, async (event, sessionId: unknown) => {
-    assertProductSender(event)
-    if (typeof sessionId !== 'string' || sessionId.length === 0 || sessionId.length > 512 || /[\u0000-\u001f\u007f]/u.test(sessionId)) {
-      throw new Error('Invalid conversation identity')
-    }
-    if (quitting || !enteredWorkspace || backend.state.phase !== 'ready') throw new Error('Desktop Host is unavailable')
-    const window = createWindow(appPreload, false, true)
-    sessionWindows.set(window, { pendingSessionId: sessionId })
+  /** Attach the shared product-window services: unread badge, browser guests, shortcuts, auto update checks. */
+  const bindProductWindow = (window: BrowserWindow): void => {
     bindCompletionBadge(window)
-    window.once('closed', () => { sessionWindows.delete(window) })
     browserGuests.bind(window, (guest, name) => shortcuts.attachGuest(window, guest, name))
     shortcuts.attach(window)
     window.on('focus', automaticCheck)
+  }
+  /**
+   * Create one secondary conversation window sharing the running Host.
+   * Opening, manual IPC opens, and startup restores all use this path.
+   * @param sessionId - validated conversation identity.
+   * @param options - restored bounds and whether the new window takes focus.
+   * @returns completion after the window document loads.
+   */
+  const openConversationWindow = async (sessionId: string,
+    options: { bounds?: WindowBounds; activate: boolean } = { activate: true }): Promise<void> => {
+    if (quitting || !enteredWorkspace || backend.state.phase !== 'ready') throw new Error('Desktop Host is unavailable')
+    const window = createWindow(appPreload, false, true, options.bounds)
+    sessionWindows.set(window, { sessionId, pendingSessionId: sessionId })
+    bindProductWindow(window)
+    window.on('move', () => { persistSessionWindows() })
+    window.on('resize', () => { persistSessionWindows() })
+    window.once('closed', () => {
+      sessionWindows.delete(window)
+      if (!closingSessionWindows) persistSessionWindows()
+    })
+    persistSessionWindows()
     try {
       await window.loadURL(applicationUrl)
-      if (!window.isDestroyed()) { window.show(); window.focus() }
+      if (window.isDestroyed()) return
+      if (options.activate) { window.show(); window.focus() }
+      else window.showInactive()
     } catch (error) {
       if (!window.isDestroyed()) window.destroy()
       throw error
     }
+  }
+  let restoreAttempted = false
+  /** Reopen the saved secondary conversation windows once, when the setting restores all windows. */
+  const restoreSessionWindows = async (): Promise<void> => {
+    if (restoreAttempted || restoreOnStartup !== 'all' || quitting || recovery.active) return
+    restoreAttempted = true
+    if (backend.state.phase !== 'ready' || savedWindows.length === 0) return
+    const displays = screen.getAllDisplays().map(display => display.workArea)
+    for (const saved of savedWindows) {
+      if (isQuitting() || sessionWindows.size >= MAX_SAVED_WINDOWS) break
+      if (linkedSessionIds.has(saved.sessionId)
+        || [...sessionWindows.values()].some(entry => entry.sessionId === saved.sessionId)) continue
+      const bounds = clampWindowBounds(saved.bounds, displays)
+      if (bounds === undefined) continue
+      try {
+        await openConversationWindow(saved.sessionId, { bounds, activate: false })
+      } catch (error) {
+        console.warn('desktop window restore: could not reopen a conversation window', error)
+      }
+    }
+  }
+  ipcMain.handle(DESKTOP_IPC.openSessionWindow, async (event, sessionId: unknown) => {
+    assertProductSender(event)
+    const id = parseSessionId(sessionId)
+    if (id === undefined) throw new Error('Invalid conversation identity')
+    await openConversationWindow(id)
+  })
+  ipcMain.handle(DESKTOP_IPC.windowsRestoreOnStartupGet, (event) => {
+    assertProductSender(event)
+    return restoreOnStartup
+  })
+  ipcMain.handle(DESKTOP_IPC.windowsRestoreOnStartupSet, async (event, value: unknown) => {
+    assertProductSender(event)
+    if (value !== 'all' && value !== 'primary') throw new Error("windows.restoreOnStartup must be 'all' or 'primary'")
+    await writeWindowRestoreOnStartup(app.getPath('userData'), value)
+    restoreOnStartup = value
   })
 
   const createMainWindow = (): BrowserWindow => {
     const window = createWindow(appPreload, false, true)
     mainWindow = window
-    bindCompletionBadge(window)
-    browserGuests.bind(window, (guest, name) => shortcuts.attachGuest(window, guest, name))
-    shortcuts.attach(window)
-    window.on('focus', automaticCheck)
+    bindProductWindow(window)
     // Closing hides: the page and the Host keep running, and the next show resumes the same document.
     window.on('close', (event) => {
       if (quitting || shellInstallerOwnsQuit || sessionEnding) return
@@ -1367,6 +1448,8 @@ async function main(): Promise<void> {
     if (activate && development && process.env.DSH_DESKTOP_OPEN_DEVTOOLS !== '0') {
       window.webContents.openDevTools({ mode: 'detach' })
     }
+    // Restored windows open beside the primary one without taking focus from it.
+    void restoreSessionWindows().catch((error: unknown) => { console.warn('desktop window restore failed:', error) })
   }
   let openingWelcome: Promise<void> | undefined
   const showWelcome = (): Promise<void> => {
@@ -1479,15 +1562,21 @@ async function main(): Promise<void> {
     tray?.dispose()
     stopAccount?.()
     closeSessionWindows()
+    windowSession.dispose()
     if (welcomeWindow !== undefined && !welcomeWindow.isDestroyed()) welcomeWindow.hide()
     if (mainWindow !== undefined && !mainWindow.isDestroyed()) mainWindow.hide()
     updateSchedule.dispose()
     updateDialog.dispose()
     mandatoryUI?.dispose()
-    void Promise.all([Promise.resolve(mandatoryPolicy?.dispose()).then(() => policyAuth?.dispose()),
-      backend.close(), mobileControl.dispose(), sessionReader.dispose().catch((error: unknown) => { console.error(error) }),
+    void Promise.all([
+      Promise.resolve(mandatoryPolicy?.dispose()).then(() => policyAuth?.dispose()),
+      windowSession.flush(),
+      backend.close(),
+      mobileControl.dispose(),
+      sessionReader.dispose().catch((error: unknown) => { console.error(error) }),
       // A Platform cleanup failure is logged without cutting the remaining Host shutdown short.
-      platformView.dispose().catch((error: unknown) => { console.error(error) })])
+      platformView.dispose().catch((error: unknown) => { console.error(error) }),
+    ])
       .catch((error: unknown) => { console.error(error) }).finally(() => { app.quit() })
   }
   app.on('before-quit', (event) => {
@@ -1501,6 +1590,8 @@ async function main(): Promise<void> {
       mandatoryUI?.dispose()
       void sessionReader.dispose().catch(() => {})
       void mobileControl.dispose().catch((error: unknown) => { console.error(error) })
+      windowSession.dispose()
+      void windowSession.flush()
       // Installation preparation already awaited Platform storage cleanup.
       void platformView.dispose().catch((error: unknown) => { console.error(error) })
       return

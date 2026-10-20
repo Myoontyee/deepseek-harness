@@ -42,3 +42,14 @@ export interface DesktopUpdateView {
   readonly failed: boolean
   readonly opening: boolean
 }
+
+/** What a Desktop launch opens: every saved conversation window, or only the primary window. */
+export type DesktopStartupRestoreMode = 'all' | 'primary'
+
+/** Optional Desktop-only startup window preference; absent in browsers. */
+export interface DesktopWindowsBridge {
+  readonly restoreOnStartup: {
+    get(): Promise<DesktopStartupRestoreMode>
+    set(value: DesktopStartupRestoreMode): Promise<void>
+  }
+}

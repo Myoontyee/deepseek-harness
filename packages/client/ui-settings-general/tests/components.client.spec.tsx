@@ -9,6 +9,7 @@ import { CloseLabel, HeaderContent, TriggerContent } from '../src/client/chrome.
 import type { TriggerContentProps } from '../src/client/chrome.tsx'
 import { SettingsDocumentAction } from '../src/client/SettingsDocumentAction.tsx'
 import { DeveloperToolsRow } from '../src/client/DeveloperToolsRow.tsx'
+import { StartupWindowRow } from '../src/client/StartupWindowRow.tsx'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import { SettingsDescribeMirror } from '@deepseek-ai/dsh-client-ui-settings/src/client/settings-mirror.ts'
 import { SettingsDocumentStore } from '../src/client/settings-document-store.ts'
@@ -46,7 +47,7 @@ const kit = {
 }
 
 describe('Desktop collapsed update badge', () => {
-  it('shows update and retry status and yields to connection feedback', () => {
+  it('shows the custom channel badge and yields to connection feedback', () => {
     let state: DesktopUpdateView = { failed: false, opening: false }
     let connection: 'connected' | 'connecting' | 'disconnected' = 'connected'
     const props = { ...kit, t,
@@ -57,17 +58,17 @@ describe('Desktop collapsed update badge', () => {
     expect(screen.queryByRole('img')).toBeNull()
     state = { ...state, presentation: { phase: 'available', version: '1.0.1' } }
     view.rerender(<DesktopUpdateBadge {...props} />)
-    expect(screen.getByRole('img', { name: 'Update' })).toBeTruthy()
+    expect(screen.getByRole('img', { name: en['desktop.channel.custom'] })).toBeTruthy()
     expect(screen.queryByRole('button')).toBeNull()
     state = { ...state, failed: true }
     view.rerender(<DesktopUpdateBadge {...props} />)
-    expect(screen.getByRole('img', { name: en['desktop.update.retry'] })).toBeTruthy()
+    expect(screen.getByRole('img', { name: en['desktop.channel.custom'] })).toBeTruthy()
     state = { failed: true, opening: false }
     view.rerender(<DesktopUpdateBadge {...props} />)
-    expect(screen.getByRole('img', { name: en['desktop.update.retry'] })).toBeTruthy()
+    expect(screen.getByRole('img', { name: en['desktop.channel.custom'] })).toBeTruthy()
     state = { failed: false, opening: false, presentation: { phase: 'error', failure: 'install' } }
     view.rerender(<DesktopUpdateBadge {...props} />)
-    expect(screen.getByRole('img', { name: en['desktop.update.retry'] })).toBeTruthy()
+    expect(screen.getByRole('img', { name: en['desktop.channel.custom'] })).toBeTruthy()
     for (const value of ['connecting', 'disconnected'] as const) {
       connection = value
       view.rerender(<DesktopUpdateBadge {...props} />)
@@ -308,5 +309,41 @@ describe('Host release change confirmation', () => {
     cleanup()
     prompt({ page: { version: '0.2.1' }, previous: { version: '0.2.1' }, host: undefined })
     expect(screen.getByRole('dialog').textContent).toContain('Service0.2.1UnknownPage0.2.1Unknown')
+  })
+})
+
+describe('startup window restore row', () => {
+  function restoreBridge(initial: 'all' | 'primary', write: (value: 'all' | 'primary') => Promise<void>) {
+    let mode = initial
+    return {
+      get: vi.fn(async () => mode),
+      set: vi.fn(async (value: 'all' | 'primary') => { await write(value); mode = value }),
+    }
+  }
+
+  it('loads the saved choice and writes a changed choice', async () => {
+    const restoreOnStartup = restoreBridge('primary', async () => {})
+    render(<StartupWindowRow {...kit} t={t} restoreOnStartup={restoreOnStartup} />)
+    const select = await screen.findByRole('combobox', { name: en['startupWindows.title'] }) as HTMLSelectElement
+    expect(select.value).toBe('primary')
+    fireEvent.change(select, { target: { value: 'all' } })
+    await waitFor(() => { expect(select.value).toBe('all') })
+    expect(restoreOnStartup.set).toHaveBeenCalledExactlyOnceWith('all')
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(select.hasAttribute('disabled')).toBe(false)
+  })
+
+  it('reports a failed read and a failed write', async () => {
+    const readFailure = { get: vi.fn(async () => { throw new Error('bridge unavailable') }), set: vi.fn() }
+    const first = render(<StartupWindowRow {...kit} t={t} restoreOnStartup={readFailure} />)
+    expect((await screen.findByRole('alert')).textContent).toBe(en['startupWindows.error'])
+    first.unmount()
+    const restoreOnStartup = restoreBridge('primary', async () => { throw new Error('write denied') })
+    render(<StartupWindowRow {...kit} t={t} restoreOnStartup={restoreOnStartup} />)
+    const select = await screen.findByRole('combobox', { name: en['startupWindows.title'] }) as HTMLSelectElement
+    fireEvent.change(select, { target: { value: 'all' } })
+    expect((await screen.findByRole('alert')).textContent).toBe(en['startupWindows.error'])
+    expect(select.value).toBe('primary')
+    expect(select.hasAttribute('disabled')).toBe(false)
   })
 })
