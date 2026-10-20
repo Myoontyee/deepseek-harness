@@ -91,19 +91,6 @@ public final class MainActivity extends Activity {
  }
  private void showStart() {
   if(!signedIn()) { showLogin(""); return; }
-  JSONObject view=automaticReconnect()?lastView():null;
-  if(LastView.isRemote(view)) {
-   String device=LastView.device(view),session=LastView.session(view);
-   Pairing pairing=savedPairing(device);JSONObject grant=savedGrant(device);
-   boolean paused=grant!=null&&grant.optBoolean("tailnet",false)&&!tailnet.hasSavedNode();
-   if(pairing!=null&&!paused) {
-    showConnecting(pairing,session);requestedSession=session;
-    final int current=generation;
-    tailnetHandler.post(()->{if(disposed||generation!=current)return;openSavedConnection(pairing);});
-    return;
-   }
-   if(pairing==null&&!grantsUnreadable)options().edit().remove(PREF_LAST_VIEW).apply();
-  }
   showPhoneChat();
  }
  private android.content.SharedPreferences options() { return getSharedPreferences("options",MODE_PRIVATE); }
@@ -394,9 +381,11 @@ public final class MainActivity extends Activity {
   worker.execute(()->{try{for(java.util.Map.Entry<String,JSONObject> entry:targets.entrySet()){
    JSONObject grant=entry.getValue();String name=grant.optString("name","已授权电脑");org.json.JSONArray rows=new org.json.JSONArray();String error="";
    try{
-    Pairing pairing=tailnet.route(new Pairing(grant,"token"));JSONObject response=pairing.embedded?tailnet.command(new JSONObject().put("action","request").put("operation","sessions").put("origin",pairing.origin).put("pin",pairing.pin).put("token",pairing.secret)).getJSONObject("sessions"):pairing.sessions();
-    org.json.JSONArray items=response.getJSONObject("result").getJSONObject("value").getJSONArray("items");
-    for(int i=0;i<items.length()&&rows.length()<500;i++){JSONObject item=items.getJSONObject(i);String id=item.optString("sessionId");JSONObject origin=item.optJSONObject("origin");if(id.isEmpty()||id.length()>512||(origin!=null&&origin.optString("kind").equals("subagent")))continue;JSONObject projections=item.optJSONObject("projections"),values=projections==null?null:projections.optJSONObject("values");rows.put(new JSONObject().put("id",id).put("title",values==null?id:values.optString("title",id)).put("running",item.optBoolean("running")));}
+    Pairing pairing=tailnet.route(new Pairing(grant,"token"));
+    JSONObject response=pairing.embedded?tailnet.command(new JSONObject().put("action","request").put("operation","sessions").put("origin",pairing.origin).put("pin",pairing.pin).put("token",pairing.secret)).getJSONObject("sessions"):pairing.sessions();
+    JSONObject workspaces=null;
+    try{workspaces=pairing.embedded?tailnet.command(new JSONObject().put("action","request").put("operation","workspaces").put("origin",pairing.origin).put("pin",pairing.pin).put("token",pairing.secret)).getJSONObject("workspaces"):pairing.workspaces();}catch(Exception ignored){/* Workspace names are optional; rows still group by directory. */}
+    rows=RemoteCatalog.rows(response,workspaces);
    }catch(Exception failure){org.json.JSONArray cached=cachedRemoteRows(entry.getKey());rows=cached;error=cached.length()==0?"暂未连接，手机聊天仍可使用。":"电脑离线，显示上次对话。";}
    if(error.isEmpty())cacheRemoteRows(entry.getKey(),rows);
    PhoneChatScreen screen=phoneChat;if(screen!=null)screen.remote(entry.getKey(),name,rows,error);

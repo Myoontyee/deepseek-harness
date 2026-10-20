@@ -9,8 +9,8 @@ android {
   testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
   minSdk = 26
   targetSdk = 35
-  versionCode = (System.getenv('DSH_ANDROID_VERSION_CODE') ?: '2026101903').toInteger()
-  versionName = System.getenv('DSH_ANDROID_VERSION_NAME') ?: '0.2.1-rc.2.20261019.3'
+  versionCode = (System.getenv('DSH_ANDROID_VERSION_CODE') ?: '2026102006').toInteger()
+  versionName = System.getenv('DSH_ANDROID_VERSION_NAME') ?: '0.2.1-rc.2.20261020.6'
   buildConfigField 'String', 'HARNESS_VERSION', '"' + new groovy.json.JsonSlurper().parse(file('../../../package.json')).version + '"'
  }
  if (System.getenv('DSH_ANDROID_KEYSTORE')) {

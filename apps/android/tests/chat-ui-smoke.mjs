@@ -64,11 +64,12 @@ try {
   const sent = await page.evaluate(() => window.commands.findLast(item => item.action === 'send'))
   assert.equal(sent.model, 'deepseek-fixture'); assert.equal(sent.effort, 'max')
   await page.locator('#history').click()
-  await page.evaluate(() => window.phone.onmessage({ data: JSON.stringify({ type: 'remote', device: 'computer-one', name: '3070-laptop', error: '', sessions: [{ id: 'remote-conversation', title: '电脑上的研究', running: true }] }) }))
+  await page.evaluate(() => window.phone.onmessage({ data: JSON.stringify({ type: 'remote', device: 'computer-one', name: '3070-laptop', error: '', sessions: [{ id: 'remote-conversation', title: '电脑上的研究', running: true, workspaceId: 'workspace-a', workspaceTitle: 'DeepSeekHarness' }, { id: 'remote-other', title: '另一个项目', running: false, workspaceId: 'workspace-b', workspaceTitle: 'Claude-Code-Tools' }] }) }))
   const remote = '#remoteChats [data-device="computer-one"]'
-  assert.equal(await page.locator(`${remote} .remote-row svg`).count(), 1)
+  assert.equal(await page.locator(`${remote} .remote-row svg`).count(), 2)
   assert.equal(await page.locator(`${remote} .remote-device .device-name`).textContent(), '3070-laptop')
   assert.equal(await page.locator(`${remote} .remote-device .device-state`).getAttribute('data-status'), 'online')
+  assert.deepEqual(await page.locator(`${remote} .remote-workspace-name`).allTextContents(), ['DeepSeekHarness', 'Claude-Code-Tools'])
   assert.equal(await page.locator(`${remote} .remote-running`).textContent(), '运行中')
   await page.screenshot({ path: '.artifacts/android-drawer-remote.png' })
   // A failed refresh keeps the last conversation list and marks the device offline instead of a bare error line.

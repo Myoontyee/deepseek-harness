@@ -59,6 +59,11 @@ textarea { display: block; width: 100%; min-width: 0; resize: none; font-size: 1
 .chat-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 #chats button[aria-current="page"] { background: var(--dsw-static-neutral-bluish-150); }
 .remote-row svg { color: #74b6a3; }
+.remote-workspace { display: grid; gap: 2px; }
+.remote-workspace-name { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 8px 12px 2px; color: var(--dsw-static-neutral-bluish-600); font-size: 12px; }
+.remote-workspace-name span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.remote-workspace-name svg { flex: none; width: 16px; height: 16px; }
+.remote-workspace .remote-row { padding-left: 26px; min-height: 40px; }
 .remote-device { display: flex; align-items: center; gap: 8px; padding: 14px 12px 2px; }
 .remote-device .device-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
 .device-state { flex: none; padding: 1px 8px; border-radius: 999px; font-size: 11px; line-height: 18px; background: var(--dsw-static-neutral-bluish-150); color: var(--dsw-static-neutral-bluish-600); }

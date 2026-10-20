@@ -69,15 +69,23 @@ func pinnedRequest(ctx context.Context, dial dialer, request command, known func
 	client := &http.Client{Transport: transport, Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	path := "/_dsh_mobile/phone-sync"
 	bodyText := string(request.Body)
-	if request.Operation == "sessions" {
-		path = "/api/session/list"
+	catalog := ""
+	if request.Operation == "sessions" || request.Operation == "workspaces" {
+		method := "session/list"
+		args := `{"_request":{}}`
+		if request.Operation == "workspaces" {
+			method = "workspace/list"
+			args = `{}`
+		}
+		path = "/api/" + method
 		var id [16]byte
 		if _, err = rand.Read(id[:]); err != nil {
 			return nil, err
 		}
 		rpc := fmt.Sprintf("%x-%x-%x-%x-%x", id[0:4], id[4:6], id[6:8], id[8:10], id[10:])
-		bodyText = `{"type":"client-request","rpcId":"` + rpc + `","method":"session/list","payload":{"args":{"_request":{}}}}`
+		bodyText = `{"type":"client-request","rpcId":"` + rpc + `","method":"` + method + `","payload":{"args":` + args + `}}`
 		client.Timeout = 10 * time.Second
+		catalog = request.Operation
 	} else if request.Operation != "" {
 		return nil, fmt.Errorf("不支持的电脑操作")
 	}
@@ -106,8 +114,8 @@ func pinnedRequest(ctx context.Context, dial dialer, request command, known func
 	if json.Unmarshal(body, &result) != nil {
 		return nil, fmt.Errorf("电脑响应不是有效数据")
 	}
-	if request.Operation == "sessions" {
-		return map[string]any{"ok": true, "sessions": result}, nil
+	if catalog != "" {
+		return map[string]any{"ok": true, catalog: result}, nil
 	}
 	if result["saved"] != true {
 		return nil, fmt.Errorf("电脑没有确认保存手机记录")

@@ -61,10 +61,12 @@ final class Pairing {
   byte[] bytes=body.toString().getBytes(StandardCharsets.UTF_8);if(bytes.length>4*1024*1024)throw new Exception("同步内容过大");connection.setFixedLengthStreamingMode(bytes.length);
   try{try(java.io.OutputStream out=connection.getOutputStream()){out.write(bytes);}if(connection.getResponseCode()!=200)throw new Exception("电脑没有确认同步，请更新电脑客户端或检查授权（"+connection.getResponseCode()+"）");}finally{connection.disconnect();}
  }
- JSONObject sessions() throws Exception {
-  HttpsURLConnection connection=open("/api/session/list");connection.setRequestProperty("Cookie","__Host-dsh-device="+secret);connection.setReadTimeout(10000);
-  byte[] bytes=new JSONObject().put("type","client-request").put("rpcId",java.util.UUID.randomUUID().toString()).put("method","session/list").put("payload",new JSONObject().put("args",new JSONObject().put("_request",new JSONObject()))).toString().getBytes(StandardCharsets.UTF_8);connection.setFixedLengthStreamingMode(bytes.length);
-  try{try(java.io.OutputStream out=connection.getOutputStream()){out.write(bytes);}if(connection.getResponseCode()!=200)throw new Exception("电脑对话暂不可用（"+connection.getResponseCode()+"）");java.io.ByteArrayOutputStream result=new java.io.ByteArrayOutputStream();try(java.io.InputStream in=connection.getInputStream()){byte[] block=new byte[4096];int count;while((count=in.read(block))!=-1){if(result.size()+count>4*1024*1024)throw new Exception("电脑列表过大");result.write(block,0,count);}}return new JSONObject(result.toString("UTF-8"));}finally{connection.disconnect();}
+ JSONObject sessions() throws Exception { return rpc("session/list",new JSONObject().put("_request",new JSONObject())); }
+ JSONObject workspaces() throws Exception { return rpc("workspace/list",new JSONObject()); }
+ private JSONObject rpc(String method,JSONObject args) throws Exception {
+  HttpsURLConnection connection=open("/api/"+method);connection.setRequestProperty("Cookie","__Host-dsh-device="+secret);connection.setReadTimeout(10000);
+  byte[] bytes=new JSONObject().put("type","client-request").put("rpcId",java.util.UUID.randomUUID().toString()).put("method",method).put("payload",new JSONObject().put("args",args)).toString().getBytes(StandardCharsets.UTF_8);connection.setFixedLengthStreamingMode(bytes.length);
+  try{try(java.io.OutputStream out=connection.getOutputStream()){out.write(bytes);}if(connection.getResponseCode()!=200)throw new Exception("电脑列表暂不可用（"+connection.getResponseCode()+"）");java.io.ByteArrayOutputStream result=new java.io.ByteArrayOutputStream();try(java.io.InputStream in=connection.getInputStream()){byte[] block=new byte[4096];int count;while((count=in.read(block))!=-1){if(result.size()+count>4*1024*1024)throw new Exception("电脑列表过大");result.write(block,0,count);}}return new JSONObject(result.toString("UTF-8"));}finally{connection.disconnect();}
  }
  JSONObject pair(String label) throws Exception {
   HttpsURLConnection connection=open("/_dsh_mobile/pair");
